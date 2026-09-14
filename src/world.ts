@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { GameAudio } from './audio';
 import { advance, beginNight, beginTutorial, canShoot, cost, devices, hit, initialState, inspectJournal, recommendation, registerShot, TARGETS, unlocked, volley, waveActive } from './rules';
 import type { GameState, Target } from './rules';
@@ -60,8 +61,8 @@ export class Scene {
     this.renderer.shadowMap.type = T.PCFSoftShadowMap;
     this.renderer.toneMapping = T.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.45;
-    this.world.background = new T.Color(0x100e15);
-    this.world.fog = new T.FogExp2(0x15121c, 0.025);
+    this.world.background = new T.Color(0x030305);
+    this.world.fog = new T.FogExp2(0x030305, 0.043);
     this.camera.position.set(0, 5, 12.6); this.camera.lookAt(0, 1.65, -0.6); this.world.add(this.camera);
     this.buildRoom(); this.buildTable();
     for (const t of TARGETS) this.buildMachine(t);
@@ -111,23 +112,25 @@ export class Scene {
     const tex = new T.CanvasTexture(canvas); tex.colorSpace = T.SRGBColorSpace; this.textures.push(tex); return tex;
   }
   private buildRoom() {
-    this.world.add(new T.HemisphereLight(0xc0aacb, 0x362521, 1.25));
-    const moon = new T.DirectionalLight(0x9895d2, 1.8); moon.position.set(-3, 8, -2); this.world.add(moon);
+    this.world.add(new T.HemisphereLight(0x8a829e, 0x16100e, 0.38));
+    const moon = new T.DirectionalLight(0x777fae, 0.9); moon.position.set(-3, 8, -2); this.world.add(moon);
     this.shadow = new T.SpotLight(0xffcd9a, 100, 30, 0.65, 0.8, 1.3); this.shadow.position.set(-3, 8, 5); this.shadow.target.position.set(0, 0, 0); this.shadow.castShadow = true; this.shadow.shadow.mapSize.set(1024, 1024); this.shadow.shadow.bias = -0.001; this.world.add(this.shadow, this.shadow.target);
-    this.box(this.world, 20, 0.25, 25, 0, -0.6, -4, 0x25222b);
-    this.box(this.world, 19, 10, 0.5, 0, 4, -5.5, 0x29242e);
+    this.buildEnclosure();
+    // The apse is recessed beyond the altar, inside the continuous room shell.
+    const sanctuary = new T.Group(); sanctuary.position.z = -6; this.world.add(sanctuary);
+    this.box(sanctuary, 21, 16, 0.6, 0, 7.3, -5.5, 0x202028);
     for (let y = 0; y < 8; y++) for (let x = -6; x <= 6; x++) {
-      this.box(this.world, 1.37, 0.69, 0.12, x * 1.43 + y % 2 * 0.7, y * 0.77 - 0.1, -5.16, (x + y) % 3 ? 0x302c35 : 0x39313a);
+      this.box(sanctuary, 1.37, 0.69, 0.12, x * 1.43 + y % 2 * 0.7, y * 0.77 - 0.1, -5.16, (x + y) % 3 ? 0x302c35 : 0x39313a);
     }
     for (let x = -6.4; x <= 6.4; x += 3.2) {
-      this.box(this.world, 0.7, 0.4, 1, x, -0.1, -4.5);
-      this.cylinder(this.world, 0.23, 7, x, 3.3, -4.6, 0x49404b, 0.19, 8);
-      this.box(this.world, 0.68, 0.35, 0.8, x, 5.9, -4.6, C.trim);
-      this.arch(this.world, x + 1.6, 1.2, -4.8, 3, 5.5, 0x5b4b53);
+      this.box(sanctuary, 0.7, 0.4, 1, x, -0.1, -4.5);
+      this.cylinder(sanctuary, 0.23, 7, x, 3.3, -4.6, 0x49404b, 0.19, 8);
+      this.box(sanctuary, 0.68, 0.35, 0.8, x, 5.9, -4.6, C.trim);
+      this.arch(sanctuary, x + 1.6, 1.2, -4.8, 3, 5.5, 0x5b4b53);
     }
     // Central rose window; every spoke is actual geometry with depth.
-    this.cylinder(this.world, 0.2, 0.1, 0, 5, -4.9);
-    const rose = new T.Group(); rose.position.set(0, 5.4, -5); this.world.add(rose);
+    this.cylinder(sanctuary, 0.2, 0.1, 0, 5, -4.9);
+    const rose = new T.Group(); rose.position.set(0, 5.4, -5); sanctuary.add(rose);
     this.mesh(rose, new T.CircleGeometry(1.55, 48), this.material(0x341b32, 0, 0.55), 0, 0, -0.02);
     this.ring(rose, 1.6, 0.11, 0, 0, 0, C.stone); this.ring(rose, 1.42, 0.045, 0, 0, 0.03, C.trim); this.ring(rose, 0.55, 0.06, 0, 0, 0.05);
     for (let i = 0; i < 12; i++) {
@@ -136,31 +139,116 @@ export class Scene {
       const petal = this.ring(rose, 0.24, 0.028, x * 0.94, y * 0.94, 0.03, C.brass); petal.scale.set(0.65, 1.2, 1); petal.rotation.z = a - Math.PI / 2;
     }
     // Sealed pointed doorway beneath the rose.
-    this.box(this.world, 2.55, 3.7, 0.18, 0, 1.35, -4.85, C.dark); this.arch(this.world, 0, -0.35, -4.56, 2.8, 4.35, C.trim);
-    for (let x = -1; x <= 1; x += 0.25) this.box(this.world, 0.17, 3.5, 0.13, x, 1.25, -4.68, 0x322731);
-    for (const direction of [-1, 1]) this.beam(this.world, new T.Vector3(-1.2, 0.1 + (direction === 1 ? 0 : 2.4), -4.45), new T.Vector3(1.2, 2.5 - (direction === 1 ? 0 : 2.4), -4.45), 0.07, C.trim);
-    this.ring(this.world, 0.35, 0.045, 0, 1.4, -4.35, C.red);
+    this.box(sanctuary, 2.55, 3.7, 0.18, 0, 1.35, -4.85, C.dark); this.arch(sanctuary, 0, -0.35, -4.56, 2.8, 4.35, C.trim);
+    for (let x = -1; x <= 1; x += 0.25) this.box(sanctuary, 0.17, 3.5, 0.13, x, 1.25, -4.68, 0x322731);
+    for (const direction of [-1, 1]) this.beam(sanctuary, new T.Vector3(-1.2, 0.1 + (direction === 1 ? 0 : 2.4), -4.45), new T.Vector3(1.2, 2.5 - (direction === 1 ? 0 : 2.4), -4.45), 0.07, C.trim);
+    this.ring(sanctuary, 0.35, 0.045, 0, 1.4, -4.35, C.red);
     for (let i = 0; i < 4; i++) {
-      const barrier = this.mesh(this.world, new T.TorusGeometry(1.35 + i * 0.14, 0.017, 4, 48), new T.MeshBasicMaterial({ color: C.green, transparent: true, opacity: 0.3, depthWrite: false }), 0, 1.65, -4.12 + i * 0.05);
+      const barrier = this.mesh(sanctuary, new T.TorusGeometry(1.35 + i * 0.14, 0.017, 4, 48), new T.MeshBasicMaterial({ color: C.green, transparent: true, opacity: 0.3, depthWrite: false }), 0, 1.65, -4.12 + i * 0.05);
       barrier.scale.y = 1.32; barrier.visible = false; this.barriers.push(barrier);
     }
     for (const side of [-1, 1]) {
-      this.arch(this.world, side * 4.65, 0.6, -4.87, 1.4, 3.6);
-      this.box(this.world, 1.1, 2.6, 0.05, side * 4.65, 1.9, -4.99, C.dark);
-      for (let i = -1; i <= 1; i++) this.box(this.world, 0.04, 2.6, 0.1, side * 4.65 + i * 0.3, 1.9, -4.8, C.trim);
-      this.candle(this.world, side * 3.1, 1.1, -3.4, 0.8, true);
-      this.candle(this.world, side * 3.4, 1.1, -3.4, 0.5);
-      this.box(this.world, 1, 1.45, 0.8, side * 6, 0.2, -1.3, C.stone);
-      this.skull(this.world, side * 6, 1.05, -1.3, 0.29);
+      this.arch(sanctuary, side * 4.65, 0.6, -4.87, 1.4, 3.6);
+      this.box(sanctuary, 1.1, 2.6, 0.05, side * 4.65, 1.9, -4.99, C.dark);
+      for (let i = -1; i <= 1; i++) this.box(sanctuary, 0.04, 2.6, 0.1, side * 4.65 + i * 0.3, 1.9, -4.8, C.trim);
+      this.candle(sanctuary, side * 3.1, 1.1, -3.4, 0.8, true);
+      this.candle(sanctuary, side * 3.4, 1.1, -3.4, 0.5);
+      this.box(sanctuary, 1, 1.45, 0.8, side * 6, 0.2, -1.3, C.stone);
+      this.skull(sanctuary, side * 6, 1.05, -1.3, 0.29);
       // Dark velvet banners with pointed ends.
-      const banner = this.box(this.world, 0.8, 3.2, 0.035, side * 2.2, 4.9, -4.25, C.blood);
-      const tail = this.mesh(this.world, new T.ConeGeometry(0.4, 0.55, 3), this.material(C.blood), side * 2.2, 3.15, -4.25); tail.rotation.z = Math.PI; tail.scale.z = 0.08; banner.rotation.z = side * 0.025;
-      this.box(this.world, 0.06, 1.1, 0.06, side * 2.2, 5.1, -4.18, C.trim); this.box(this.world, 0.5, 0.055, 0.06, side * 2.2, 5.25, -4.18, C.trim);
+      const banner = this.box(sanctuary, 0.8, 3.2, 0.035, side * 2.2, 4.9, -4.25, C.blood);
+      const tail = this.mesh(sanctuary, new T.ConeGeometry(0.4, 0.55, 3), this.material(C.blood), side * 2.2, 3.15, -4.25); tail.rotation.z = Math.PI; tail.scale.z = 0.08; banner.rotation.z = side * 0.025;
+      this.box(sanctuary, 0.06, 1.1, 0.06, side * 2.2, 5.1, -4.18, C.trim); this.box(sanctuary, 0.5, 0.055, 0.06, side * 2.2, 5.25, -4.18, C.trim);
     }
     const dust = new Float32Array(100 * 3);
     for (let i = 0; i < dust.length; i += 3) { dust[i] = Math.sin(i * 63) * 7; dust[i + 1] = (i % 41) / 7; dust[i + 2] = Math.cos(i * 27) * 5; }
     const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.BufferAttribute(dust, 3));
     this.motes = new T.Points(geo, new T.PointsMaterial({ color: C.pale, size: 0.017, transparent: true, opacity: 0.5, depthWrite: false })); this.world.add(this.motes);
+  }
+  private buildEnclosure() {
+    const room = new T.Group(); room.name = 'enclosed-chapel'; this.world.add(room);
+    // Solid shell extends behind the observer and beyond every supported camera angle.
+    this.box(room, 21.6, 0.4, 45, 0, -0.72, 10.4, 0x1b191e);
+    this.box(room, 21.6, 0.5, 45, 0, 14.6, 10.4, 0x0c0c10);
+    this.box(room, 21.6, 15.6, 0.6, 0, 7, 32.6, 0x111116);
+    for (const side of [-1, 1]) {
+      this.box(room, 0.6, 15.6, 45, side * 10.5, 7, 10.4, 0x1b1a22);
+      this.box(room, 0.8, 0.5, 44, side * 10.1, -0.2, 10.4, 0x29252c);
+      this.box(room, 0.9, 0.3, 44, side * 10.1, 5.4, 10.4, 0x2b2730);
+      // Side chapels have recessed black interiors, thick jambs and a visible sill.
+      for (const z of [-7, 0, 7, 14, 21, 28]) {
+        const bay = new T.Group(); bay.position.set(side * 10.13, 0, z); bay.rotation.y = -side * Math.PI / 2; room.add(bay);
+        this.box(bay, 3.5, 4.9, 0.08, 0, 2.1, 0, 0x050507);
+        this.arch(bay, 0, -0.45, 0.35, 3.7, 5.7, 0x37323d);
+        for (const x of [-1.75, 1.75]) this.box(bay, 0.26, 3.1, 0.6, x, 1.1, 0.22, 0x302b35);
+        this.box(bay, 3.8, 0.2, 0.7, 0, -0.35, 0.24, 0x383039);
+        this.box(bay, 0.07, 3.7, 0.13, 0, 1.8, 0.1, 0x25232d);
+      }
+    }
+    // Repeated nave pillars and vault ribs make the near, middle and far spaces overlap.
+    for (const z of [-8.8, -2, 5, 12, 19, 26]) {
+      for (const side of [-1, 1]) {
+        const x = side * 8.1;
+        this.box(room, 1.1, 0.35, 1.1, x, -0.32, z, 0x37303a);
+        this.cylinder(room, 0.39, 7.6, x, 3.6, z, 0x37313e, 0.32, 8);
+        for (const offset of [-0.29, 0.29]) this.cylinder(room, 0.1, 7.5, x + offset, 3.6, z + 0.24, 0x403747, 0.085, 6);
+        this.box(room, 1.0, 0.27, 0.95, x, 7.38, z, 0x413743);
+        // Buttresses join the nave to the side walls instead of ending in empty space.
+        this.beam(room, new T.Vector3(x, 7.5, z), new T.Vector3(side * 10.2, 8.8, z), 0.18, 0x302b36);
+      }
+      this.arch(room, 0, 3.8, z, 16.2, 9.6, 0x302b37);
+    }
+    this.beam(room, new T.Vector3(0, 13.4, -11), new T.Vector3(0, 13.4, 32), 0.15, 0x292631);
+    const chandelier = this.ring(room, 1.25, 0.055, 0, 6.7, -2.8, 0x4d3c36); chandelier.rotation.x = Math.PI / 2;
+    for (let i = 0; i < 6; i++) {
+      const angle = i * Math.PI / 3, x = Math.cos(angle) * 1.25, z = -2.8 + Math.sin(angle) * 1.25;
+      this.candle(room, x, 6.75, z, 0.26);
+      if (i % 2 === 0) this.beam(room, new T.Vector3(x, 6.7, z), new T.Vector3(0, 11.8, -2.8), 0.022, 0x3f3540);
+    }
+    const vaultGlow = new T.PointLight(0x9a8272, 20, 15, 2); vaultGlow.position.set(0, 7.3, -2.8); room.add(vaultGlow);
+    // Closed sloping vault surfaces meet the ribs; their upper faces disappear in darkness.
+    for (const side of [-1, 1]) {
+      const roof = this.box(room, 9.9, 0.3, 44, side * 4.3, 11.25, 10.4, 0x121219);
+      roof.rotation.z = -side * 0.48;
+    }
+    // Reuse one instanced mesh for the worn flagstones, keeping added draw calls small.
+    const tiles = new T.InstancedMesh(new T.BoxGeometry(1.68, 0.045, 1.73), this.material(0x38323a), 12 * 24);
+    const matrix = new T.Matrix4(), tint = new T.Color(); let tile = 0;
+    for (let row = 0; row < 24; row++) for (let col = 0; col < 12; col++) {
+      matrix.makeTranslation((col - 5.5) * 1.74, -0.493, -10.9 + row * 1.8);
+      tiles.setMatrixAt(tile, matrix);
+      tint.setScalar(0.42 + ((row * 7 + col * 13) % 9) * 0.04); tiles.setColorAt(tile++, tint);
+    }
+    tiles.receiveShadow = true; room.add(tiles);
+    // Raised apse steps and abandoned pews give the room depth behind the altar.
+    this.box(room, 13.9, 0.18, 3.9, 0, -0.4, -8.9, 0x302a32);
+    this.box(room, 13.3, 0.17, 3.2, 0, -0.23, -9.2, 0x353039);
+    for (const side of [-1, 1]) for (const z of [-5.8, -3.1, 4.5, 7.3]) {
+      const pew = new T.Group(); pew.position.set(side * 7.1, -0.43, z); room.add(pew);
+      this.box(pew, 1.5, 0.15, 0.65, 0, 0.53, 0, 0x281d23);
+      this.box(pew, 1.55, 0.77, 0.13, 0, 0.97, -0.28, 0x302129);
+      for (const x of [-0.62, 0.62]) this.box(pew, 0.15, 0.58, 0.55, x, 0.26, 0, 0x251b21);
+    }
+    // Small local pools of light reveal masonry without illuminating the whole shell.
+    for (const side of [-1, 1]) {
+      this.box(room, 0.6, 0.18, 0.65, side * 8.0, 2.5, 4.9, 0x39303a);
+      this.candle(room, side * 8.0, 2.6, 4.9, 0.5);
+    }
+    // Architecture is static: batch by material rather than draw every pillar/pew part.
+    room.updateMatrixWorld(true);
+    const batches = new Map<T.Material, T.Mesh[]>();
+    room.traverse(object => {
+      if (!(object instanceof T.Mesh) || object instanceof T.InstancedMesh || Array.isArray(object.material)) return;
+      const batch = batches.get(object.material) ?? []; batch.push(object); batches.set(object.material, batch);
+    });
+    for (const [material, meshes] of batches) {
+      const parts = meshes.map(mesh => mesh.geometry.clone().applyMatrix4(mesh.matrixWorld));
+      const geometry = mergeGeometries(parts);
+      parts.forEach(part => part.dispose());
+      if (!geometry) continue;
+      for (const mesh of meshes) { mesh.removeFromParent(); mesh.geometry.dispose(); }
+      this.mesh(room, geometry, material);
+    }
   }
   private buildTable() {
     this.box(this.world, 12.6, 0.45, 3.7, 0, 1.1, 0, 0x3c3038);

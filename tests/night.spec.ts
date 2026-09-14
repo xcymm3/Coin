@@ -10,6 +10,7 @@ async function savedGame(page: import('@playwright/test').Page, state: GameState
 }
 
 test('全屏世界、真实命中、强制 B 引导与只显示已有升级', async ({ page }) => {
+  test.setTimeout(120_000); // Full-room software WebGL screenshots need extra capture time.
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
   await page.goto('/');
   await expect(page.getByRole('button', { name: '握紧铸币枪' })).toBeVisible();
@@ -22,8 +23,11 @@ test('全屏世界、真实命中、强制 B 引导与只显示已有升级', as
   await page.getByRole('button', { name: '握紧铸币枪' }).click();
   const beacon = (await page.locator('.ritual-beacon').boundingBox())!;
   await page.mouse.move(beacon.x + beacon.width / 2, beacon.y + beacon.height / 2);
-  await page.mouse.down(); await page.waitForTimeout(2800); await page.mouse.up();
-  await expect(page.getByText(/现在，看最右侧的丧钟/)).toBeVisible({ timeout: 10000 });
+  await page.mouse.down();
+  try {
+    // Wait for actual impacts; software WebGL does not guarantee ten shots in 2.8 seconds.
+    await expect(page.getByText(/现在，看最右侧的丧钟/)).toBeVisible({ timeout: 20000 });
+  } finally { await page.mouse.up(); }
   await page.keyboard.press('Digit7'); await page.keyboard.press('Space');
   await page.waitForTimeout(650); await page.keyboard.press('Space');
   await expect(page.getByRole('button', { name: /展开契约烙印/ })).toBeVisible();
