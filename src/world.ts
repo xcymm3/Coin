@@ -7,7 +7,7 @@ import type { GameState, Target } from './rules';
 const C = { stone: 0x39333c, dark: 0x161319, trim: 0x78644c, brass: 0xb69960, pale: 0xc5b9a1, copper: 0xe7a65e, red: 0xda5345, blood: 0x3a141d, violet: 0x9472bc, green: 0x8cbaa3 };
 const positions: Record<Target, [number, number]> = { forge: [-4.25, -0.2], splitter: [-2.8, 0.45], choir: [-1.35, -0.25], ward: [0.1, 0.45], lens: [1.55, -0.25], seal: [3, 0.4], clock: [4.7, -0.1] };
 interface Shot { mesh: T.Mesh; start: T.Vector3; end: T.Vector3; age: number; delay: number; duration: number; target: Target | null; visualOnly: boolean }
-interface Model { group: T.Group; target: T.Mesh; aura: T.Mesh; animated: T.Object3D[]; flash: number; label: T.Sprite; revealed: boolean; runes: T.Mesh[]; crowns: T.Mesh[]; lastLevel: number }
+interface Model { group: T.Group; target: T.Mesh; aura: T.Mesh; animated: T.Object3D[]; flash: number; label: T.Sprite; labelKey: string; revealed: boolean; runes: T.Mesh[]; crowns: T.Mesh[]; lastLevel: number }
 export interface SceneView { hovered: Target | null; points: Partial<Record<Target, { x: number; y: number }>>; ready: boolean }
 
 export class Scene {
@@ -330,9 +330,9 @@ export class Scene {
     const targetMesh = this.mesh(group, new T.BoxGeometry(target === 'clock' ? 1.3 : 1.12, target === 'clock' ? 2.3 : 1.65, 0.9), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }), 0, aimY, 0.05);
     targetMesh.userData.target = target;
     const aura = this.mesh(group, new T.TorusGeometry(target === 'clock' ? 0.71 : 0.57, 0.013, 4, 48), this.material(coreColor, 0, 1), 0, 0.22, 0); aura.rotation.x = -Math.PI / 2;
-    const sprite = new T.Sprite(new T.SpriteMaterial({ map: this.textTexture(target === 'clock' ? '丧钟' : devices[target].short), transparent: true, depthWrite: false }));
-    sprite.position.set(0, 0.3, 0.65); sprite.scale.set(target === 'clock' ? 1.05 : 1.25, 0.23, 1); group.add(sprite);
-    sprite.visible = false;
+    const sprite = new T.Sprite(new T.SpriteMaterial({ map: this.textTexture('', '#ffffff', 40, 512, 384), transparent: true, depthWrite: false, toneMapped: false }));
+    sprite.position.set(0, 1.98, 0.12); sprite.scale.set(1.28, 0.96, 1); group.add(sprite);
+    sprite.visible = target !== 'clock';
     const runes: T.Mesh[] = [], crowns: T.Mesh[] = [];
     if (target !== 'clock') {
       for (let i = 0; i < 10; i++) {
@@ -345,8 +345,36 @@ export class Scene {
         crown.rotation.x = Math.PI / 2; crown.visible = false; crowns.push(crown);
       }
     }
-    this.models[target] = { group, target: targetMesh, aura, animated, flash: 0, label: sprite, revealed: target === 'clock' || devices[target].at === 0, runes, crowns, lastLevel: 0 };
+    this.models[target] = { group, target: targetMesh, aura, animated, flash: 0, label: sprite, labelKey: '', revealed: target === 'clock' || devices[target].at === 0, runes, crowns, lastLevel: 0 };
     if (target !== 'clock' && devices[target].at > 0) { group.visible = false; const dormant = this.ring(this.world, 0.43, 0.012, x, 1.52, z, 0x55444e); dormant.rotation.x = -Math.PI / 2; }
+  }
+  private updateUpgradeLabel(target: Exclude<Target, 'clock'>, model: Model) {
+    const level = this.state.levels[target], required = cost(this.state, target);
+    const remaining = Math.max(0, Math.ceil(required - this.state.progress[target]));
+    const key = `${level}/${required}/${remaining}`;
+    if (key === model.labelKey) return;
+    model.labelKey = key;
+    const texture = model.label.material.map as T.CanvasTexture;
+    const canvas = texture.image as HTMLCanvasElement, c = canvas.getContext('2d')!;
+    const maxLevel = devices[target].costs.length;
+    c.clearRect(0, 0, 512, 384);
+    c.fillStyle = '#100c13'; c.fillRect(8, 8, 496, 368);
+    c.strokeStyle = required ? '#a67f4e' : '#a3d6bf'; c.lineWidth = 5; c.strokeRect(8, 8, 496, 368);
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillStyle = '#dfc8a7'; c.font = '32px "Microsoft YaHei", sans-serif'; c.fillText(devices[target].short, 256, 42);
+    c.fillStyle = required ? '#f1ce8d' : '#b2f0d1'; c.font = 'bold 59px Georgia, serif'; c.fillText(`Lv.${level}`, 256, 101);
+    for (let i = 0; i < maxLevel; i++) {
+      const x = 256 + (i - (maxLevel - 1) / 2) * 36;
+      c.fillStyle = i < level ? '#f1ce8d' : '#302934'; c.fillRect(x - 11, 143, 22, 13);
+    }
+    c.fillStyle = '#c9bba8'; c.font = '30px "Microsoft YaHei", sans-serif'; c.fillText(required ? '下次升级还需' : '契约圆满', 256, 194);
+    c.fillStyle = required ? '#fff1c9' : '#b2f0d1'; c.font = 'bold 94px Georgia, "Microsoft YaHei", serif';
+    c.fillText(required ? remaining.toLocaleString('en-US') : 'MAX', 256, 266);
+    c.fillStyle = '#c9bba8'; c.font = '27px "Microsoft YaHei", sans-serif';
+    c.fillText(required ? `点 / 本阶共 ${required.toLocaleString('en-US')} 点` : `已达最高 ${maxLevel} 级`, 256, 329);
+    c.fillStyle = '#302934'; c.fillRect(32, 355, 448, 6);
+    c.fillStyle = required ? '#f1ce8d' : '#b2f0d1'; c.fillRect(32, 355, 448 * (required ? Math.min(1, this.state.progress[target] / required) : 1), 6);
+    texture.needsUpdate = true;
   }
   private buildGun() {
     // Camera-mounted flintlock and two visible hands; the muzzle is the source of every player coin.
@@ -502,6 +530,7 @@ export class Scene {
       m.group.scale.lerp(new T.Vector3(modelScale, modelScale, modelScale), this.reduced ? 1 : dt * 2);
       if (active) m.flash = Math.max(0, m.flash - dt * 3);
       if (target !== 'clock') {
+        this.updateUpgradeLabel(target, m);
         const level = this.state.levels[target], required = cost(this.state, target);
         const progress = required ? this.state.progress[target] / required : 1;
         if (level > m.lastLevel) m.flash = 2;
