@@ -1,0 +1,11 @@
+:root {
+  --color-paper: #131612; --color-panel: #1c201b; --color-inset: #111510;
+  --color-ink: #e2e2cb; --color-muted: #9b9f87; --color-faint: #868d76;
+  --color-line: #343c2e; --color-accent: #e5ae63; --color-accent-dark: #6c4d2c;
+  --color-green: #afbb89; --color-danger: #e87557; --color-dark: #0a0e0b;
+  --color-overlay: #0a0e0bcc; --color-scan: #00000012;
+  --font-display: 'Courier New', 'Microsoft YaHei', monospace;
+  --font-body: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+  --font-mono: 'Cascadia Code', 'Consolas', monospace;
+  --space-unit: 4px; --radius-control: 2px; --dur-fast: 140ms; --ease-ui: ease-out;
+}
