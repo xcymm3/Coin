@@ -1,12 +1,12 @@
 import * as T from 'three';
 import { GameAudio } from './audio';
-import { advance, beginNight, beginTutorial, canShoot, cost, devices, hit, initialState, recommendation, registerShot, TARGETS, unlocked, volley, waveActive } from './rules';
+import { advance, beginNight, beginTutorial, canShoot, cost, devices, hit, initialState, inspectJournal, recommendation, registerShot, TARGETS, unlocked, volley, waveActive } from './rules';
 import type { GameState, Target } from './rules';
 
 const C = { stone: 0x39333c, dark: 0x161319, trim: 0x78644c, brass: 0xb69960, pale: 0xc5b9a1, copper: 0xe7a65e, red: 0xda5345, blood: 0x3a141d, violet: 0x9472bc, green: 0x8cbaa3 };
 const positions: Record<Target, [number, number]> = { forge: [-4.25, -0.2], splitter: [-2.8, 0.45], choir: [-1.35, -0.25], ward: [0.1, 0.45], lens: [1.55, -0.25], seal: [3, 0.4], clock: [4.7, -0.1] };
 interface Shot { mesh: T.Mesh; start: T.Vector3; end: T.Vector3; age: number; delay: number; duration: number; target: Target | null; visualOnly: boolean }
-interface Model { group: T.Group; target: T.Mesh; aura: T.Mesh; animated: T.Object3D[]; flash: number; label: T.Sprite; revealed: boolean }
+interface Model { group: T.Group; target: T.Mesh; aura: T.Mesh; animated: T.Object3D[]; flash: number; label: T.Sprite; revealed: boolean; runes: T.Mesh[]; crowns: T.Mesh[]; lastLevel: number }
 export interface SceneView { hovered: Target | null; points: Partial<Record<Target, { x: number; y: number }>>; ready: boolean }
 
 export class Scene {
@@ -25,6 +25,9 @@ export class Scene {
   private muzzleFlash!: T.Mesh;
   private fingers: T.Mesh[] = [];
   private gunBarrels: T.Group[] = [];
+  private spirits: T.Mesh[] = [];
+  private barriers: T.Mesh[] = [];
+  private forgeFire!: T.Mesh;
   private shots: Shot[] = [];
   private coinGeo = new T.CylinderGeometry(0.07, 0.07, 0.02, 12);
   private coinMat = new T.MeshStandardMaterial({ color: C.copper, metalness: 0.7, roughness: 0.3, emissive: C.copper, emissiveIntensity: 0.2 });
@@ -137,6 +140,10 @@ export class Scene {
     for (let x = -1; x <= 1; x += 0.25) this.box(this.world, 0.17, 3.5, 0.13, x, 1.25, -4.68, 0x322731);
     for (const direction of [-1, 1]) this.beam(this.world, new T.Vector3(-1.2, 0.1 + (direction === 1 ? 0 : 2.4), -4.45), new T.Vector3(1.2, 2.5 - (direction === 1 ? 0 : 2.4), -4.45), 0.07, C.trim);
     this.ring(this.world, 0.35, 0.045, 0, 1.4, -4.35, C.red);
+    for (let i = 0; i < 4; i++) {
+      const barrier = this.mesh(this.world, new T.TorusGeometry(1.35 + i * 0.14, 0.017, 4, 48), new T.MeshBasicMaterial({ color: C.green, transparent: true, opacity: 0.3, depthWrite: false }), 0, 1.65, -4.12 + i * 0.05);
+      barrier.scale.y = 1.32; barrier.visible = false; this.barriers.push(barrier);
+    }
     for (const side of [-1, 1]) {
       this.arch(this.world, side * 4.65, 0.6, -4.87, 1.4, 3.6);
       this.box(this.world, 1.1, 2.6, 0.05, side * 4.65, 1.9, -4.99, C.dark);
@@ -184,7 +191,7 @@ export class Scene {
     if (target === 'forge') {
       this.box(group, 0.82, 0.95, 0.66, 0, 0.65, 0, C.stone); this.arch(group, 0, 0.22, 0.36, 0.65, 0.96);
       this.box(group, 0.5, 0.55, 0.03, 0, 0.62, 0.34, C.dark);
-      this.mesh(group, new T.PlaneGeometry(0.39, 0.42), this.material(C.red, 0, 1), 0, 0.58, 0.361);
+      this.forgeFire = this.mesh(group, new T.PlaneGeometry(0.39, 0.42), this.material(C.red, 0, 1).clone(), 0, 0.58, 0.361);
       for (let i = 0; i < 5; i++) this.box(group, 0.025, 0.33, 0.03, (i - 2) * 0.1, 0.5, 0.4, C.dark);
       for (const side of [-1, 1]) { this.cylinder(group, 0.085, 1.1, side * 0.45, 0.77, 0, C.dark); this.mesh(group, new T.ConeGeometry(0.14, 0.35, 5), this.material(C.trim), side * 0.45, 1.43, 0); }
       this.skull(group, 0, 1.25, 0.2, 0.13);
@@ -202,6 +209,7 @@ export class Scene {
       for (const side of [-1, 1]) this.cylinder(group, 0.035, 0.95, side * 0.3, 0.94, 0.22, C.trim);
       const spirit = this.mesh(group, new T.IcosahedronGeometry(0.24, 1), this.material(C.green, 0.2, 0.7), 0, 0.97, 0.1); animated.push(spirit);
       const halo = this.ring(group, 0.34, 0.025, 0, 0.98, 0.1, C.pale); halo.rotation.y = 0.7; animated.push(halo);
+      for (let i = 0; i < 4; i++) { const familiar = this.mesh(group, new T.IcosahedronGeometry(0.07, 1), this.material(C.green, 0.1, 1.5), 0, 1, 0); familiar.visible = false; this.spirits.push(familiar); }
     } else if (target === 'ward') {
       this.box(group, 0.9, 0.6, 0.65, 0, 0.47, 0, C.blood);
       for (let i = 0; i < 7; i++) { const h = 1.2 - Math.abs(i - 3) * 0.15; this.cylinder(group, 0.055, h, (i - 3) * 0.12, 0.6 + h / 2, 0, C.brass); }
@@ -228,7 +236,7 @@ export class Scene {
       const eye = this.mesh(group, new T.SphereGeometry(0.12, 12, 6), this.material(C.red, 0, 1.3), 0, 1.8, 0.35); eye.scale.x = 1.8;
       this.mesh(group, new T.SphereGeometry(0.07, 8, 6), this.material(C.dark), 0, 1.8, 0.455);
       this.clockCanvas.width = 512; this.clockCanvas.height = 256; this.clockFace = new T.CanvasTexture(this.clockCanvas); this.clockFace.colorSpace = T.SRGBColorSpace; this.textures.push(this.clockFace);
-      this.mesh(group, new T.PlaneGeometry(0.97, 0.485), new T.MeshBasicMaterial({ map: this.clockFace, transparent: true }), 0, 1.08, 0.34);
+      this.mesh(group, new T.PlaneGeometry(1.03, 0.65), new T.MeshBasicMaterial({ map: this.clockFace, transparent: true }), 0, 1.08, 0.34);
       const pendulum = new T.Group(); pendulum.position.set(0, 0.8, 0.32); group.add(pendulum); this.cylinder(pendulum, 0.018, 0.45, 0, -0.2, 0, C.brass); this.mesh(pendulum, new T.OctahedronGeometry(0.12), this.material(C.red, 0.5), 0, -0.45, 0); animated.push(pendulum);
     }
     const targetMesh = this.mesh(group, new T.BoxGeometry(target === 'clock' ? 1.3 : 1.12, target === 'clock' ? 2.3 : 1.65, 0.9), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }), 0, aimY, 0.05);
@@ -236,7 +244,20 @@ export class Scene {
     const aura = this.mesh(group, new T.TorusGeometry(target === 'clock' ? 0.71 : 0.57, 0.013, 4, 48), this.material(coreColor, 0, 1), 0, 0.22, 0); aura.rotation.x = -Math.PI / 2;
     const sprite = new T.Sprite(new T.SpriteMaterial({ map: this.textTexture(target === 'clock' ? '丧钟' : devices[target].short), transparent: true, depthWrite: false }));
     sprite.position.set(0, 0.3, 0.65); sprite.scale.set(target === 'clock' ? 1.05 : 1.25, 0.23, 1); group.add(sprite);
-    this.models[target] = { group, target: targetMesh, aura, animated, flash: 0, label: sprite, revealed: target === 'clock' || devices[target].at === 0 };
+    sprite.visible = false;
+    const runes: T.Mesh[] = [], crowns: T.Mesh[] = [];
+    if (target !== 'clock') {
+      for (let i = 0; i < 10; i++) {
+        const angle = i / 10 * Math.PI * 2;
+        const rune = this.mesh(group, new T.OctahedronGeometry(0.043), this.material(coreColor, 0.4, 0).clone(), Math.cos(angle) * 0.49, 0.22, Math.sin(angle) * 0.45);
+        rune.scale.y = 0.6; runes.push(rune);
+      }
+      for (let i = 0; i < devices[target].costs.length; i++) {
+        const crown = this.ring(group, 0.37 + i * 0.035, 0.018, 0, 0.33 + i * 0.085, 0, coreColor);
+        crown.rotation.x = Math.PI / 2; crown.visible = false; crowns.push(crown);
+      }
+    }
+    this.models[target] = { group, target: targetMesh, aura, animated, flash: 0, label: sprite, revealed: target === 'clock' || devices[target].at === 0, runes, crowns, lastLevel: 0 };
     if (target !== 'clock' && devices[target].at > 0) { group.visible = false; const dormant = this.ring(this.world, 0.43, 0.012, x, 1.52, z, 0x55444e); dormant.rotation.x = -Math.PI / 2; }
   }
   private buildGun() {
@@ -284,6 +305,7 @@ export class Scene {
   restart = () => { this.clearShots(); this.state = initialState(); this.recoil = 0; this.held = false; this.lastAlarm = -1; this.start(); };
   pause = () => { this.release(); if (canShoot(this.state)) this.state = { ...this.state, status: 'paused' }; else if (this.state.status === 'paused') this.resume(); this.publish(); };
   setAutoTarget = (target: Target) => { if (unlocked(this.state, target)) this.state = { ...this.state, autoTarget: target }; this.publish(); };
+  inspectUpgrades = () => { this.state = inspectJournal(this.state); this.publish(); };
   select = (target: Target) => { if (!unlocked(this.state, target)) return; this.selected = target; this.pointerInside = false; this.onView(this.view()); };
   fireSelected = () => { const model = this.models[this.selected]; if (model && unlocked(this.state, this.selected)) this.shoot(model.target.getWorldPosition(new T.Vector3()).add(new T.Vector3(0, 0, 0.5)), this.selected); };
   private intersection() {
@@ -364,14 +386,53 @@ export class Scene {
     this.gun.rotation.x = 0.08 + this.recoil * 0.12 - (this.pointerInside ? this.mouse.y * 0.12 : 0);
     this.gun.rotation.y = -0.1 - aim * 0.22;
     this.muzzleFlash.visible = this.recoil > 0.72 && active; this.muzzleFlash.rotation.z += dt * 6;
-    for (let i = 0; i < 5; i++) this.gunBarrels[i].visible = Math.abs(i - 2) <= Math.floor(volley(this.state) / 2) && (volley(this.state) % 2 === 1 || i !== 2 + Math.floor(volley(this.state) / 2));
+    for (let i = 0; i < 5; i++) {
+      const present = Math.abs(i - 2) <= Math.floor(volley(this.state) / 2) && (volley(this.state) % 2 === 1 || i !== 2 + Math.floor(volley(this.state) / 2));
+      const barrel = this.gunBarrels[i];
+      if (present && !barrel.visible) barrel.scale.setScalar(0.01);
+      barrel.visible = present;
+      if (present) barrel.scale.lerp(new T.Vector3(1, 1, 1), this.reduced ? 1 : dt * 5);
+    }
+    const coinColor = [C.copper, 0xe3d7bd, 0xf4c56f, 0xe9b6a1, 0xcac3f5, 0xf6e5af][this.state.levels.forge];
+    this.coinMat.color.setHex(coinColor); this.coinMat.emissive.setHex(coinColor);
+    this.coinMat.emissiveIntensity = 0.15 + this.state.levels.forge * 0.12 + this.state.levels.lens * 0.15;
+    for (let i = 0; i < this.spirits.length; i++) {
+      const spirit = this.spirits[i]; spirit.visible = i < this.state.levels.choir;
+      const angle = this.animationTime * 1.4 + i * Math.PI / 2;
+      spirit.position.set(Math.cos(angle) * 0.44, 1.05 + Math.sin(angle * 0.7) * 0.16, Math.sin(angle) * 0.36);
+    }
+    for (let i = 0; i < this.barriers.length; i++) {
+      const barrier = this.barriers[i]; barrier.visible = i < this.state.levels.ward;
+      (barrier.material as T.MeshBasicMaterial).opacity = this.reduced ? 0.32 : 0.22 + Math.sin(this.animationTime * 1.3 + i) * 0.1;
+    }
     this.world.updateMatrixWorld(true); this.currentHover = this.pointerInside ? this.intersection().target : null;
     for (const target of TARGETS) {
       const m = this.models[target], visible = unlocked(this.state, target); m.group.visible = visible;
       if (!visible) { m.revealed = false; continue; }
       if (!m.revealed) { m.group.scale.setScalar(0.01); m.revealed = true; }
-      m.group.scale.lerp(new T.Vector3(1, 1, 1), this.reduced ? 1 : dt * 2);
+      const modelScale = target === 'clock' ? 1.2 : 1;
+      m.group.scale.lerp(new T.Vector3(modelScale, modelScale, modelScale), this.reduced ? 1 : dt * 2);
       if (active) m.flash = Math.max(0, m.flash - dt * 3);
+      if (target !== 'clock') {
+        const level = this.state.levels[target], required = cost(this.state, target);
+        const progress = required ? this.state.progress[target] / required : 1;
+        if (level > m.lastLevel) m.flash = 2;
+        m.lastLevel = level;
+        m.crowns.forEach((crown, i) => { crown.visible = i < level; });
+        m.runes.forEach((rune, i) => {
+          const lit = progress > i / 10, material = rune.material as T.MeshStandardMaterial;
+          material.emissiveIntensity = lit ? 1.1 + m.flash : 0;
+          material.color.setHex(lit ? target === 'ward' ? C.green : target === 'lens' ? C.violet : C.copper : C.trim);
+        });
+        if (target === 'forge') {
+          const flame = this.forgeFire.material as T.MeshStandardMaterial;
+          flame.emissiveIntensity = 0.8 + progress + level * 0.18 + m.flash * 0.5;
+          flame.color.setHex(coinColor); flame.emissive.setHex(coinColor);
+        }
+        if (target === 'lens' || target === 'seal') for (const ornament of m.animated) {
+          ornament.scale.setScalar(1 + level * 0.12 + (target === 'seal' ? progress * 0.35 : 0));
+        }
+      }
       const highlight = (this.pointerInside ? this.currentHover : this.selected) === target || (this.state.status === 'tutorial' && recommendation(this.state).target === target);
       m.aura.scale.setScalar(1 + m.flash * 0.12); m.aura.visible = highlight || m.flash > 0;
       for (let i = 0; i < m.animated.length; i++) {

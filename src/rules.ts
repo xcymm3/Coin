@@ -24,11 +24,11 @@ export interface GameState {
   status: Status; time: number; elapsed: number; shots: number; hits: number;
   levels: Record<Device, number>; progress: Record<Device, number>;
   autoTarget: Target; upgrades: number; saved: number; guide: number; guideHits: number;
-  message: string; waveCount: number; autoCharge: number;
+  message: string; waveCount: number; autoCharge: number; journalRead: boolean;
 }
 const blank = (): Record<Device, number> => ({ forge: 0, splitter: 0, choir: 0, ward: 0, lens: 0, seal: 0 });
 export function initialState(): GameState {
-  return { status: 'ready', time: 100, elapsed: 0, shots: 0, hits: 0, levels: blank(), progress: blank(), autoTarget: 'forge', upgrades: 0, saved: 0, guide: 0, guideHits: 0, waveCount: 0, autoCharge: 0, message: '末日生存系统正在寻找仍有心跳的守夜人……' };
+  return { status: 'ready', time: 100, elapsed: 0, shots: 0, hits: 0, levels: blank(), progress: blank(), autoTarget: 'forge', upgrades: 0, saved: 0, guide: 0, guideHits: 0, waveCount: 0, autoCharge: 0, journalRead: false, message: '末日生存系统正在寻找仍有心跳的守夜人……' };
 }
 export function chapter(s: GameState) { return chapters.reduce((index, item, i) => s.elapsed >= item.at ? i : index, 0); }
 export function unlocked(s: GameState, target: Target) { return target === 'clock' || s.elapsed >= devices[target].at; }
@@ -59,7 +59,25 @@ export function effect(s: GameState, target: Device) {
 export function beginTutorial(s: GameState): GameState {
   return { ...s, status: 'tutorial', guide: 1, message: '守夜人，举起铸币枪。向分魂祭器献上十枚铜币，唤醒它的第二道回响。' };
 }
-export function beginNight(s: GameState): GameState { return { ...s, status: 'playing', guide: 4, message: '临时庇护已撤除。右侧丧钟归零，门外之物便会找到你。守到十二分钟后的黎明。' }; }
+export function beginNight(s: GameState): GameState {
+  if (s.status === 'tutorial' && s.guide === 3 && !s.journalRead) return s;
+  return { ...s, status: 'playing', guide: 4, journalRead: true, message: '临时庇护已撤除。右侧丧钟归零，门外之物便会找到你。守到十二分钟后的黎明。' };
+}
+export function inspectJournal(s: GameState): GameState {
+  if ((s.status === 'tutorial' || s.status === 'paused') && s.guide === 3) return { ...s, journalRead: true, message: '你已经认出了枪中的回响。今后按 B 便能查阅已有契约。合上它吧；继续献祭，让新生的祭器告诉你它们的力量。守至十二分钟后的黎明，并让最后显现的圣龛充满光。' };
+  return s;
+}
+export function ownedUpgrades(s: GameState): { id: Device; name: string; description: string; level: number }[] {
+  const descriptions: Record<Device, string> = {
+    forge: `铜币已被淬炼，基础献祭效力 ×${[1, 2, 4, 7, 11, 16][s.levels.forge]}。`,
+    splitter: `枪中已有 ${volley(s)} 道回响，每次扣动扳机射出 ${volley(s)} 枚铜币。`,
+    choir: `灵仆已被唤醒，每秒替你完成 ${autoRate(s).toFixed(1)} 次齐射。`,
+    ward: `祷声每秒修复 ${(s.levels.ward * 0.38).toFixed(2)} 秒庇护，每枚献祭续命 ${clockGain(s).toFixed(1)} 秒。`,
+    lens: `棱镜已放大祭品，设备献祭效力提升 ${s.levels.lens * 35}%。`,
+    seal: '黎明圣龛已充满光。守至十二分钟之约，裂隙便会封闭。',
+  };
+  return (Object.keys(devices) as Device[]).filter(id => s.levels[id] > 0).map(id => ({ id, name: devices[id].name, description: descriptions[id], level: s.levels[id] }));
+}
 export function canShoot(s: GameState) { return s.status === 'playing' || s.status === 'tutorial'; }
 export function registerShot(s: GameState, count: number) { return canShoot(s) ? { ...s, shots: s.shots + count } : s; }
 export function hit(s: GameState, target: Target | null): GameState {
@@ -70,7 +88,7 @@ export function hit(s: GameState, target: Target | null): GameState {
     n.time += Math.max(0, gain); n.saved += Math.max(0, gain);
     if (n.status === 'tutorial' && n.guide === 2) {
       n.guideHits += 1;
-      if (n.guideHits >= 3) { n.guide = 3; n.message = '契约已确认。你面前的圣约机能抵御门外的恐怖诡异，但每一秒庇护都需要献祭。'; }
+      if (n.guideHits >= 3) { n.guide = 3; n.message = '枪已发生变化，你应该感受到了。按 B 展开契约烙印，看看自己已经获得的力量。只有真正属于你的回响，才会留在那里。'; }
     }
     return n;
   }
@@ -137,6 +155,6 @@ export function readSave(raw: string | null): GameState | null {
     for (const key of ['time', 'elapsed', 'shots', 'hits', 'upgrades', 'saved', 'waveCount', 'autoCharge'] as const) if (!Number.isFinite(s[key]) || s[key] < 0) return null;
     for (const t of Object.keys(devices) as Device[]) if (!Number.isInteger(s.levels?.[t]) || s.levels[t] < 0 || s.levels[t] > devices[t].costs.length || !Number.isFinite(s.progress?.[t]) || s.progress[t] < 0) return null;
     if (s.time <= 0 || s.time > capacity(s) || s.elapsed > 86400) return null;
-    return { ...s, status: 'paused', guide: 4 };
+    return { ...s, status: 'paused', guide: 4, journalRead: true };
   } catch { return null; }
 }

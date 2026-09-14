@@ -1,0 +1,49 @@
+@import './gothic.css';
+/* The world is the entire viewport. Menus belong to the paused game, never to a surrounding page. */
+html, body, #root { width: 100%; height: 100%; margin: 0; }
+body { overscroll-behavior: none; }
+.game-screen { position: fixed; inset: 0; width: 100%; height: 100dvh; isolation: isolate; background: var(--g-panel-deep); }
+.game-world { display: block; position: absolute; inset: 0; width: 100%; height: 100%; cursor: crosshair; touch-action: none; outline: none; }
+.game-world:focus-visible { outline: 1px solid var(--g-gold-dark); outline-offset: -1px; }
+.game-vignette { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 110px 10px var(--g-overlay); }
+.game-loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--g-muted); font: 14px var(--g-serif); letter-spacing: 4px; }
+.arrival { position: absolute; left: 8%; top: 50%; transform: translateY(-50%); width: 370px; max-width: calc(100% - 40px); padding: 34px 28px; background: linear-gradient(90deg,var(--g-overlay),var(--g-overlay) 75%,var(--g-clear)); text-shadow: 0 2px 10px var(--g-panel-deep); }
+.arrival-mark { display: block; font: 40px var(--g-serif); color: var(--g-gold); margin-bottom: 24px; }
+.arrival-identity { color: var(--g-muted); font: 10px var(--g-body); letter-spacing: 2px; }
+.arrival h1 { font: 56px var(--g-serif); letter-spacing: 8px; margin: 17px 0 26px; }
+.arrival-voice { font: 14px/2.2 var(--g-serif); color: var(--g-ink); }
+.arrival .covenant-button { margin-top: 28px; }
+.arrival-secondary { display: block; width: 100%; border: 0; background: transparent; padding: 13px 0 0; color: var(--g-gold); font-size: 11px; text-align: center; }
+.arrival-secondary.subdued { color: var(--g-muted); font-size: 10px; }.arrival-secondary:hover { color: var(--g-ink); }
+.guide-voice { position: absolute; bottom: 7%; left: 5%; width: 550px; max-width: calc(100% - 40px); padding: 20px 26px; background: var(--g-overlay); text-shadow: 0 2px 5px var(--g-panel-deep); }
+.voice-identity { font-size: 10px; color: var(--g-gold); letter-spacing: 3px; }
+.guide-voice p { font: 16px/1.9 var(--g-serif); margin: 12px 0; color: var(--g-ink); }
+.guide-voice small { color: var(--g-muted); font-size: 10px; }
+.guide-voice .covenant-button { width: 255px; max-width: 100%; margin-top: 18px; }
+.journal-invitation { border: 0; background: transparent; padding: 7px 0; display: flex; gap: 12px; align-items: center; font-size: 12px; color: var(--g-gold); }
+.journal-invitation kbd { font-size: 16px; padding: 7px 12px; border-color: var(--g-gold-dark); color: var(--g-ink); }
+.ritual-beacon { pointer-events: none; position: absolute; width: 64px; height: 64px; transform: translate(-50%,-50%) rotate(45deg); border: 1px solid var(--g-gold); outline: 1px solid var(--g-gold-dark); outline-offset: 6px; }
+.ritual-beacon i { position: absolute; inset: 6px; border: 1px solid var(--g-gold-dark); }
+.passing-voice { position: absolute; bottom: 7%; left: 15%; right: 15%; text-align: center; font: 16px/1.8 var(--g-serif); color: var(--g-ink); text-shadow: 0 2px 6px var(--g-panel-deep),0 0 16px var(--g-panel-deep); pointer-events: none; }
+.fading-controls { position: absolute; bottom: 22px; left: 30px; display: flex; align-items: center; gap: 9px; font-size: 10px; color: var(--g-muted); pointer-events: none; }
+.fading-controls i { width: 1px; height: 10px; background: var(--g-line); margin: 0 7px; }
+.touch-gestures { display: none; }
+.in-world-menu { width: 600px; max-width: calc(100vw - 32px); max-height: calc(100dvh - 40px); padding: 32px 38px; overflow-y: auto; background: var(--g-panel-deep); color: var(--g-ink); border: 1px solid var(--g-gold-dark); box-shadow: 0 20px 100px var(--g-overlay); }
+.in-world-menu::backdrop { background: var(--g-overlay); }
+.seal-close { position: absolute; right: 13px; top: 9px; background: transparent; border: 0; color: var(--g-muted); font: 26px var(--g-serif); width: 33px; height: 33px; }
+.seal-close:hover { color: var(--g-ink); }
+.book-heading { text-align: center; margin-bottom: 25px; }.book-heading>span { color: var(--g-gold); font: 38px var(--g-serif); }.book-heading>p { color: var(--g-faint); font-size: 10px; letter-spacing: 2px; margin-top: 14px; }.book-heading h2 { font: 27px var(--g-serif); letter-spacing: 5px; margin-top: 13px; }
+.owned-contracts { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--g-line); }
+.owned-contracts li { display: flex; gap: 16px; align-items: center; padding: 21px 0; border-bottom: 1px solid var(--g-line); }
+.owned-rune { color: var(--g-gold); font: 30px var(--g-serif); width: 34px; flex-shrink: 0; text-align: center; }
+.owned-contracts h3 { font: 17px var(--g-serif); letter-spacing: 2px; }.owned-contracts p { font-size: 11px; line-height: 1.9; color: var(--g-muted); margin-top: 8px; }
+.owned-seals { margin-left: auto; color: var(--g-gold); font-size: 12px; letter-spacing: 1px; white-space: nowrap; }
+.unmarked-soul { font: 15px/2.2 var(--g-serif); color: var(--g-muted); text-align: center; padding: 22px 0; }
+.book-footnote { text-align: center; font-size: 10px; line-height: 2.2; color: var(--g-muted); margin: 24px 0; }.book-footnote kbd { padding: 2px 6px; }
+.spirit-orders { margin-top: 20px; display: flex; align-items: center; justify-content: space-between; gap: 15px; }.spirit-orders label { font-size: 11px; color: var(--g-gold); }.spirit-orders select { border: 1px solid var(--g-line); background: var(--g-panel); color: var(--g-ink); font-size: 11px; padding: 9px; max-width: 50%; }
+.pause-ritual { width: 360px; text-align: center; padding: 35px; }.pause-symbol { color: var(--g-gold); font: 40px var(--g-serif); }.pause-ritual h2 { font: 24px var(--g-serif); margin-top: 23px; }.pause-ritual>p { font-size: 11px; color: var(--g-muted); line-height: 1.9; margin-top: 14px; }.pause-ritual>.covenant-button { margin: 25px 0 13px; }.menu-line { display: flex; justify-content: space-between; align-items: center; width: 100%; border: 0; border-bottom: 1px solid var(--g-line); background: transparent; color: var(--g-muted); padding: 13px 0; font-size: 11px; }.menu-line:hover { color: var(--g-gold); }.pause-ritual>p.pause-controls { font-size: 9px; line-height: 2.3; margin-top: 22px; }
+.ending-veil { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; padding: 24px; background: var(--g-overlay); }
+.ending-content { text-align: center; max-width: 450px; }.ending-content>span { font: 56px var(--g-serif); color: var(--g-red); }.sunrise .ending-content>span { color: var(--g-gold); }.ending-content h2 { font: 30px/1.6 var(--g-serif); letter-spacing: 2px; margin-top: 25px; }.ending-content p { font: 14px/1.9 var(--g-serif); color: var(--g-muted); margin-top: 17px; }.ending-content small { display: block; font-size: 10px; color: var(--g-faint); margin-top: 16px; }.ending-content .covenant-button { max-width: 260px; margin: 28px auto 0; }
+@media(pointer: coarse) { .touch-gestures { display: flex; position: absolute; top: max(14px, env(safe-area-inset-top)); right: max(14px, env(safe-area-inset-right)); gap: 8px; }.touch-gestures button { width: 38px; height: 38px; background: var(--g-overlay); color: var(--g-muted); border: 1px solid var(--g-line); font: 14px var(--g-serif); } }
+@media(max-width:600px) { .arrival { left: 6%; width: 320px; padding: 24px; }.arrival h1 { font-size: 42px; margin: 15px 0 22px; }.arrival-mark { font-size: 32px; margin-bottom: 16px; }.arrival-identity { font-size: 8px; }.arrival-voice { font-size: 12px; }.arrival .covenant-button { margin-top: 23px; }.guide-voice { bottom: 4%; left: 5%; max-width: 90%; padding: 14px 17px; }.guide-voice p { font-size: 13px; line-height: 1.85; }.guide-voice small { font-size: 8px; }.voice-identity { font-size: 9px; }.guide-voice .covenant-button { font-size: 11px; margin-top: 12px; }.ritual-beacon { width: 36px; height: 36px; outline-offset: 4px; }.passing-voice { font-size: 13px; left: 8%; right: 8%; bottom: 10%; }.fading-controls { font-size: 8px; left: 18px; bottom: 18px; }.in-world-menu { padding: 25px 20px; max-height: calc(100dvh - 24px); }.book-heading { margin-bottom: 20px; }.book-heading h2 { font-size: 23px; letter-spacing: 3px; }.owned-contracts li { gap: 11px; padding: 18px 0; }.owned-contracts h3 { font-size: 16px; }.owned-contracts p { font-size: 10px; }.owned-rune { font-size: 24px; width: 26px; }.owned-seals { font-size: 9px; letter-spacing: 0; }.spirit-orders { flex-direction: column; align-items: stretch; gap: 10px; }.spirit-orders select { max-width: 100%; }.ending-content h2 { font-size: 24px; }.ending-content p { font-size: 12px; } }
+@media(max-height:560px) and (orientation:landscape) { .arrival { padding: 18px 25px; width: 330px; }.arrival-mark { display:none; }.arrival h1 { font-size: 35px; margin: 10px 0 16px; }.arrival-voice { font-size: 11px; line-height: 1.8; }.arrival .covenant-button { margin-top: 16px; padding: 10px 13px; }.arrival-secondary { padding-top: 10px; }.guide-voice { bottom: 3%; padding: 12px 18px; width: 470px; }.guide-voice p { font-size: 12px; margin: 8px 0; }.book-heading>span { display: none; } }

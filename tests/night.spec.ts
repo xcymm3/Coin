@@ -5,69 +5,88 @@ import type { GameState } from '../src/rules';
 async function savedGame(page: import('@playwright/test').Page, state: GameState) {
   await page.addInitScript(({ key, s }) => localStorage.setItem(key, JSON.stringify({ version: 2, state: s })), { key: SAVE_KEY, s: state });
   await page.goto('/');
-  await expect(page.getByRole('button', { name: '握紧铸币枪' })).toBeEnabled();
-  await page.getByRole('button', { name: /继续上次守夜/ }).click();
+  await expect(page.getByRole('button', { name: '握紧铸币枪' })).toBeVisible();
+  await page.getByRole('button', { name: '继续上次守夜' }).click();
 }
 
-test('真实三维场景、系统引导、持枪命中、双发续命与暂停', async ({ page }) => {
+test('全屏世界、真实命中、强制 B 引导与只显示已有升级', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
-  await page.goto('/'); await expect(page.getByRole('button', { name: '握紧铸币枪' })).toBeEnabled();
-  expect(await page.locator('canvas').evaluate(c => !!(c as HTMLCanvasElement).getContext('webgl2'))).toBe(true);
-  await page.screenshot({ path: 'test-results/gothic-ready.png', fullPage: true });
+  await page.goto('/');
+  await expect(page.getByRole('button', { name: '握紧铸币枪' })).toBeVisible();
+  const canvas = page.locator('canvas');
+  const box = (await canvas.boundingBox())!;
+  expect(box).toMatchObject({ x: 0, y: 0, width: 1440, height: 1100 });
+  expect(await canvas.evaluate(c => !!(c as HTMLCanvasElement).getContext('webgl2'))).toBe(true);
+  await expect(page.locator('header, footer, aside, .device-grid, .doom-column')).toHaveCount(0);
+  await page.screenshot({ path: 'test-results/immersive-arrival.png', fullPage: true });
   await page.getByRole('button', { name: '握紧铸币枪' }).click();
-  await expect(page.getByText(/契约引导 1/)).toBeVisible();
-  const marker = page.locator('.guidance-marker span'); const box = (await marker.boundingBox())!;
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  await page.mouse.down(); await page.waitForTimeout(2700); await page.mouse.up();
-  await expect(page.getByText(/契约引导 2/)).toBeVisible({ timeout: 10000 });
-  await expect(page.getByTestId('countdown')).toHaveText('100');
+  const beacon = (await page.locator('.ritual-beacon').boundingBox())!;
+  await page.mouse.move(beacon.x + beacon.width / 2, beacon.y + beacon.height / 2);
+  await page.mouse.down(); await page.waitForTimeout(2800); await page.mouse.up();
+  await expect(page.getByText(/现在，看最右侧的丧钟/)).toBeVisible({ timeout: 10000 });
   await page.keyboard.press('Digit7'); await page.keyboard.press('Space');
-  await page.waitForTimeout(500); await page.keyboard.press('Space');
-  await expect(page.getByRole('button', { name: '我将守到黎明' })).toBeVisible();
+  await page.waitForTimeout(650); await page.keyboard.press('Space');
+  await expect(page.getByRole('button', { name: /展开契约烙印/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: '我将守到黎明' })).toHaveCount(0);
+  await page.keyboard.press('KeyB');
+  await expect(page.getByRole('dialog', { name: '已有契约烙印' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '分魂祭器' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '余烬铸币炉' })).toHaveCount(0);
+  await expect(page.locator('.owned-contracts')).toContainText('2 枚铜币');
+  await expect(page.locator('.owned-contracts')).not.toContainText('下一');
+  const description = await canvas.getAttribute('aria-description');
+  await page.waitForTimeout(1000); await expect(canvas).toHaveAttribute('aria-description', description!);
+  await page.screenshot({ path: 'test-results/immersive-book.png', fullPage: true });
+  await page.keyboard.press('KeyB');
   await page.getByRole('button', { name: '我将守到黎明' }).click();
-  await page.keyboard.press('Digit1'); await page.keyboard.press('Space');
-  await expect(page.getByTestId('forge-progress')).toHaveText('2 / 1,000');
-  await page.screenshot({ path: 'test-results/gothic-play.png', fullPage: true });
-  await page.keyboard.press('KeyP'); await expect(page.getByText('烛火替你守着。')).toBeVisible();
-  const time = await page.getByTestId('countdown').innerText(); await page.waitForTimeout(1200); await expect(page.getByTestId('countdown')).toHaveText(time);
-  await page.getByRole('button', { name: '继续守夜', exact: true }).last().click();
-  await page.getByRole('button', { name: '守夜手册', exact: true }).click(); await expect(page.getByRole('dialog')).toBeVisible();
+  await page.waitForTimeout(7200);
+  await expect(page.locator('.guide-voice, .passing-voice, .fading-controls')).toHaveCount(0);
+  await page.screenshot({ path: 'test-results/immersive-playing.png', fullPage: true });
+  await page.keyboard.press('KeyP');
+  await expect(page.getByRole('heading', { name: '烛火替你守着。' })).toBeVisible();
+  await page.keyboard.press('KeyB'); await expect(page.getByRole('dialog', { name: '已有契约烙印' })).toBeVisible();
+  await page.keyboard.press('Escape'); await expect(page.getByRole('heading', { name: '烛火替你守着。' })).toBeVisible();
   await page.keyboard.press('Escape'); await expect(page.getByRole('dialog')).not.toBeVisible();
   expect(errors).toEqual([]);
 });
 
-test('存档恢复后新祭器显现、灵仆献祭与黎明胜利', async ({ page }) => {
-  const s = beginNight(initialState());
-  s.elapsed = 711; s.time = 150; s.levels = { forge: 3, splitter: 3, choir: 2, ward: 2, lens: 2, seal: 1 };
-  s.autoTarget = 'forge';
+test('后期契约仅显示当前能力，灵仆可改目标，合上后继续直到黎明', async ({ page }) => {
+  const s = beginNight(initialState()); s.elapsed = 711; s.time = 150;
+  s.levels = { forge: 3, splitter: 3, choir: 2, ward: 2, lens: 2, seal: 1 };
   await savedGame(page, s);
-  await expect(page.getByRole('button', { name: '黑曜棱镜，选择瞄准' })).toBeEnabled();
-  await expect(page.getByLabel('灵仆献祭')).toBeEnabled();
-  await expect(page.getByTestId('forge-progress')).not.toHaveText('0 / 14,000');
-  await page.screenshot({ path: 'test-results/gothic-late.png', fullPage: true });
+  await page.keyboard.press('KeyB');
+  await expect(page.locator('.owned-contracts li')).toHaveCount(6);
+  await expect(page.locator('.owned-contracts')).toContainText('4 枚铜币');
+  await expect(page.locator('.owned-contracts')).toContainText('1.6 次齐射');
+  await page.getByLabel('让灵仆聆听你的意志').selectOption('clock');
+  const frozen = await page.locator('canvas').getAttribute('aria-description');
+  await page.waitForTimeout(1200); await expect(page.locator('canvas')).toHaveAttribute('aria-description', frozen!);
+  await page.keyboard.press('KeyB');
+  await page.screenshot({ path: 'test-results/immersive-late.png', fullPage: true });
   await expect(page.getByRole('heading', { name: '这一次，黎明是真的。' })).toBeVisible({ timeout: 16000 });
-  await page.screenshot({ path: 'test-results/gothic-victory.png', fullPage: true });
   expect(await page.evaluate(key => localStorage.getItem(key), SAVE_KEY)).toBe(null);
 });
 
-test('丧钟归零失败，重新签订契约重置进度', async ({ page }) => {
-  const s = beginNight(initialState()); s.time = 2; s.elapsed = 50;
+test('丧钟归零失败，重开后的烙印不保留旧升级', async ({ page }) => {
+  const s = beginNight(initialState()); s.time = 2; s.elapsed = 50; s.levels.splitter = 2;
   await savedGame(page, s);
   await expect(page.getByRole('heading', { name: '别回头。它已在你身后。' })).toBeVisible({ timeout: 8000 });
   await page.getByRole('button', { name: '重新签订契约' }).click();
-  await expect(page.getByTestId('splitter-progress')).toHaveText('0 / 10');
-  await expect(page.getByTestId('forge-progress')).toHaveText('0 / 1,000');
+  await page.keyboard.press('KeyB');
+  await expect(page.locator('.owned-contracts li')).toHaveCount(0);
+  await expect(page.getByText(/你的灵魂还没有新的烙印/)).toBeVisible();
 });
 
-test('小屏幕无溢出且向导、倒计时和祭器可访问', async ({ page }) => {
+test('小屏世界填满视口，B 菜单内部滚动而页面不滚动', async ({ page }) => {
   for (const width of [320, 375, 414, 768]) {
-    await page.setViewportSize({ width, height: 1000 }); await page.goto('/');
-    await expect(page.getByRole('button', { name: '握紧铸币枪' })).toBeEnabled();
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    await page.screenshot({ path: `test-results/gothic-mobile-${width}.png`, fullPage: true });
-    await page.getByRole('button', { name: '我已知晓契约，直接守夜' }).click();
-    await page.keyboard.press('Digit2'); await page.keyboard.press('Space');
-    await expect(page.getByTestId('splitter-progress')).toHaveText('1 / 10');
-    await page.getByRole('button', { name: '暂停守夜' }).click();
+    await page.setViewportSize({ width, height: 850 }); await page.goto('/');
+    await expect(page.getByRole('button', { name: '握紧铸币枪' })).toBeVisible();
+    expect(await page.locator('canvas').boundingBox()).toMatchObject({ x: 0, y: 0, width, height: 850 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
+    await page.getByRole('button', { name: '我已知晓契约' }).click();
+    await page.keyboard.press('KeyB'); await expect(page.getByRole('dialog')).toBeVisible();
+    await page.screenshot({ path: 'test-results/immersive-mobile-' + width + '.png', fullPage: true });
+    const menu = (await page.getByRole('dialog').boundingBox())!; expect(menu.x).toBeGreaterThanOrEqual(0); expect(menu.x + menu.width).toBeLessThanOrEqual(width);
+    await page.keyboard.press('KeyB');
   }
 });

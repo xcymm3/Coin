@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { advance, autoRate, beginNight, beginTutorial, capacity, chapter, clockGain, cost, DAWN_TIME, drain, hit, initialState, netDrain, readSave, registerShot, unlocked, volley } from './rules.ts';
+import { advance, autoRate, beginNight, beginTutorial, capacity, chapter, clockGain, cost, DAWN_TIME, drain, hit, initialState, inspectJournal, netDrain, ownedUpgrades, readSave, registerShot, unlocked, volley } from './rules.ts';
 import type { GameState, Target } from './rules.ts';
 
 test('系统引导冻结倒计时，并通过真实献祭依次解锁引导', () => {
@@ -10,7 +10,16 @@ test('系统引导冻结倒计时，并通过真实献祭依次解锁引导', ()
   assert.equal(volley(s), 2); assert.equal(s.guide, 2);
   for (let i = 0; i < 3; i++) s = hit(s, 'clock');
   assert.equal(s.guide, 3); assert.equal(s.time, 103); assert.equal(s.elapsed, 0);
+  assert.deepEqual(beginNight(s), s, '未查阅 B 烙印时不能完成此教程步骤');
+  s = inspectJournal(s); assert.equal(s.journalRead, true);
   s = advance(beginNight(s), 1); assert.ok(s.time < 103); assert.equal(s.guide, 4);
+});
+test('烙印只显示已获得能力，数值来自当前等级而非下一级', () => {
+  const s = initialState(); assert.deepEqual(ownedUpgrades(s), []);
+  s.levels.splitter = 1;
+  const entries = ownedUpgrades(s); assert.equal(entries.length, 1); assert.equal(entries[0].id, 'splitter');
+  assert.match(entries[0].description, /2 枚铜币/); assert.doesNotMatch(entries[0].description, /3 枚铜币|成本|下一/);
+  assert.equal(inspectJournal(beginTutorial(initialState())).journalRead, false);
 });
 test('锁定祭器不能充能，到达章节后才显现', () => {
   let s = beginNight(initialState()); assert.deepEqual(hit(s, 'choir'), s);
