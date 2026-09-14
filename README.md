@@ -2,6 +2,16 @@
 
 React + TypeScript + Canvas 制作的末日地堡投币增量游戏 Demo，使用 pnpm 和 Vite。
 
+在线试玩：[最后一枚](https://xcymm3.github.io/Coin/)
+
+## 自动部署
+
+代码仓库：[xcymm3/Coin](https://github.com/xcymm3/Coin)。每次推送到 `main`，GitHub Actions 会使用 Node.js 22 和项目指定的 pnpm 版本安装锁定依赖，运行游戏规则测试及类型检查，构建并发布到 GitHub Pages。测试或构建失败时不会发布。
+
+工作流为 `.github/workflows/deploy.yml`，也可在 Actions 页手动运行。Pages 的发布来源使用 **GitHub Actions**，无需维护 `gh-pages` 分支，也无需添加个人令牌。
+
+部署时通过 `PAGES_BASE_PATH` 设置 Pages 子路径，确保 `/Coin/` 下脚本、样式与图标正确加载。本地开发默认仍使用 `/`。
+
 ## 本地运行
 
 需要 Node.js 22.12+（推荐 Node.js 22 LTS）及 pnpm。
