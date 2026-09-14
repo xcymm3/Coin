@@ -1,0 +1,183 @@
+@import '../tokens.css';
+/* Hallmark · bespoke in-place redesign · gothic apocalypse / first-person 3D ritual
+ * Visual priority: sanctuary, rightmost death clock, diegetic guide, evolving covenants.
+ * Pre-emit critique: P5 H5 E4 S5 R4 V5 */
+:root {
+  --g-bg: #141117; --g-panel: #1d1820; --g-panel-deep: #100d12; --g-stone: #2a222d;
+  --g-ink: #e2d6c3; --g-muted: #b2a293; --g-faint: #998a87; --g-line: #42343c;
+  --g-gold: #cfa77b; --g-gold-dark: #66513f; --g-red: #ee8b79; --g-red-dark: #703c42;
+  --g-ghost: #ada1bd; --g-green: #a9bfa5; --g-overlay: #100b13c9; --g-clear: #14111700;
+  --g-serif: Georgia, 'Noto Serif SC', 'Songti SC', 'SimSun', serif;
+  --g-body: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+  --g-mono: 'Cascadia Code', Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html,body { margin: 0; overflow-x: clip; background: var(--g-bg); color: var(--g-ink); }
+body { font-family: var(--g-body); font-size: 13px; }
+button,select { font: inherit; }
+button { cursor: pointer; white-space: nowrap; transition: background 150ms, color 150ms, border-color 150ms; }
+button:disabled { cursor: not-allowed; }
+button:focus-visible,a:focus-visible,select:focus-visible { outline: 2px solid var(--g-gold); outline-offset: 4px; }
+button:active:not(:disabled) { transform: translateY(1px); }
+h1,h2,h3,p { margin: 0; }
+h1,h2,h3 { font-style: normal; min-width: 0; overflow-wrap: anywhere; }
+button,a,canvas { -webkit-tap-highlight-color: transparent; }
+.night-app { max-width: 1760px; padding: 0 40px; margin: auto; }
+.night-header { height: 88px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid var(--g-line); }
+.night-brand { display: flex; gap: 13px; align-items: center; text-decoration: none; color: var(--g-ink); font: 23px var(--g-serif); letter-spacing: 4px; }
+.brand-seal { color: var(--g-gold); font-size: 45px; line-height: 1; }
+.night-brand small { display: block; font: 8px var(--g-mono); letter-spacing: 2.2px; margin-top: 8px; color: var(--g-muted); }
+.place-name { color: var(--g-muted); font-size: 10px; letter-spacing: 2px; display: flex; gap: 16px; align-items: center; }
+.place-name i { width: 4px; height: 4px; background: var(--g-gold); transform: rotate(45deg); }
+.night-tools { display: flex; gap: 8px; align-items: center; }
+.night-tools button { border: 1px solid var(--g-line); background: transparent; padding: 7px 10px; font-size: 10px; color: var(--g-muted); min-height: 32px; }
+.night-tools button:hover:not(:disabled) { background: var(--g-stone); color: var(--g-ink); }
+.night-tools button:disabled { color: var(--g-faint); opacity: .45; }
+.edition { color: var(--g-faint); font-size: 9px; letter-spacing: 1px; margin-right: 12px; }
+kbd { font: 9px var(--g-mono); border: 1px solid var(--g-line); padding: 2px 4px; color: var(--g-muted); }
+.night-tools kbd { margin-left: 4px; }
+.night-title { padding: 29px 0 25px; display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
+.overline { display: block; color: var(--g-gold); font: 8px var(--g-mono); letter-spacing: 2.4px; }
+.night-title h1 { font: 28px/1.5 var(--g-serif); letter-spacing: 2px; margin-top: 8px; }
+.night-title h1 span { color: var(--g-muted); }
+.night-title p { color: var(--g-faint); font-size: 11px; letter-spacing: 1px; padding-bottom: 6px; }
+.night-layout { display: grid; grid-template-columns: minmax(0,1fr) 256px; gap: 22px; align-items: stretch; }
+.sanctuary { border: 1px solid var(--g-line); background: var(--g-panel-deep); min-width: 0; display: flex; flex-direction: column; }
+.scene-topline { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 17px; font-size: 10px; color: var(--g-muted); border-bottom: 1px solid var(--g-line); }
+.scene-topline>span:first-child { display: flex; align-items: center; gap: 8px; }
+.scene-topline>span:last-child { font: 8px var(--g-mono); letter-spacing: 1px; color: var(--g-faint); }
+.living-dot { width: 4px; height: 4px; background: var(--g-green); display: inline-block; }
+.world-frame { position: relative; aspect-ratio: 16/10; min-height: 0; isolation: isolate; overflow: hidden; flex: 1; }
+.world-frame canvas { display: block; width: 100%; height: 100%; position: absolute; inset: 0; outline: none; touch-action: manipulation; cursor: crosshair; }
+.world-frame canvas:focus-visible { outline: 1px solid var(--g-gold-dark); outline-offset: -1px; }
+.world-shade { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 65px 10px var(--g-overlay); background: linear-gradient(0deg,var(--g-overlay),var(--g-clear) 24%); }
+.view-corners { position: absolute; top: 16px; left: 18px; right: 18px; display: flex; justify-content: space-between; font-size: 8px; color: var(--g-muted); letter-spacing: 1px; pointer-events: none; }
+.initiation { position: absolute; top: 13%; left: 5%; padding: 27px; width: 348px; max-width: 88%; background: var(--g-overlay); border: 1px solid var(--g-gold-dark); box-shadow: 5px 5px 0 var(--g-panel-deep); }
+.system-sign { color: var(--g-gold); font-size: 9px; letter-spacing: 1px; }
+.initiation h2 { font: 30px/1.6 var(--g-serif); letter-spacing: 3px; margin: 17px 0; }
+.initiation p { font-size: 11px; line-height: 2; color: var(--g-muted); margin-top: 10px; }
+.initiation p strong { color: var(--g-ink); font-weight: 400; }
+.covenant-button { width: 100%; border: 1px solid var(--g-gold); padding: 13px 16px; min-height: 43px; background: var(--g-gold); color: var(--g-panel-deep); display: flex; align-items: center; justify-content: space-between; font-size: 12px; letter-spacing: 1px; }
+.covenant-button:hover { background: var(--g-ink); border-color: var(--g-ink); }
+.covenant-button:disabled { opacity: .4; }
+.initiation .covenant-button { margin-top: 21px; }
+.skip-guide,.resume-save { display: block; width: 100%; border: 0; background: transparent; padding: 12px 0 0; color: var(--g-muted); font-size: 9px; text-align: center; }
+.resume-save { color: var(--g-gold); font-size: 11px; }
+.skip-guide:hover,.resume-save:hover { color: var(--g-ink); }
+.guidance-marker { position: absolute; transform: translate(-50%,-50%); pointer-events: none; font-size: 10px; color: var(--g-ink); text-shadow: 0 2px var(--g-panel-deep); white-space: nowrap; display: flex; flex-direction: column; align-items: center; gap: 9px; }
+.guidance-marker>span { display: block; width: 62px; height: 62px; border: 1px solid var(--g-gold); outline: 1px solid var(--g-gold-dark); outline-offset: 5px; transform: rotate(45deg); }
+.system-guide { position: absolute; left: 18px; bottom: 18px; width: 470px; max-width: 65%; background: var(--g-panel-deep); border: 1px solid var(--g-gold-dark); padding: 16px 19px; box-shadow: 3px 3px 0 var(--g-overlay); }
+.system-guide>div { display: flex; justify-content: space-between; gap: 8px; color: var(--g-gold); font-size: 10px; }
+.system-guide small { font-size: 8px; color: var(--g-faint); }
+.system-guide p { font: 13px/1.9 var(--g-serif); margin: 10px 0; }
+.guide-progress { color: var(--g-muted); font-size: 9px; }
+.guide-progress i { display: inline-block; height: 8px; width: 1px; margin: 0 9px; background: var(--g-line); }
+.system-guide .covenant-button { max-width: 240px; margin-top: 12px; padding: 10px 12px; min-height: 38px; }
+.weapon-caption,.target-caption { position: absolute; bottom: 25px; pointer-events: none; display: grid; gap: 8px; color: var(--g-muted); }
+.weapon-caption { left: 23px; }
+.target-caption { right: 22px; bottom: 115px; text-align: right; }
+.weapon-caption>span,.target-caption>span { font-size: 8px; letter-spacing: 2px; }
+.weapon-caption strong,.target-caption strong { font: 16px var(--g-serif); color: var(--g-ink); letter-spacing: 1px; }
+.weapon-caption small,.target-caption small { font-size: 9px; }
+.weapon-caption strong i { display: inline-block; height: 9px; width: 1px; background: var(--g-line); margin: 0 8px; }
+.night-mission { display: flex; align-items: center; gap: 14px; padding: 15px 18px; border-top: 1px solid var(--g-line); background: var(--g-panel); min-height: 70px; }
+.mission-rune { font-size: 26px; color: var(--g-gold); }
+.night-mission small { font-size: 8px; color: var(--g-faint); letter-spacing: 1px; }
+.night-mission p { font-size: 11px; color: var(--g-ink); margin-top: 7px; }
+.night-mission button { margin-left: auto; border: 0; background: transparent; color: var(--g-gold); font-size: 10px; padding: 8px; }
+.night-mission button:disabled { opacity: .4; }
+.night-mission button>span { margin-left: 12px; }
+.doom-column { min-width: 0; display: flex; flex-direction: column; }
+.death-clock { position: relative; text-align: center; border: 1px solid var(--g-red-dark); background: var(--g-panel); padding: 12px 22px 12px; flex: 1; }
+.death-clock::before,.death-clock::after { content:''; position: absolute; top: 28px; bottom: 28px; width: 4px; border-top: 1px solid var(--g-red-dark); border-bottom: 1px solid var(--g-red-dark); pointer-events:none; }
+.death-clock::before { left: 6px; border-left: 1px solid var(--g-red-dark); }.death-clock::after { right: 6px; border-right: 1px solid var(--g-red-dark); }
+.doom-spires { color: var(--g-red-dark); font: 26px var(--g-serif); display: flex; justify-content: space-between; align-items: center; }
+.doom-spires>span { color: var(--g-red); font-size: 18px; }
+.doom-eye { display: block; width: 140px; height: 100px; margin: -8px auto 0; color: var(--g-red); }
+.death-clock .overline { color: var(--g-faint); font-size: 8px; letter-spacing: 2px; margin-top: 8px; }
+.death-clock h2 { font: 20px var(--g-serif); letter-spacing: 4px; margin-top: 13px; }
+.doom-number { font: 85px/1.15 var(--g-serif); color: var(--g-red); font-variant-numeric: tabular-nums; letter-spacing: -4px; margin-top: 6px; }
+.doom-unit { display: block; font-size: 9px; color: var(--g-muted); letter-spacing: 6px; margin: 2px 0 21px; }
+.doom-meter { height: 3px; background: var(--g-stone); width: 100%; }
+.doom-meter>i { display: block; height: 100%; background: var(--g-red); }
+.doom-whisper { font: 11px/1.8 var(--g-serif); color: var(--g-red); margin: 15px -6px 20px; letter-spacing: 1px; }
+.doom-rates { border-top: 1px solid var(--g-line); padding-top: 14px; display: grid; gap: 11px; text-align: left; }
+.doom-rates>span { display: flex; justify-content: space-between; font-size: 9px; color: var(--g-muted); gap: 8px; }
+.doom-rates b { font: 10px var(--g-mono); color: var(--g-ink); }
+.aim-clock { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; border: 1px solid var(--g-red-dark); background: transparent; color: var(--g-red); font-size: 10px; margin-top: 18px; width: 100%; }
+.aim-clock:hover { background: var(--g-red-dark); color: var(--g-ink); }
+.clock-ornament { display: block; color: var(--g-red-dark); margin-top: 10px; font-size: 13px; }
+.night-journey { border: 1px solid var(--g-line); padding: 17px 19px; margin-top: 12px; background: var(--g-panel); }
+.night-journey>div:first-child,.next-siege { display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: var(--g-muted); }
+.night-journey b { font: 14px var(--g-mono); color: var(--g-gold); }
+.journey-track { height: 2px; background: var(--g-line); margin-top: 12px; }
+.journey-track>i { background: var(--g-gold); height: 100%; display: block; }
+.night-journey p { font-size: 9px; color: var(--g-faint); line-height: 1.7; margin-top: 10px; }
+.next-siege { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--g-line); }
+.next-siege b { font-size: 11px; color: var(--g-muted); }
+.doom-urgent .death-clock { box-shadow: inset 0 0 32px var(--g-red-dark); }
+.doom-urgent .doom-eye { animation: unease 2s ease-in-out infinite; }
+.under-siege .scene-topline { color: var(--g-red); border-color: var(--g-red-dark); }
+.under-siege .scene-topline>span:last-child { color: var(--g-red); }
+.covenants { margin-top: 24px; }
+.covenants-heading { display: flex; gap: 20px; align-items: center; margin-bottom: 15px; }
+.covenants-heading h2 { font: 17px var(--g-serif); letter-spacing: 2px; }
+.covenants-heading>span { color: var(--g-faint); font-size: 10px; }
+.covenants-heading>small { margin-left: auto; font-size: 9px; color: var(--g-gold); }
+.device-grid { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 10px; }
+.covenant-card { border: 1px solid var(--g-line); background: var(--g-panel); color: var(--g-ink); padding: 15px; text-align: left; white-space: normal; min-width: 0; }
+.covenant-card:hover:not(:disabled),.covenant-card.chosen { border-color: var(--g-gold-dark); background: var(--g-stone); }
+.covenant-top { display: flex; align-items: center; gap: 9px; }
+.device-glyph { font: 24px/1 var(--g-serif); color: var(--g-gold); }
+.covenant-top>span:nth-child(2) { font-size: 8px; color: var(--g-faint); }
+.covenant-top kbd { margin-left: auto; }
+.covenant-card h3 { font: 14px var(--g-serif); letter-spacing: 1px; margin-top: 13px; }
+.covenant-card p { font-size: 9px; color: var(--g-muted); margin-top: 9px; line-height: 1.8; min-height: 33px; }
+.sacrament-track { height: 3px; background: var(--g-line); margin-top: 15px; }
+.sacrament-track>i { display: block; height: 100%; background: var(--g-gold); }
+.sacrament-value { color: var(--g-gold); font: 11px var(--g-mono); margin-top: 10px; }
+.sacrament-value>span { color: var(--g-faint); font-size: 9px; }
+.covenant-card.dormant { background: var(--g-panel-deep); border-style: dashed; }
+.dormant .device-glyph,.dormant h3 { color: var(--g-faint); }
+.fulfilled .sacrament-value { color: var(--g-green); }
+.bottom-row { display: grid; grid-template-columns: minmax(0,1fr) 256px; gap: 22px; margin-top: 16px; }
+.system-transmission { display: flex; align-items: flex-start; gap: 14px; padding: 12px 0; font-size: 10px; }
+.system-transmission>span { color: var(--g-gold); white-space: nowrap; }
+.system-transmission p { color: var(--g-muted); line-height: 1.8; margin-top: -2px; }
+.spirit-control { display: flex; align-items: center; gap: 10px; }
+.spirit-control label { font-size: 10px; color: var(--g-muted); flex: 1; }
+.spirit-control small { display: block; margin-top: 5px; font-size: 8px; color: var(--g-faint); }
+.spirit-control select { border: 1px solid var(--g-line); background: var(--g-panel); color: var(--g-ink); width: 130px; padding: 9px 5px; font-size: 10px; }
+.spirit-control select:disabled { color: var(--g-faint); cursor: not-allowed; }
+.spirit-control.awake label { color: var(--g-green); }
+.night-footer { border-top: 1px solid var(--g-line); display: flex; justify-content: space-between; gap: 20px; padding: 22px 0 26px; margin-top: 18px; font-size: 9px; color: var(--g-faint); }
+.night-footer>span { display: flex; align-items: center; gap: 13px; letter-spacing: 1px; }
+.night-footer i { width: 4px; height: 4px; background: var(--g-gold-dark); transform: rotate(45deg); }
+.night-footer>div { display: flex; gap: 24px; }.night-footer b { color: var(--g-muted); font: 10px var(--g-mono); margin-left: 5px; }
+.night-overlay { position: absolute; inset: 0; background: var(--g-overlay); display: flex; justify-content: center; align-items: center; padding: 20px; }
+.ritual-panel { width: 390px; max-width: 100%; min-width: 0; padding: 26px; text-align: center; background: var(--g-panel-deep); border: 1px solid var(--g-gold-dark); }
+.ritual-panel>svg { width: 80px; height: 60px; color: var(--g-gold); margin: 0 auto 15px; }
+.ritual-panel h2 { font: 23px/1.6 var(--g-serif); margin: 18px 0 10px; }
+.ritual-panel p { font-size: 11px; line-height: 1.8; color: var(--g-muted); }
+.ritual-panel .covenant-button { margin-top: 23px; }
+.night-results { display: flex; justify-content: space-around; gap: 12px; padding: 18px 0; border-block: 1px solid var(--g-line); margin-top: 18px; }
+.night-results span { display: grid; gap: 8px; font-size: 9px; color: var(--g-muted); }
+.night-results b { font: 22px var(--g-serif); color: var(--g-gold); }
+.death .ritual-panel { border-color: var(--g-red-dark); }.death svg { color: var(--g-red); }
+.dawn .ritual-panel { border-color: var(--g-gold); }
+.world-loading,.world-error { position: absolute; inset: 0; background: var(--g-panel-deep); display: flex; justify-content: center; align-items: center; flex-direction: column; padding: 25px; text-align: center; color: var(--g-muted); }
+.world-error svg { width: 90px; color: var(--g-red); }.world-error p { max-width: 400px; line-height: 1.8; margin: 15px 0; }.world-error button { max-width: 240px; }
+.night-manual { width: 610px; max-width: calc(100vw - 32px); max-height: calc(100dvh - 40px); overflow-y: auto; padding: 32px; border: 1px solid var(--g-gold-dark); background: var(--g-panel-deep); color: var(--g-ink); }
+.night-manual::backdrop { background: var(--g-overlay); }
+.manual-close { position: absolute; right: 15px; top: 12px; border: 0; background: transparent; color: var(--g-muted); font-size: 24px; }
+.night-manual h2 { font: 28px var(--g-serif); margin: 18px 0; letter-spacing: 3px; }.night-manual h3 { font: 18px var(--g-serif); margin: 20px 0; }
+.night-manual p,.night-manual dd { font-size: 11px; line-height: 1.9; color: var(--g-muted); }.night-manual>p { margin: 15px 0; }
+.night-manual dl { display: grid; grid-template-columns: 100px minmax(0,1fr); gap: 12px; margin: 20px 0; }.night-manual dt { font-size: 11px; color: var(--g-gold); }.night-manual dd { margin: 0; }
+.night-manual ol { padding: 0; list-style: none; display: grid; gap: 15px; }.night-manual li b { display: block; color: var(--g-gold); font-weight: normal; font-size: 12px; }.night-manual li span { display: block; font-size: 10px; color: var(--g-muted); margin-top: 6px; }
+@keyframes unease { 50% { opacity: .55; } }
+@media(min-width:1600px) { .night-app { padding: 0 55px; }.night-layout,.bottom-row { grid-template-columns:minmax(0,1fr) 280px; }.doom-eye { width: 170px; height: 130px; margin-top: 0; }.doom-number { font-size: 98px; }.doom-rates { gap: 14px; }.doom-whisper { margin-block: 22px; } }
+@media(max-width:1200px) { .night-app { padding: 0 24px; }.night-layout,.bottom-row { grid-template-columns: minmax(0,1fr) 220px; gap: 16px; }.world-frame { aspect-ratio: 1.35; }.doom-number { font-size: 75px; }.death-clock { padding: 10px 17px; }.doom-eye { height: 80px; width: 120px; }.death-clock h2 { font-size: 18px; letter-spacing: 3px; }.initiation { width: 310px; padding: 23px; }.initiation h2 { font-size: 26px; }.night-title p { display: none; }.device-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }.covenant-card p { min-height: 20px; }.system-guide { max-width: 76%; }.night-footer .save-note { display: none; } }
+@media(max-width:850px) { .night-app { padding:0 18px; }.place-name,.edition { display: none; }.night-header { height:76px; }.night-layout { grid-template-columns:minmax(0,1fr) 185px; gap:12px; }.world-frame { aspect-ratio: 1; min-height:440px; }.death-clock { padding:10px 13px; }.doom-number { font-size:62px; }.doom-eye { width:105px; height:75px; }.doom-whisper { font-size:10px; letter-spacing:0; }.doom-rates>span { font-size:8px; }.doom-rates b { font-size:9px; }.death-clock h2 { font-size:16px; letter-spacing:2px; }.night-journey { padding:14px; }.initiation { top:11%; left:6%; max-width:88%; padding:20px; }.initiation h2 { font-size:23px; }.initiation p { font-size:10px; }.night-mission { gap:9px; padding:12px; }.night-mission p { font-size:10px; line-height:1.7; }.night-mission button { font-size:9px; padding:5px; }.mission-rune { display:none; }.system-guide { left:12px; bottom:12px; padding:12px; max-width:calc(100% - 24px); }.system-guide p { font-size:12px; }.system-guide>div { flex-direction:column; gap:5px; }.scene-topline { padding:12px;font-size:9px; }.scene-topline>span:last-child { display:none; }.target-caption { display:none; }.weapon-caption { left:15px; bottom:18px; }.weapon-caption strong { font-size:13px; }.weapon-caption small { font-size:8px; }.covenants-heading>span { display:none; }.bottom-row { grid-template-columns:minmax(0,1fr); gap:4px; }.spirit-control { max-width:340px; }.night-footer { font-size:8px; }.night-footer>div { gap:12px; }.night-title h1 { font-size:25px; } }
+@media(max-width:600px) { .night-app { padding:0 12px; }.night-header { gap:8px; height:72px; }.night-brand { font-size:19px; gap:7px; letter-spacing:2px; }.brand-seal { font-size:31px; }.night-brand small { font-size:6px; letter-spacing:1px; }.night-tools { gap:4px; }.night-tools button { font-size:9px; padding:6px; min-height:30px; }.night-tools kbd { display:none; }.night-title { padding:22px 0 18px; }.night-title .overline { font-size:7px; letter-spacing:1.7px; }.night-title h1 { font-size:21px; letter-spacing:1px; }.night-title h1 span { display:block; }.night-layout { grid-template-columns:minmax(0,1fr); gap:12px; }.world-frame { min-height:385px; aspect-ratio:1; }.scene-topline>span:last-child { display:block; font-size:7px; }.initiation { padding:19px;top:7%; width:290px; }.initiation h2 { font-size:23px; margin:12px 0;line-height:1.45; }.initiation p { font-size:10px;line-height:1.8; }.initiation .covenant-button { margin-top:16px; padding:10px 13px;min-height:38px; }.system-sign { font-size:8px; }.skip-guide { font-size:8px; }.doom-column { display:grid;grid-template-columns:minmax(0,1fr); }.death-clock { display:grid; grid-template-columns: 80px minmax(0,1fr) 100px; align-items:center;gap:5px 10px;padding:15px; text-align:left; }.doom-spires,.death-clock>.overline,.doom-unit,.clock-ornament { display:none; }.doom-eye { grid-column:1;grid-row:1/4;width:78px;height:66px;margin:0; }.death-clock h2 { grid-column:2;grid-row:1;font-size:16px;letter-spacing:2px;margin:0; }.doom-number { grid-column:3;grid-row:1/4;font-size:58px;letter-spacing:-3px;line-height:1;text-align:right;margin:0; }.doom-meter { grid-column:2;grid-row:2; }.doom-whisper { grid-column:2;grid-row:3;margin:0;font-size:9px;line-height:1.6; }.doom-rates { grid-column:1/-1;display:flex;justify-content:space-between;padding-top:12px;margin-top:5px;gap:10px; }.doom-rates>span { flex-direction:column;gap:5px;font-size:8px; }.aim-clock { grid-column:1/-1;padding:8px 10px;margin-top:8px;font-size:9px; }.night-journey { margin-top:8px;padding:12px 15px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 18px; }.night-journey>div:first-child { grid-column:1; }.journey-track { grid-column:1;margin:0; }.night-journey p { grid-column:1;font-size:8px;margin:0; }.next-siege { grid-column:2;grid-row:1/4;margin:0;padding:0 0 0 15px;border-top:0;border-left:1px solid var(--g-line); }.covenants { margin-top:20px; }.covenants-heading { gap:10px;margin-bottom:12px; }.covenants-heading h2 { font-size:16px;letter-spacing:1px; }.covenants-heading>small { font-size:8px; }.device-grid { grid-template-columns:repeat(2,minmax(0,1fr));gap:8px; }.covenant-card { padding:12px; }.covenant-card h3 { font-size:14px; }.covenant-card p { min-height:33px;font-size:8px; }.covenant-top { gap:8px; }.device-glyph { font-size:22px; }.covenant-top>span:nth-child(2) { font-size:8px; }.system-transmission { display:block;font-size:9px;line-height:1.8; }.system-transmission p { margin:6px 0 0; }.night-footer { flex-direction:column;gap:13px;padding:20px 0; }.night-footer>div { gap:22px; }.system-guide { bottom:12px; }.system-guide p { font-size:11px;margin:8px 0; }.guide-progress { font-size:8px; }.guide-progress i { margin:0 5px; }.guidance-marker { font-size:8px; }.guidance-marker>span { width:40px;height:40px; }.view-corners { font-size:7px;top:12px;left:12px;right:12px; }.weapon-caption strong { font-size:12px; }.night-mission button>span { margin-left:5px; }.night-manual { padding:24px 20px; }.night-manual dl { grid-template-columns:75px minmax(0,1fr);gap:10px; }.ritual-panel { padding:20px; }.ritual-panel h2 { font-size:21px; }.ritual-panel p { font-size:10px; }.night-results b { font-size:20px; }.ritual-panel>svg { height:50px;margin-bottom:8px; } }
+@media(max-width:350px) { .night-brand { font-size:17px; }.night-brand small { font-size:5px; }.brand-seal { font-size:26px; }.night-tools button { padding:5px;font-size:8px; }.death-clock { grid-template-columns:55px minmax(0,1fr) 80px;gap:5px 8px;padding:12px; }.doom-eye { width:55px;height:55px; }.doom-number { font-size:50px; }.death-clock h2 { font-size:14px;letter-spacing:1px; }.doom-whisper { font-size:8px; }.world-frame { min-height:380px; }.initiation { padding:17px; }.initiation h2 { font-size:21px; }.system-guide small { font-size:7px; }.ritual-panel h2 { font-size:19px; } }
+@media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none!important;transition:none!important; } }

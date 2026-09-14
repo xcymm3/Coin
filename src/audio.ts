@@ -13,9 +13,9 @@ export class GameAudio {
     gain.gain.setValueAtTime(volume, now); gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
     osc.connect(gain); gain.connect(this.ctx.destination); osc.start(now); osc.stop(now + duration);
   }
-  fire() { this.tone(170, 0.06, 'triangle', 0.035, 70); }
-  hit(target: string | null) { this.tone(target === 'clock' ? 1100 : target === 'splitter' ? 750 : 320, 0.12, 'square', 0.015); }
-  upgrade() { [440, 554, 659, 880].forEach((f, i) => setTimeout(() => this.tone(f, 0.18, 'triangle', 0.07, f), i * 90)); }
-  alarm() { this.tone(180, 0.28, 'sawtooth', 0.025, 150); }
+  fire() { this.tone(110, 0.09, 'triangle', 0.06, 36); this.tone(700, 0.035, 'square', 0.014, 130); }
+  hit(target: string | null) { const frequency = target === 'clock' ? 220 : target === 'ward' ? 294 : 650; this.tone(frequency, 0.45, 'sine', 0.035, frequency * 0.99); this.tone(frequency * 2.76, 0.2, 'sine', 0.012); }
+  upgrade() { [196, 233, 294].forEach((f, i) => setTimeout(() => this.tone(f, 0.9, 'sine', 0.055, f), i * 130)); }
+  alarm() { this.tone(73, 1.2, 'sine', 0.055, 69); this.tone(151, 0.9, 'triangle', 0.02, 145); }
   dispose() { if (this.ctx) void this.ctx.close(); }
 }
