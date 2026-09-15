@@ -30,9 +30,15 @@ function Modal({ title, children, close, className = '' }: { title: string; chil
     {close && <button className="close-button blue-button" aria-label="关闭菜单" onClick={close}>×</button>}{children}
   </dialog>
 }
-type Settings = { sound: boolean; volume: number; motion: boolean }
+function PixelBurst({ kind }: { kind: string }) {
+  return <span aria-hidden="true" className={`pixel-burst burst-${kind}`}>{Array.from({ length: 10 }, (_, i) => <i key={i} style={{ '--dx': `${Math.cos(i * 2.4) * (24 + i * 4)}px`, '--dy': `${-25 - (i % 5) * 13}px`, '--turn': `${i * 45}deg`, '--delay': `${i % 3 * 25}ms` } as CSSProperties} />)}</span>
+}
+function Fireflies() {
+  return <div className="fireflies" aria-hidden="true">{Array.from({ length: 16 }, (_, i) => <i key={i} style={{ left: `${(i * 37 + 3) % 100}%`, top: `${(i * 23 + 7) % 100}%`, '--delay': `${-i * 1.7}s`, '--duration': `${8 + i % 5}s` } as CSSProperties} />)}</div>
+}
+type Settings = { sound: boolean; volume: number; music: boolean; musicVolume: number; motion: boolean }
 function loadSettings(): Settings {
-  try { const p = JSON.parse(localStorage.getItem('moon-garden-settings') ?? '{}'); return { sound: p.sound !== false, volume: typeof p.volume === 'number' ? Math.max(0, Math.min(1, p.volume)) : .35, motion: p.motion !== false } } catch { return { sound: true, volume: .35, motion: true } }
+  try { const p = JSON.parse(localStorage.getItem('moon-garden-settings') ?? '{}'); return { sound: p.sound !== false, volume: typeof p.volume === 'number' ? Math.max(0, Math.min(1, p.volume)) : .35, music: p.music !== false, musicVolume: typeof p.musicVolume === 'number' ? Math.max(0, Math.min(1, p.musicVolume)) : .3, motion: p.motion !== false } } catch { return { sound: true, volume: .35, music: true, musicVolume: .3, motion: true } }
 }
 function loadGame() {
   try { return parseSave(localStorage.getItem(SAVE_KEY)) ?? newGame() } catch { return newGame() }
@@ -49,7 +55,7 @@ export default function Garden() {
   const [toast, setToast] = useState('')
   const [saveError, setSaveError] = useState(false)
   const [victoryDismissed, setVictoryDismissed] = useState(s.wonAt !== null)
-  const [floats, setFloats] = useState<{ id: number; pot: number; text: string }[]>([])
+  const [floats, setFloats] = useState<{ id: number; pot: number; text: string; kind: string }[]>([])
   const current = useRef(s)
   const floatId = useRef(0)
   const offlineApplied = useRef(false)
@@ -59,7 +65,7 @@ export default function Garden() {
 
   useEffect(() => { current.current = s }, [s])
   useEffect(() => {
-    configureAudio(settings.sound, settings.volume)
+    configureAudio(settings.sound, settings.volume, settings.music, settings.musicVolume)
     try { localStorage.setItem('moon-garden-settings', JSON.stringify(settings)) } catch { /* Gameplay remains available without storage. */ }
   }, [settings])
   useEffect(() => {
@@ -102,7 +108,7 @@ export default function Garden() {
       text = '种下了！'; sound('plant')
     } else if (p.growth >= PLANTS[p.plant].seconds) { text = `+${reward(s, PLANTS[p.plant])}`; sound('coin') }
     else { text = `+${p.plant === 9 ? '0.5' : clickPower(s).toFixed(0)}秒`; sound('water') }
-    setFloats(f => [...f.slice(-9), { id: floatId.current++, pot: index, text }])
+    setFloats(f => [...f.slice(-9), { id: floatId.current++, pot: index, text, kind: p.plant === null ? 'plant' : p.growth >= PLANTS[p.plant].seconds ? 'coin' : 'water' }])
     dispatch({ type: 'pot', index })
   }
   function choose(id: number) { dispatch({ type: 'select', id }); sound('tap') }
@@ -110,7 +116,8 @@ export default function Garden() {
   const nextGoal = s.earned < 120 ? '累计赚取 120 金币，解锁中级种子' : s.earned < 1800 ? '累计赚取 1,800 金币，解锁高级种子' : !unlocked(s, 3) ? `培育三种高级植物（${[6, 7, 8].filter(id => s.discovered.includes(id)).length}/3），解锁终极种子` : s.wonAt !== null ? '星之花已经绽放。继续创造你的奇妙花园吧。' : s.pots.some(p => p.plant === 9) ? '照料永恒星之花，让第一颗星星在花园绽放' : '积攒 6,500 金币，种下永恒星之花'
   const goalProgress = s.earned < 120 ? s.earned / 120 : s.earned < 1800 ? s.earned / 1800 : !unlocked(s, 3) ? [6, 7, 8].filter(id => s.discovered.includes(id)).length / 3 : s.pots.some(p => p.plant === 9) ? s.pots.find(p => p.plant === 9)!.growth / 480 : s.wonAt !== null ? 1 : s.coins / 6500
 
-  return <div className={`game-shell ${!settings.motion ? 'reduce-motion' : ''} ${screen === 'menu' ? 'on-menu' : ''}`}>
+  return <div className={`game-shell ${!settings.motion ? 'reduce-motion' : ''} ${screen === 'menu' ? 'on-menu' : ''} ${paused ? 'is-paused' : ''}`}>
+    <Fireflies />
     <header className="topbar">
       <div className="stat wood coin-stat"><Sprite id={15} /><div><small>花园金币</small><strong data-testid="coins">{number(s.coins)}</strong></div></div>
       <div className="stat wood"><Icon name="leaf" /><div><small>培育图鉴</small><strong>{s.discovered.length}<em>/ 10</em></strong></div></div>
@@ -149,13 +156,15 @@ export default function Garden() {
             const seed = p !== null && pot.growth < p.seconds * .15
             const young = p !== null && pot.growth < p.seconds * .5
             const sprite = p === null ? 10 : seed ? 11 : young ? 0 : p.id
-            return <button key={i} data-testid={`pot-${i}`} aria-label={`花盆${i + 1} ${p?.name ?? '空闲'} ${p ? ready ? '收获' : '浇水' : '播种'}`} className={`pot ${ready ? 'ready' : ''} ${p?.tier === 3 ? 'ultimate' : ''}`} onClick={() => potClick(i)}>
+            return <button key={i} data-testid={`pot-${i}`} aria-label={`花盆${i + 1} ${p?.name ?? '空闲'} ${p ? ready ? '收获' : '浇水' : '播种'}`} className={`pot ${ready ? 'ready' : ''} ${p?.tier === 3 ? 'ultimate' : ''} ${p && !seed ? 'alive' : ''} plant-${p?.id ?? 'empty'}`} style={{ '--sway-delay': `${-i * .37}s` } as CSSProperties} onClick={() => potClick(i)}>
               <span className="pot-number">{(i + 1).toString().padStart(2, '0')}</span>
               {p && <span className="plant-name">{p.name}</span>}
-              <Sprite id={sprite} className="pot-art" />
-              {p && s.elapsed - pot.wateredAt < .65 && <span className="water-drop">♦</span>}
+              {p && !young && p.tier > 0 && <span className={`plant-aura aura-${p.tier}`} aria-hidden="true"><i /><i /><i /></span>}
+              <Sprite key={`${sprite}-${ready}`} id={sprite} className="pot-art" />
+              {ready && <span className="ripe-sparkles" aria-hidden="true">✦<i>✧</i><b>✦</b></span>}
+              {p && s.elapsed - pot.wateredAt < .65 && <span key={pot.wateredAt} className="water-drop" aria-hidden="true">♦<PixelBurst kind="water" /></span>}
               <span className="pot-sign"><strong>{p ? ready ? '可收获' : seed ? '萌芽中' : young ? '生长中' : p.tier === 3 ? '凝聚星光' : '成株生长' : '空 闲'}</strong><Progress value={p ? pot.growth / p.seconds : 0} gold={p?.tier === 3} /><small>{p ? ready ? `+${reward(s, p)} 金币` : `${formatTime((p.seconds - pot.growth) / (p.tier === 3 ? 1 : growthRate(s)))}` : '点击播种'}</small></span>
-              {floats.filter(f => f.pot === i).map(f => <span className="float-label" key={f.id}>{f.text}</span>)}
+              {floats.filter(f => f.pot === i).map(f => <span className={`pot-feedback feedback-${f.kind}`} key={f.id}><span className="float-label">{f.text}</span>{f.kind !== 'water' && <PixelBurst kind={f.kind} />}</span>)}
             </button>
           })}</div>
           <div className="garden-path"><span className="path-grass">✦</span>{s.upgrades.snail ? <div className="snail-parade" style={{ '--snail-position': `${(s.cursor % s.pots.length) / s.pots.length * 70}%`, '--snail-count': s.upgrades.snail } as CSSProperties}>{Array.from({ length: s.upgrades.snail }, (_, i) => <Sprite id={12} key={i} />)}<span className="snail-drops">▪ · ▪ ·</span></div> : <div className="sleepy-snail"><Sprite id={12} /><span>小蜗牛在等你雇用它…</span></div>}<span className="path-grass">✦</span></div>
@@ -187,10 +196,21 @@ export default function Garden() {
       <div className="menu-links"><button onClick={() => setPanel('help')}>玩法指南</button><span>◆</span><button onClick={() => setPanel('settings')}>游戏设置</button>{s.started && <><span>◆</span><button onClick={() => setPanel('reset')}>新的花园</button></>}</div>
       <small className="menu-footnote">10 种奇植 · 12 种升级 · 一段约 10–15 分钟的旅程</small>
     </Modal>}
-    {panel === 'settings' && <Modal title="游戏设置" close={() => setPanel(null)}><h2>游戏设置</h2><p className="modal-intro">暂歇片刻，花园里的时间也会停下来。</p><label className="setting-row">游戏音效<input type="checkbox" checked={settings.sound} onChange={e => { unlockAudio(); setSettings({ ...settings, sound: e.target.checked }) }} /></label><label className="setting-row">音量 <span>{Math.round(settings.volume * 100)}%</span><input aria-label="音量" type="range" min="0" max="1" step=".05" value={settings.volume} onChange={e => setSettings({ ...settings, volume: Number(e.target.value) })} /></label><button className="text-button" onClick={() => { unlockAudio(); sound('coin') }}>试听收获音效 ♪</button><label className="setting-row">植物与助手动画<input type="checkbox" checked={settings.motion} onChange={e => setSettings({ ...settings, motion: e.target.checked })} /></label><p className="settings-note">每 3 秒自动保存。关闭页面后最多结算 30 分钟离线成长；菜单和设置暂停当前游戏。</p><div className="modal-actions"><button className="primary-button" onClick={() => setPanel(null)}>返回{screen === 'game' ? '花园' : '菜单'}</button>{screen === 'game' && <button className="blue-button" onClick={() => { setPanel(null); setScreen('menu') }}>开始菜单</button>}</div></Modal>}
+    {panel === 'settings' && <Modal title="游戏设置" close={() => setPanel(null)}>
+      <h2>游戏设置</h2><p className="modal-intro">暂歇片刻，花园里的时间也会停下来。</p>
+      <div className="music-card"><span className={`music-notes ${settings.music ? 'playing' : ''}`} aria-hidden="true"><i /><i /><i /><i /></span><div><strong>月光下，慢慢生长</strong><small>原创花园摇篮曲 · 72 BPM · 循环播放</small></div></div>
+      <label className="setting-row">舒缓背景音乐<input type="checkbox" checked={settings.music} onChange={e => { unlockAudio(); setSettings({ ...settings, music: e.target.checked }) }} /></label>
+      <label className="setting-row">音乐音量 <span>{Math.round(settings.musicVolume * 100)}%</span><input aria-label="音乐音量" type="range" min="0" max="1" step=".05" value={settings.musicVolume} onChange={e => { unlockAudio(); setSettings({ ...settings, musicVolume: Number(e.target.value) }) }} /></label>
+      <label className="setting-row">游戏音效<input type="checkbox" checked={settings.sound} onChange={e => { unlockAudio(); setSettings({ ...settings, sound: e.target.checked }) }} /></label>
+      <label className="setting-row">音效音量 <span>{Math.round(settings.volume * 100)}%</span><input aria-label="音效音量" type="range" min="0" max="1" step=".05" value={settings.volume} onChange={e => setSettings({ ...settings, volume: Number(e.target.value) })} /></label>
+      <button className="text-button" onClick={() => { unlockAudio(); sound('coin') }}>试听收获音效 ♪</button>
+      <label className="setting-row">植物与助手动画<input type="checkbox" checked={settings.motion} onChange={e => setSettings({ ...settings, motion: e.target.checked })} /></label>
+      <p className="settings-note">切到其他标签页时音乐会暂停。每 3 秒自动保存，最多结算 30 分钟离线成长；菜单和设置暂停当前游戏。</p>
+      <div className="modal-actions"><button className="primary-button" onClick={() => setPanel(null)}>返回{screen === 'game' ? '花园' : '菜单'}</button>{screen === 'game' && <button className="blue-button" onClick={() => { setPanel(null); setScreen('menu') }}>开始菜单</button>}</div>
+    </Modal>}
     {panel === 'help' && <Modal title="玩法指南" close={() => setPanel(null)}><h2>园丁的小手册</h2><ol className="help-list"><li><b>选种、播种</b><p>左侧选择品种，点击空花盆购买并播种。三种低级种子永远免费。</p></li><li><b>浇水、收获</b><p>植物会自然生长，点击可加速。长出完整外观后特殊效果生效；进度满后再次点击收获金币。</p></li><li><b>扩建、雇用助手</b><p>右侧三个分类共有 12 种升级。建议先买园艺手套，再雇用浇水蜗牛。自动播种使用当前种子，金币不足时种嫩芽豆。</p></li><li><b>种出第一颗星星</b><p>培育出三种高级植物即可购买终极种子。星之花自然生长需 8 分钟，点击和蜗牛可小幅加速，其他加成无效。成熟即通关，之后可以继续种植。</p></li></ol><p className="settings-note">星之花不会被自动收获或自动播种。可关闭自动收获，保留植物光环。相邻指上下左右花盆。</p><button className="primary-button" onClick={() => setPanel(null)}>知道了</button></Modal>}
     {panel === 'book' && <Modal title="植物图鉴" className="book-modal" close={() => setPanel(null)}><h2>奇植图鉴 <small>{s.discovered.length} / 10</small></h2><p className="modal-intro">培育至成熟，便能点亮它的名字。成株阶段为 50% 进度。</p><div className="book-grid">{PLANTS.map(p => <article key={p.id} className={s.discovered.includes(p.id) ? 'discovered' : ''}><Sprite id={p.id} /><div><h3>{p.name}<small>{TIERS[p.tier].replace('种子', '')} · {s.discovered.includes(p.id) ? '已培育' : '未培育'}</small></h3><p>{p.effect}</p><span>{p.lore}</span></div></article>)}</div></Modal>}
     {panel === 'reset' && <Modal title="开始新的花园" close={() => setPanel(null)}><h2>重新种下第一颗种子？</h2><p className="modal-intro">这会替换本机的花园存档，金币、植物和升级会重新开始。音效设置会保留。</p><div className="modal-actions"><button className="blue-button" onClick={() => setPanel(null)}>保留我的花园</button><button className="primary-button" onClick={reset}>开始新的花园</button></div></Modal>}
-    {won && !panel && <Modal title="星之花绽放，通关成功" className="victory-modal"><span className="menu-eyebrow">一颗星星，为你而开</span><Sprite id={9} /><h2>星之花，绽放了。</h2><p>从第一颗小小的种子，到一整个星光花园。<br />谢谢你的每一次照料。</p><div className="victory-stats"><div><small>通关用时</small><strong data-testid="win-time">{formatTime(s.wonAt ?? 0)}</strong></div><div><small>收获植物</small><strong>{s.harvests}</strong></div><div><small>发现奇植</small><strong>{s.discovered.length}/10</strong></div></div><button className="primary-button" onClick={() => setVictoryDismissed(true)}>继续照料花园</button><small className="menu-footnote">旅程完成了，花园的故事还在继续。</small></Modal>}
+    {won && !panel && <Modal title="星之花绽放，通关成功" className="victory-modal"><div className="victory-stars" aria-hidden="true"><PixelBurst kind="star" /><PixelBurst kind="coin" /></div><span className="menu-eyebrow">一颗星星，为你而开</span><Sprite id={9} /><h2>星之花，绽放了。</h2><p>从第一颗小小的种子，到一整个星光花园。<br />谢谢你的每一次照料。</p><div className="victory-stats"><div><small>通关用时</small><strong data-testid="win-time">{formatTime(s.wonAt ?? 0)}</strong></div><div><small>收获植物</small><strong>{s.harvests}</strong></div><div><small>发现奇植</small><strong>{s.discovered.length}/10</strong></div></div><button className="primary-button" onClick={() => setVictoryDismissed(true)}>继续照料花园</button><small className="menu-footnote">旅程完成了，花园的故事还在继续。</small></Modal>}
   </div>
 }

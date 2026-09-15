@@ -249,3 +249,60 @@ input[type=checkbox] { accent-color: var(--color-green); width: 16px; height: 16
   .statusbar { margin-top:17px; }
 }
 @media (max-width:620px) { .garden-path { --snail-size:40px; } }
+
+/* Pixel motion: hard-edged light, stepped motion, small bounded particle bursts. */
+.game-shell { isolation: isolate; }
+.fireflies { position: fixed; inset: 0; pointer-events: none; z-index: -1; overflow: hidden; }
+.fireflies i { position: absolute; width: 3px; height: 3px; background: var(--color-gold-light); box-shadow: 0 0 0 3px #ffdf5515, 0 0 0 6px #ffdf5508; animation: firefly var(--duration) steps(24) var(--delay) infinite; }
+@keyframes firefly { 0%,100% { opacity: .15; transform: translate(0,0); } 35% { opacity: .85; } 60% { opacity: .45; transform: translate(22px,-36px); } }
+.pot.alive .pot-art { transform-origin: 50% 85%; animation: plant-arrive .45s steps(6) both, plant-sway 5s steps(10) var(--sway-delay) infinite; }
+.pot.ready .pot-art { animation: plant-arrive .45s steps(6) both, ripe-breathe 3s steps(12) infinite; filter: drop-shadow(2px 0 0 #ffdf5566) drop-shadow(-2px 0 0 #ffdf5533); }
+@keyframes plant-arrive { 0% { opacity: .65; scale: .85; } 65% { scale: 1.04; } 100% { opacity: 1; scale: 1; } }
+@keyframes plant-sway { 0%,100% { rotate: -1deg; } 50% { rotate: 1deg; } }
+@keyframes ripe-breathe { 0%,100% { translate: 0 0; } 50% { translate: 0 -3px; } }
+.pot.ready::before { border-style: solid; clip-path: polygon(0 0,22% 0,22% 3%,3% 3%,3% 22%,0 22%,0 0,100% 0,100% 22%,97% 22%,97% 3%,78% 3%,78% 0,100% 0,100% 100%,78% 100%,78% 97%,97% 97%,97% 78%,100% 78%,100% 100%,0 100%,0 78%,3% 78%,3% 97%,22% 97%,22% 100%,0 100%); }
+.ripe-sparkles { position: absolute; top: 20%; left: 10%; color: var(--color-gold-light); font-size: 18px; pointer-events: none; animation: pixel-twinkle 2.4s steps(4) infinite; }
+.ripe-sparkles i { position: absolute; left: 70px; top: -10px; font-style: normal; font-size: 12px; }
+.ripe-sparkles b { position: absolute; left: 5px; top: 40px; font-size: 9px; }
+@keyframes pixel-twinkle { 0%,100% { opacity: .3; } 50% { opacity: 1; } }
+.plant-aura { position: absolute; inset: 22% 20% 24%; pointer-events: none; z-index: -1; color: var(--color-cyan); }
+.aura-2 { color: var(--color-purple); }.aura-3 { color: var(--color-gold-light); }
+.plant-aura i { position: absolute; bottom: 10%; width: 3px; height: 3px; background: currentColor; box-shadow: 0 0 0 3px #ffffff09; animation: aura-rise 3.6s steps(16) infinite; }
+.plant-aura i:nth-child(2) { left: 80%; animation-delay: -1.2s; }.plant-aura i:nth-child(3) { left: 40%; animation-delay: -2.4s; }
+@keyframes aura-rise { from { opacity: 0; translate: 0 0; } 25% { opacity: .8; } to { opacity: 0; translate: 6px -65px; } }
+.pot-feedback { position: absolute; inset: 0; pointer-events: none; z-index: 7; }
+.pot-feedback .float-label { left: 50%; top: 30%; translate: -50% 0; text-shadow: 2px 2px var(--color-ink), -1px -1px var(--color-ink); }
+.feedback-water .float-label { color: var(--color-cyan); }
+.feedback-plant .float-label { color: var(--color-green-light); }
+.pixel-burst { position: absolute; left: 50%; top: 45%; pointer-events: none; z-index: 6; color: var(--color-green); }
+.pixel-burst i { position: absolute; width: 5px; height: 5px; background: currentColor; box-shadow: 1px 1px var(--color-ink); animation: pixel-burst .85s steps(12) var(--delay) both; }
+.burst-water { color: var(--color-cyan); }.burst-coin,.burst-star { color: var(--color-gold); }
+.burst-coin i { width: 7px; height: 9px; border: 2px solid var(--color-gold-dark); box-shadow: inset 1px 1px var(--color-gold-light); }
+.burst-plant i:nth-child(even) { color: var(--color-wood-deep); }
+.burst-star i:nth-child(even) { color: var(--color-cyan); }
+@keyframes pixel-burst { 0% { opacity: 1; transform: translate(0,0) rotate(0); } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx),var(--dy)) rotate(var(--turn)); } }
+.water-drop .pixel-burst { top: 70%; }.water-drop .pixel-burst i { animation-delay: .14s; width: 4px; height: 4px; }
+.snail-parade .sprite { animation: snail-crawl 1.8s steps(6) infinite; transform-origin: bottom; }
+.snail-parade .sprite:nth-child(even) { animation-delay: -.8s; }
+@keyframes snail-crawl { 0%,100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-2px) rotate(1deg); } }
+.snail-drops { animation: pixel-twinkle 1.2s steps(3) infinite; }
+.menu-plants .sprite { animation: ripe-breathe 4s steps(12) infinite; }
+.menu-plants .sprite:nth-child(2) { animation-delay: -1.5s; filter: drop-shadow(3px 0 #ffdf5540) drop-shadow(-3px 0 #ffdf5540); }
+.modal { animation: modal-arrive .22s steps(6) both; }
+@keyframes modal-arrive { from { opacity: 0; translate: 0 8px; } to { opacity: 1; translate: 0 0; } }
+.music-card { display: flex; align-items: center; gap: 16px; padding: 14px; background: var(--color-blue-dark); border: 2px solid var(--color-blue-edge); margin-bottom: 12px; }
+.music-card strong { color: var(--color-gold-light); font-size: 14px; }.music-card small { display: block; color: var(--color-muted); font-size: 10px; margin-top: 5px; }
+.music-notes { display: flex; align-items: end; gap: 3px; height: 22px; flex-shrink: 0; }
+.music-notes i { display: block; width: 4px; height: 5px; background: var(--color-green); }
+.music-notes.playing i { animation: music-bar 1.67s steps(5) infinite alternate; }
+.music-notes i:nth-child(2) { animation-delay: -.4s; }.music-notes i:nth-child(3) { animation-delay: -.9s; }.music-notes i:nth-child(4) { animation-delay: -.2s; }
+@keyframes music-bar { to { height: 22px; } }
+.victory-stars { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.victory-stars .pixel-burst { top: 32%; left: 35%; }.victory-stars .pixel-burst:nth-child(2) { left: 70%; top: 38%; }
+.victory-stars i { animation-duration: 2.4s; animation-iteration-count: 3; }
+.victory-modal > .sprite { animation: ripe-breathe 3s steps(12) infinite; filter: drop-shadow(3px 0 #ffdf5555) drop-shadow(-3px 0 #ffdf5555); }
+.is-paused .garden-board *, .is-paused .garden-board *::before { animation-play-state: paused; }
+.reduce-motion .pixel-burst,.reduce-motion .fireflies,.reduce-motion .plant-aura,.reduce-motion .ripe-sparkles { display: none; }
+.reduce-motion *, .reduce-motion *::before { animation: none !important; transition: none !important; }
+@media (prefers-reduced-motion: reduce) { .pixel-burst,.fireflies,.plant-aura,.ripe-sparkles { display: none; } *,*::before { animation: none !important; transition: none !important; } }
+@media (max-width:620px) { .ripe-sparkles { font-size: 10px; }.ripe-sparkles i { left: 30px; }.pixel-burst i { width: 3px; height: 3px; }.pot-feedback .float-label { font-size: 12px; } }
