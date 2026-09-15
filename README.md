@@ -1,64 +1,75 @@
-# 最后一枚 · THE LAST COIN
+# React + TypeScript + Vite
 
-《最后一枚》是 React、TypeScript 与 Three.js 制作的低模心理恐怖增量游戏。玩家在月圆之夜探索一座封闭教堂，以无限银币净化生物、恢复在线生产，最终组装月亮炮并亲自击碎月亮。游戏没有倒计时胜负，也没有离线收益。
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-在线试玩：[https://xcymm3.github.io/Coin/](https://xcymm3.github.io/Coin/)
+Currently, two official plugins are available:
 
-## 运行与验证
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
-需要 Node.js 22.12+ 与项目锁定的 pnpm 版本。
+## React Compiler
 
-```sh
-pnpm install
-pnpm dev
-pnpm test
-pnpm build
-pnpm test:e2e
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+
+## Expanding the ESLint configuration
+
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+
+```js
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+
+      // Remove tseslint.configs.recommended and replace with this
+      tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      tseslint.configs.stylisticTypeChecked,
+
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+
 ```
 
-GitHub Pages 使用 `PAGES_BASE_PATH=/Coin/` 构建。Vite 的资源基路径由环境变量切换，本地开发保持 `/`。
+You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
 
-## 操作
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
 
-- `W`：朝当前方向前进一格；墙、关闭的终祷门会阻挡。
-- `A` / `D`：离散左转 / 右转 90°。画面有短暂过渡，规则坐标始终离散。
-- 鼠标：有限瞄准和轻微扭头；左键单击或按住连续发射无限银币。空格向准星发射。
-- `B`：打开只列出已获得能力的契约册；`M`：方位图；`P` / `Esc`：暂停；`F`：全屏。
-- 触屏底部提供 A、W、D、发射、B 与暂停的等价按钮。
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 
-首次进入必须完成“月下低语”：真实瞄准庇护机并命中三次，实际打开 `B` 查看“银币发射”，随后移动才会解锁。刷新后若有有效存档，开始界面会明确提供“继续上次探索”。
-
-## 教堂与推进
-
-规则地图有 13 个真实 Three.js 方格节点，包含庇护地、前厅、洗礼堂、中殿、两侧廊、耳堂、回廊、骨库、唱诗席、钟楼、后殿和月亮炮台。未访问的门由黑暗遮挡，方位图仅显示已探索房间，不用网页按钮代替移动。
-
-怪物有三类：空壳巡礼者、伏行忏悔兽与失声唱诗体。它们的净化阈值、攻击强度和产物不同。净化后会原地变为安静的生产者：
-
-| 生物 | 净化阈值 | 自动产物 | 单体速率 |
-| --- | ---: | --- | ---: |
-| 空壳巡礼者 | 6 | 银币充能 | 0.80/秒 |
-| 伏行忏悔兽 | 10 | 圣水 | 0.08/秒 |
-| 失声唱诗体 | 16 | 十字架 | 0.04/秒 |
-
-断烛中殿、银纹耳堂、无风回廊、失声唱诗席是四处永久安全生产节点。净化后灯光改变，安全状态、生产者和主线永久保留。齐射、净化威力、射击钟摆三台机器位于安全区；射击机器为升级充能，场景铭牌显示当前等级、下级总需求和剩余点数。
-
-未知房间中的怪物会持续伤害玩家。击倒会把玩家送到拓扑距离最近的已占领庇护点，只扣除本次探索所得的 20%；升级、已净化生物、安全区、生产者和主线均不回退。
-
-## 在线生产、存档与时长
-
-生产只在页面打开、前台可见、窗口有焦点、未暂停且未打开 `B` / 地图时推进。刷新、关闭、失焦、切后台、暂停与覆盖层期间不推进，恢复时不按真实时间补算。存档包含版本、房间与朝向、资源、生产者、房间状态、升级、月炮阶段和累计有效游戏时间；损坏或旧版本存档会被安全拒绝。
-
-确定性参考策略先净化三类生产者与四处安全区，再保持在线生产。四段月亮炮需要炮身、1,400 圣水冷却、900 十字架瞄具与 18,000 银币弹芯。规则测试在 100 分钟有效游戏时间获得全部资源，落在 100–140 分钟首次通关目标内。
-
-组装完成后不会自动结算。玩家必须对远处月亮开火：第一阶段三次命中打破月壳，天空转为暗红；第二阶段五次命中贯穿月心，才进入胜利结算。
-
-## 工程结构
-
-- `src/rules.ts`：无 DOM/React/Three.js 依赖的地图、战斗、生产、回撤、存档与终局规则。
-- `src/world.ts`：Three.js 透视教堂、格点相机、门/黑暗、射线命中、怪物、机器、月亮炮与月亮。
-- `src/ImmersiveGame.tsx`：教程、HUD、覆盖层、输入、在线生命周期和存档编排。
-- `src/audio.ts`：用户手势后启动的程序化环境、脚步、银币、机器、生物与终局音效。
-- `src/rules.test.ts`：确定性规则和 100 分钟参考策略。
-- `tests/night.spec.ts`：真实 WebGL 教程、输入、生产冻结、保存恢复、月亮炮、小屏布局与上下文丢失。
-
-所有模型与音频均由代码生成，无后端、账号、远程素材或联网运行时依赖。视觉避免跳脸、频闪和强闪光，并支持 `prefers-reduced-motion`、键盘焦点与 WebGL 恢复提示。
+```

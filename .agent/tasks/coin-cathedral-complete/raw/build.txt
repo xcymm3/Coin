@@ -1,7 +1,0 @@
-# Build verification
-
-- `pnpm build`: PASS; TypeScript and Vite completed, 24 modules transformed.
-- `PAGES_BASE_PATH=/Coin/ pnpm build`: PASS; the GitHub Pages build completed and all 7 absolute asset references used the `/Coin/` prefix.
-- The standard base build was restored after the Pages check.
-
-Full captured outputs remain in `build-standard.txt`, `build-pages.txt`, and `pages-index.html`.

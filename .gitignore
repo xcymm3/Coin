@@ -1,11 +1,24 @@
-node_modules/
-dist/
-test-results/
-playwright-report/
-*.tsbuildinfo
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# deadline-carl:local-state:start
-/.agent/durable-loop/
-/.agent/deadline-carl-scratch/
-/.agent/tasks/*/.init-in-progress
-# deadline-carl:local-state:end
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

@@ -1,7 +1,0 @@
-# Browser integration verification
-
-`pnpm test:e2e`: PASS, 9/9 Playwright tests in 1.7 minutes.
-
-Covered real WebGL tutorial hits, B/W/A/D unlocks, online production and pause semantics, versioned continuation, four-stage moon cannon assembly, player-fired moon victory, four narrow touch layouts, WebGL loss recovery, desktop heights, focus pause, and reduced motion.
-
-Full Playwright output remains in `e2e.txt`; six viewport captures and `viewport-trace.json` provide visual/runtime evidence.

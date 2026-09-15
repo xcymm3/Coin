@@ -1,9 +1,0 @@
-{
-  "date": "2026-09-14",
-  "framework": "React 19 + TypeScript + Vite",
-  "font_stack": "local system serif + sans + mono",
-  "palette": "custom OKLCH moon-blue atmospheric",
-  "motion": "motion-cut; transform and opacity only",
-  "spacing": "4px scale",
-  "sources": ["package.json", "tokens.css", "src/immersive.css"]
-}
