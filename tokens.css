@@ -1,0 +1,17 @@
+/* Moonlit Garden · reference-locked pixel palette */
+:root {
+  --color-night: #07182b; --color-ink: #111617; --color-paper: #eee6cd;
+  --color-muted: #b4c7c5; --color-dim: #839ea4; --color-gold: #ffdf55;
+  --color-gold-light: #fff3a0; --color-gold-dark: #ac7224;
+  --color-green: #65e541; --color-green-light: #b9ff80; --color-green-dark: #237128;
+  --color-blue: #07394e; --color-blue-light: #12617c; --color-blue-edge: #2386a1;
+  --color-blue-dark: #052434; --color-blue-deep: #0a223e;
+  --color-wood: #8d5b35; --color-wood-light: #ba8751; --color-wood-edge: #d39a59;
+  --color-wood-dark: #4c3022; --color-wood-deep: #362319; --color-grain: #9a673d;
+  --color-cyan: #70d9f3; --color-purple: #d4a8fa;
+  --color-backdrop: #03101ad9; --color-shade: #11161738; --color-clear: transparent;
+  --font-display: 'Garden Pixel', 'Microsoft YaHei', sans-serif;
+  --font-body: 'Garden Pixel', 'Microsoft YaHei', sans-serif;
+  --font-number: 'Garden Pixel', 'Lucida Console', monospace;
+  --ease-out: cubic-bezier(.2,.7,.2,1); --dur-fast: 120ms;
+}

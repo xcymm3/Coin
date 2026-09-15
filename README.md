@@ -1,75 +1,53 @@
-# React + TypeScript + Vite
+# 月光奇植园 · Moonlit Garden
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+一款中文像素风花园增量游戏。购买种子、点击浇水、收获金币、雇用蜗牛，最终培育永恒星之花。通关后继续自由种植。
 
-Currently, two official plugins are available:
+[在线游玩](https://xcymm3.github.io/Coin/)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 本地运行
 
-## React Compiler
+需要 Node.js 22.18+ 和 pnpm 11。
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```sh
+pnpm install --frozen-lockfile
+pnpm dev --host 127.0.0.1
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+打开开发服务输出的地址，默认是 http://127.0.0.1:5173/ 。
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## 内容
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- 十种植物：三种免费低级植物、三种中级植物、三种高级植物、一种终极植物。
+- 六种中高级效果：邻盆浇水、自然生长光环、被动产币、收获群体加速、点击光环、蜗牛光环。
+- 十二种升级，分为照料、花园、助手三类。初始六个花盆，最多十五个。
+- 手动浇水与收获、自动浇水、自动收获、自动播种。
+- 开始菜单、游戏设置、植物图鉴、玩法指南、通关界面。
+- 合成音效、音量设置、动画开关、系统减少动态效果支持。
+- 每三秒本地存档；最多三十分钟离线成长；菜单暂停。
+- 手机面板切换、键盘操作、原生对话框焦点约束。
 
+## 通关节奏
+
+累计收益达到 120 / 1,800 金币解锁中级 / 高级种子。培育成熟全部三种高级植物后，可以花费 6,500 金币购买永恒星之花。
+
+星之花基础生长 480 秒，手动浇水每次增加 0.5 秒、蜗牛每次增加 0.25 秒；不接受普通植物的其他加速。成熟即通关，不需要收获触发。它不会被自动收获或自动播种。
+
+本次真实浏览器试玩从零开始，以页面操作在 **14:33** 通关，完成 10/10 图鉴和十五盆扩建。不同的点击频率和升级顺序会改变实际用时。详细记录见 [试玩与验证](docs/PLAYTEST.md)。
+
+## 验证
+
+```sh
+pnpm test
+pnpm lint
+pnpm build
 ```
+
+游戏计算在 `src/game.ts`，界面在 `src/Garden.tsx`，音效在 `src/audio.ts`，风格在 `src/garden.css` 与 `tokens.css`。
+
+## 部署
+
+推送到 `main` 后，现有 GitHub Actions 工作流自动构建并部署到 GitHub Pages。`PAGES_BASE_PATH=/Coin/` 控制生产资源路径，也支持手动触发工作流。
+
+## 素材与许可
+
+图像素材与字体均随项目本地打包，不依赖第三方运行时接口。素材生成说明、提示词与字体许可见 [ASSETS.md](docs/ASSETS.md)。
