@@ -1,160 +1,154 @@
-export const TARGETS = ['forge', 'splitter', 'choir', 'ward', 'lens', 'seal', 'clock'] as const;
-export type Target = typeof TARGETS[number];
-export type Device = Exclude<Target, 'clock'>;
-export type Status = 'ready' | 'tutorial' | 'playing' | 'paused' | 'failed' | 'won';
-export const DAWN_TIME = 720;
-export const SAVE_KEY = 'last-coin-v2-save';
-export const chapters = [
-  { at: 0, name: '第一夜钟 · 苏醒', note: '先向分魂祭器献上十枚铜币。', machine: null },
-  { at: 90, name: '第二夜钟 · 低语', note: '灵仆摇篮已现形。让它代你献祭。', machine: 'choir' },
-  { at: 210, name: '第三夜钟 · 叩门', note: '祷告风琴已经苏醒。为结界留下余裕。', machine: 'ward' },
-  { at: 360, name: '第四夜钟 · 窥视', note: '黑曜棱镜正在凝视你。用它放大献祭的力量。', machine: 'lens' },
-  { at: 510, name: '第五夜钟 · 血月', note: '黎明圣龛已显露。开始准备最后的封印。', machine: 'seal' },
-  { at: 660, name: '第六夜钟 · 终祷', note: '守住最后一分钟。黎明将回应已充能的圣龛。', machine: null },
-] as const;
-export const devices: Record<Device, { name: string; short: string; rune: string; at: number; costs: number[]; description: string }> = {
-  forge: { name: '余烬铸币炉', short: '铸币炉', rune: '♜', at: 0, costs: [1000, 2400, 6000, 14000, 32000], description: '将铜币淬成更强的祭品。' },
-  splitter: { name: '分魂祭器', short: '分魂祭器', rune: '♆', at: 0, costs: [10, 80, 360, 1200], description: '一枚铜币，多道回响。增加齐射。' },
-  choir: { name: '灵仆摇篮', short: '灵仆摇篮', rune: '♧', at: 90, costs: [120, 360, 1000, 2600], description: '唤醒灵仆，自动替你献上铜币。' },
-  ward: { name: '祷告风琴', short: '祷告风琴', rune: '♰', at: 210, costs: [250, 900, 2400, 6200], description: '祷声持续修复结界，并强化续命。' },
-  lens: { name: '黑曜棱镜', short: '黑曜棱镜', rune: '◇', at: 360, costs: [600, 2000, 6000, 16000], description: '放大每枚铜币的设备充能效率。' },
-  seal: { name: '黎明圣龛', short: '黎明圣龛', rune: '☼', at: 510, costs: [18000], description: '注满圣龛，守到第十二分钟，封闭裂隙。' },
+export const SAVE_VERSION = 3;
+export const SAVE_KEY = 'last-coin-cathedral-v3';
+export const LOSS_RATE = 0.2;
+export const MAX_ACTIVE_STEP = 30;
+
+export type Direction = 'north' | 'east' | 'south' | 'west';
+export type Resource = 'silver' | 'water' | 'crosses';
+export type CreatureKind = 'hollow' | 'penitent' | 'cantor';
+export type Upgrade = 'volley' | 'power' | 'rate';
+export type Status = 'ready' | 'tutorial' | 'playing' | 'paused' | 'won';
+export type RoomId = typeof ROOMS[number]['id'];
+export type CreatureId = typeof CREATURES[number]['id'];
+export type TargetId = `creature:${CreatureId}` | `machine:${'tutorial' | Upgrade | 'cannon'}` | 'moon';
+
+export interface RoomDefinition { id: string; name: string; area: string; x: number; z: number; exits: Partial<Record<Direction, string>>; sanctuary?: boolean; final?: boolean }
+
+export const ROOMS = [
+  { id: 'refuge', name: '烛下庇护地', area: '西廊', x: 0, z: 3, sanctuary: true, exits: { north: 'narthex' } },
+  { id: 'narthex', name: '封门前厅', area: '西廊', x: 0, z: 2, exits: { south: 'refuge', north: 'naveWest', east: 'baptistry' } },
+  { id: 'baptistry', name: '沉水洗礼堂', area: '侧堂', x: 1, z: 2, exits: { west: 'narthex', north: 'northAisle' } },
+  { id: 'naveWest', name: '断烛中殿', area: '中殿', x: 0, z: 1, sanctuary: true, exits: { south: 'narthex', north: 'transept', east: 'northAisle' } },
+  { id: 'northAisle', name: '倒悬侧廊', area: '侧堂', x: 1, z: 1, exits: { south: 'baptistry', west: 'naveWest', north: 'cloister' } },
+  { id: 'transept', name: '银纹耳堂', area: '耳堂', x: 0, z: 0, sanctuary: true, exits: { south: 'naveWest', north: 'choir', west: 'southAisle', east: 'cloister' } },
+  { id: 'southAisle', name: '流血侧廊', area: '侧堂', x: -1, z: 0, exits: { east: 'transept', north: 'ossuary' } },
+  { id: 'cloister', name: '无风回廊', area: '回廊', x: 1, z: 0, sanctuary: true, exits: { south: 'northAisle', west: 'transept', north: 'bellTower' } },
+  { id: 'ossuary', name: '无名骨库', area: '地下侧室', x: -1, z: -1, exits: { south: 'southAisle', east: 'choir' } },
+  { id: 'choir', name: '失声唱诗席', area: '唱诗席', x: 0, z: -1, sanctuary: true, exits: { south: 'transept', west: 'ossuary', east: 'bellTower', north: 'apse' } },
+  { id: 'bellTower', name: '逆鸣钟楼', area: '钟楼', x: 1, z: -1, exits: { south: 'cloister', west: 'choir', north: 'moonBattery' } },
+  { id: 'apse', name: '月蚀后殿', area: '后殿', x: 0, z: -2, exits: { south: 'choir', east: 'moonBattery' } },
+  { id: 'moonBattery', name: '月亮炮台', area: '终祷区', x: 1, z: -2, final: true, exits: { south: 'bellTower', west: 'apse' } },
+] as const satisfies readonly RoomDefinition[];
+
+export const CREATURE_KINDS: Record<CreatureKind, { name: string; threshold: number; resource: Resource; rate: number; attack: number }> = {
+  hollow: { name: '空壳巡礼者', threshold: 6, resource: 'silver', rate: 0.8, attack: 5 },
+  penitent: { name: '伏行忏悔兽', threshold: 10, resource: 'water', rate: 0.08, attack: 7 },
+  cantor: { name: '失声唱诗体', threshold: 16, resource: 'crosses', rate: 0.04, attack: 9 },
 };
+export const CREATURES = [
+  { id: 'narthex-hollow', room: 'narthex', kind: 'hollow' }, { id: 'baptistry-penitent', room: 'baptistry', kind: 'penitent' },
+  { id: 'nave-hollow', room: 'naveWest', kind: 'hollow' }, { id: 'aisle-cantor', room: 'northAisle', kind: 'cantor' },
+  { id: 'transept-penitent', room: 'transept', kind: 'penitent' }, { id: 'south-hollow', room: 'southAisle', kind: 'hollow' },
+  { id: 'cloister-cantor', room: 'cloister', kind: 'cantor' }, { id: 'ossuary-penitent', room: 'ossuary', kind: 'penitent' },
+  { id: 'choir-cantor', room: 'choir', kind: 'cantor' }, { id: 'tower-hollow', room: 'bellTower', kind: 'hollow' },
+  { id: 'apse-cantor', room: 'apse', kind: 'cantor' },
+] as const satisfies readonly { id: string; room: RoomId; kind: CreatureKind }[];
+export const SAFE_ROOMS: RoomId[] = ['naveWest', 'transept', 'cloister', 'choir'];
+export const CANNON_STAGES = [
+  { name: '炮身', resource: null, cost: 0 }, { name: '圣水冷却', resource: 'water' as Resource, cost: 1400 },
+  { name: '十字架瞄具', resource: 'crosses' as Resource, cost: 900 }, { name: '银币弹芯', resource: 'silver' as Resource, cost: 18000 },
+] as const;
+
 export interface GameState {
-  status: Status; time: number; elapsed: number; shots: number; hits: number;
-  levels: Record<Device, number>; progress: Record<Device, number>;
-  autoTarget: Target; upgrades: number; saved: number; guide: number; guideHits: number;
-  message: string; waveCount: number; autoCharge: number; journalRead: boolean;
+  version: number; status: Status; room: RoomId; facing: Direction; visited: RoomId[]; clearedRooms: RoomId[]; sanctuaries: RoomId[];
+  health: number; resources: Record<Resource, number>; expeditionGains: Record<Resource, number>; creatureDamage: Record<CreatureId, number>;
+  producers: CreatureId[]; upgrades: Record<Upgrade, number>; machineCharge: Record<Upgrade, number>; tutorialStep: number; tutorialCharge: number;
+  journalRead: boolean; effectiveSeconds: number; cannonStage: number; moonStage: number; moonHits: number; shots: number; hits: number; message: string;
 }
-const blank = (): Record<Device, number> => ({ forge: 0, splitter: 0, choir: 0, ward: 0, lens: 0, seal: 0 });
-export function initialState(): GameState {
-  return { status: 'ready', time: 100, elapsed: 0, shots: 0, hits: 0, levels: blank(), progress: blank(), autoTarget: 'forge', upgrades: 0, saved: 0, guide: 0, guideHits: 0, waveCount: 0, autoCharge: 0, journalRead: false, message: '末日生存系统正在寻找仍有心跳的守夜人……' };
+const emptyResources = (): Record<Resource, number> => ({ silver: 0, water: 0, crosses: 0 });
+const emptyDamage = () => Object.fromEntries(CREATURES.map(c => [c.id, 0])) as Record<CreatureId, number>;
+export function initialState(): GameState { return {
+  version: SAVE_VERSION, status: 'ready', room: 'refuge', facing: 'north', visited: ['refuge'], clearedRooms: ['refuge'], sanctuaries: ['refuge'],
+  health: 100, resources: emptyResources(), expeditionGains: emptyResources(), creatureDamage: emptyDamage(), producers: [], upgrades: { volley: 0, power: 0, rate: 0 },
+  machineCharge: { volley: 0, power: 0, rate: 0 }, tutorialStep: 0, tutorialCharge: 0, journalRead: false, effectiveSeconds: 0,
+  cannonStage: 0, moonStage: 0, moonHits: 0, shots: 0, hits: 0, message: '月下低语正在寻找仍敢呼吸的人。',
+}; }
+
+export const room = (id: RoomId) => ROOMS.find(r => r.id === id)!;
+export const creature = (id: CreatureId) => CREATURES.find(c => c.id === id)!;
+export const creatureInRoom = (s: GameState, id = s.room) => CREATURES.find(c => c.room === id && !s.producers.includes(c.id));
+export const isCleared = (s: GameState, id: RoomId) => s.clearedRooms.includes(id);
+export const productionRates = (s: GameState): Record<Resource, number> => s.producers.reduce((rates, id) => { const d = CREATURE_KINDS[creature(id).kind]; rates[d.resource] += d.rate; return rates }, emptyResources());
+export const volley = (s: GameState) => 1 + s.upgrades.volley;
+export const power = (s: GameState) => [1, 2, 4, 7][s.upgrades.power];
+export const fireInterval = (s: GameState) => [0.42, 0.3, 0.2, 0.13][s.upgrades.rate];
+export const upgradeCost = (s: GameState, kind: Upgrade) => [8, 24, 64][s.upgrades[kind]] ?? 0;
+export const canAct = (s: GameState) => s.status === 'tutorial' || s.status === 'playing';
+export const movementUnlocked = (s: GameState) => s.status === 'playing' && s.tutorialStep >= 3;
+export const finalResourcesReady = (s: GameState) => s.resources.silver >= 18000 && s.resources.water >= 1400 && s.resources.crosses >= 900;
+
+export function beginTutorial(s: GameState): GameState { return s.status === 'ready' ? { ...s, status: 'tutorial', tutorialStep: 1, message: '银币不会耗尽。瞄准庇护机并射击三次，让它记住你的手。' } : s }
+export function inspectJournal(s: GameState): GameState { return s.status === 'tutorial' && s.tutorialStep === 2 ? { ...s, tutorialStep: 3, journalRead: true, message: '你已获得「银币发射」。移动封印已经解除：W 前进，A / D 转向。' } : { ...s, journalRead: true } }
+export function beginGame(s: GameState): GameState { return s.status === 'tutorial' && s.tutorialStep < 3 ? s : { ...s, status: 'playing', tutorialStep: 3, message: '门已打开。未知房间才会伤害你；净化永不逆转。' } }
+const turnOrder: Direction[] = ['north', 'east', 'south', 'west'];
+export function turn(s: GameState, side: 'left' | 'right'): GameState { if (!movementUnlocked(s)) return s; const i = turnOrder.indexOf(s.facing) + (side === 'right' ? 1 : 3); return { ...s, facing: turnOrder[i % 4] } }
+export function canEnter(s: GameState, destination: RoomId) {
+  if (destination !== 'moonBattery') return true;
+  const occupied = SAFE_ROOMS.every(id => s.sanctuaries.includes(id));
+  const permanentlyOpened = s.visited.includes('moonBattery') || s.cannonStage > 0;
+  return occupied && (permanentlyOpened || finalResourcesReady(s));
 }
-export function chapter(s: GameState) { return chapters.reduce((index, item, i) => s.elapsed >= item.at ? i : index, 0); }
-export function unlocked(s: GameState, target: Target) { return target === 'clock' || s.elapsed >= devices[target].at; }
-export function cost(s: GameState, target: Device) { return devices[target].costs[s.levels[target]] ?? 0; }
-export function volley(s: GameState) { return 1 + s.levels.splitter; }
-export function power(s: GameState) { return [1, 2, 4, 7, 11, 16][s.levels.forge] * (1 + 0.35 * s.levels.lens); }
-export function capacity(s: GameState) { return 160 + 25 * s.levels.ward; }
-export function clockGain(s: GameState) { return 1 + 0.3 * s.levels.ward; }
-export function autoRate(s: GameState) { return s.levels.choir ? 0.6 + 0.5 * s.levels.choir : 0; }
-export function waveActive(s: GameState) { return s.elapsed % 120 >= 95; }
-export function drain(s: GameState) {
-  const escalation = Math.max(0, Math.floor((s.elapsed - DAWN_TIME) / 60)) * 0.3;
-  return 1 + chapter(s) * 0.3 + s.upgrades * 0.035 + escalation + (waveActive(s) ? 0.9 + chapter(s) * 0.18 : 0);
+export function moveForward(s: GameState): GameState {
+  if (!movementUnlocked(s)) return s; const destination = (room(s.room).exits as Partial<Record<Direction, RoomId>>)[s.facing];
+  if (!destination) return { ...s, message: '冷石墙挡住了这条路。' };
+  if (!canEnter(s, destination)) return { ...s, message: SAFE_ROOMS.some(id => !s.sanctuaries.includes(id)) ? '四处安全区尚未全部点亮，终祷门拒绝开启。' : '终祷门正在称量三类产物：需要 18,000 银币充能、1,400 圣水与 900 十字架。' };
+  return { ...s, room: destination, visited: s.visited.includes(destination) ? s.visited : [...s.visited, destination], message: isCleared(s, destination) ? `返回${room(destination).name}。这里的光不会熄灭。` : `进入${room(destination).name}。黑暗里有东西开始移动。` };
 }
-export function netDrain(s: GameState) { return Math.max(0.25, drain(s) - s.levels.ward * 0.38); }
-export function timeLabel(seconds: number) { const t = Math.max(0, Math.floor(seconds + 1e-6)); return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`; }
-export function effect(s: GameState, target: Device) {
-  const lv = s.levels[target];
-  switch (target) {
-    case 'forge': return `献祭效力 ${[1, 2, 4, 7, 11, 16][Math.min(lv + 1, 5)]} ×`;
-    case 'splitter': return `每枪 ${Math.min(lv + 2, 5)} 枚铜币`;
-    case 'choir': return `每秒 ${(0.6 + 0.5 * Math.min(lv + 1, 4)).toFixed(1)} 次自动齐射`;
-    case 'ward': return `每秒修复 ${(Math.min(lv + 1, 4) * 0.38).toFixed(2)} · 命中续命提升`;
-    case 'lens': return `设备效力 +${Math.min(lv + 1, 4) * 35}%`;
-    case 'seal': return '充能完成 + 守至 12:00 → 封闭裂隙';
-  }
+function occupy(n: GameState, id: RoomId) { if (!n.clearedRooms.includes(id)) n.clearedRooms = [...n.clearedRooms, id]; if (SAFE_ROOMS.includes(id) && !n.sanctuaries.includes(id)) n.sanctuaries = [...n.sanctuaries, id] }
+function hitCreature(s: GameState, id: CreatureId): GameState {
+  const c = creature(id); if (c.room !== s.room || s.producers.includes(id)) return s;
+  const n = { ...s, creatureDamage: { ...s.creatureDamage }, producers: [...s.producers], clearedRooms: [...s.clearedRooms], sanctuaries: [...s.sanctuaries] };
+  n.creatureDamage[id] += power(n); const d = CREATURE_KINDS[c.kind];
+  if (n.creatureDamage[id] >= d.threshold) { n.creatureDamage[id] = d.threshold; n.producers.push(id); occupy(n, c.room); n.message = `${d.name}已被净化并留在原处，每秒生产${resourceName(d.resource)} ${d.rate}。` }
+  else n.message = `${d.name}净化 ${n.creatureDamage[id]} / ${d.threshold}`; return n;
 }
-export function beginTutorial(s: GameState): GameState {
-  return { ...s, status: 'tutorial', guide: 1, message: '守夜人，举起铸币枪。向分魂祭器献上十枚铜币，唤醒它的第二道回响。' };
+function hitMachine(s: GameState, machine: 'tutorial' | Upgrade | 'cannon'): GameState {
+  if (machine === 'tutorial') { if (s.status !== 'tutorial' || s.tutorialStep !== 1) return s; const c = Math.min(3, s.tutorialCharge + 1); return c === 3 ? { ...s, tutorialCharge: c, tutorialStep: 2, message: '庇护机已充能。按 B，亲自查看刚获得的「银币发射」。' } : { ...s, tutorialCharge: c, message: `庇护机充能 ${c} / 3` } }
+  if (machine === 'cannon') return assembleCannon(s);
+  const locations: Record<Upgrade, RoomId> = { volley: 'naveWest', power: 'cloister', rate: 'choir' };
+  if (s.room !== locations[machine] || !s.sanctuaries.includes(s.room)) return s;
+  const total = upgradeCost(s, machine); if (!total) return s; const charge = s.machineCharge[machine] + 1;
+  if (charge < total) return { ...s, machineCharge: { ...s.machineCharge, [machine]: charge }, message: `${upgradeName(machine)}充能 ${charge} / ${total}` };
+  return { ...s, upgrades: { ...s.upgrades, [machine]: s.upgrades[machine] + 1 }, machineCharge: { ...s.machineCharge, [machine]: 0 }, message: `${upgradeName(machine)}升至 ${s.upgrades[machine] + 1} 级。` };
 }
-export function beginNight(s: GameState): GameState {
-  if (s.status === 'tutorial' && s.guide === 3 && !s.journalRead) return s;
-  return { ...s, status: 'playing', guide: 4, journalRead: true, message: '临时庇护已撤除。右侧丧钟归零，门外之物便会找到你。守到十二分钟后的黎明。' };
+export function shoot(s: GameState, target: TargetId | null): GameState {
+  if (!canAct(s)) return s; let n = { ...s, shots: s.shots + volley(s) }; if (!target) return n;
+  for (let i = 0; i < volley(s); i++) { const before = n; if (target.startsWith('creature:')) n = hitCreature(n, target.slice(9) as CreatureId); else if (target.startsWith('machine:')) n = hitMachine(n, target.slice(8) as 'tutorial' | Upgrade | 'cannon'); else n = hitMoon(n); if (n !== before) n = { ...n, hits: n.hits + 1 } } return n;
 }
-export function inspectJournal(s: GameState): GameState {
-  if ((s.status === 'tutorial' || s.status === 'paused') && s.guide === 3) return { ...s, journalRead: true, message: '你已经认出了枪中的回响。今后按 B 便能查阅已有契约。合上它吧；继续献祭，让新生的祭器告诉你它们的力量。守至十二分钟后的黎明，并让最后显现的圣龛充满光。' };
-  return s;
-}
-export function ownedUpgrades(s: GameState): { id: Device; name: string; description: string; level: number }[] {
-  const descriptions: Record<Device, string> = {
-    forge: `铜币已被淬炼，基础献祭效力 ×${[1, 2, 4, 7, 11, 16][s.levels.forge]}。`,
-    splitter: `枪中已有 ${volley(s)} 道回响，每次扣动扳机射出 ${volley(s)} 枚铜币。`,
-    choir: `灵仆已被唤醒，每秒替你完成 ${autoRate(s).toFixed(1)} 次齐射。`,
-    ward: `祷声每秒修复 ${(s.levels.ward * 0.38).toFixed(2)} 秒庇护，每枚献祭续命 ${clockGain(s).toFixed(1)} 秒。`,
-    lens: `棱镜已放大祭品，设备献祭效力提升 ${s.levels.lens * 35}%。`,
-    seal: '黎明圣龛已充满光。守至十二分钟之约，裂隙便会封闭。',
-  };
-  return (Object.keys(devices) as Device[]).filter(id => s.levels[id] > 0).map(id => ({ id, name: devices[id].name, description: descriptions[id], level: s.levels[id] }));
-}
-export function canShoot(s: GameState) { return s.status === 'playing' || s.status === 'tutorial'; }
-export function registerShot(s: GameState, count: number) { return canShoot(s) ? { ...s, shots: s.shots + count } : s; }
-export function hit(s: GameState, target: Target | null): GameState {
-  if (!canShoot(s) || !target || !unlocked(s, target)) return s;
-  const n = { ...s, levels: { ...s.levels }, progress: { ...s.progress }, hits: s.hits + 1 };
-  if (target === 'clock') {
-    const gain = Math.min(clockGain(n), capacity(n) - n.time);
-    n.time += Math.max(0, gain); n.saved += Math.max(0, gain);
-    if (n.status === 'tutorial' && n.guide === 2) {
-      n.guideHits += 1;
-      if (n.guideHits >= 3) { n.guide = 3; n.message = '枪已发生变化，你应该感受到了。按 B 展开契约烙印，看看自己已经获得的力量。只有真正属于你的回响，才会留在那里。'; }
-    }
-    return n;
-  }
-  const required = cost(n, target);
-  if (!required) return n;
-  n.progress[target] += power(n);
-  if (n.progress[target] >= required) {
-    n.progress[target] = 0; n.levels[target] += 1; n.upgrades += 1;
-    n.message = target === 'seal' ? '黎明圣龛已充能。继续守住丧钟，等待十二分钟之约。' : `${devices[target].name}已回应献祭，升至 ${n.levels[target]} 阶。门外的低语也更近了一些。`;
-    if (n.status === 'tutorial' && target === 'splitter' && n.guide === 1) { n.guide = 2; n.message = '现在，看最右侧的丧钟。向它射出三枚铜币，时间便会倒流。它一旦归零，结界便会崩塌。'; }
-    if (target === 'seal' && n.elapsed >= DAWN_TIME && n.status === 'playing') { n.status = 'won'; n.message = '裂隙已封闭。守夜人，外面的第一缕光是真的。'; }
-  }
-  return n;
-}
-// Split elapsed time at one-second boundaries so waves and unlocks remain consistent at low frame rates.
+export function defeat(s: GameState): GameState { const resources = { ...s.resources }; for (const k of Object.keys(resources) as Resource[]) resources[k] = Math.max(0, resources[k] - Math.floor(s.expeditionGains[k] * LOSS_RATE)); const checkpoint = nearestSanctuary(s); return { ...s, room: checkpoint, health: 100, resources, expeditionGains: emptyResources(), message: `你在黑暗中倒下，回到${room(checkpoint).name}。本次探索所得损失 20%，永久净化与升级保留。` } }
 export function advance(s: GameState, seconds: number): GameState {
   if (s.status !== 'playing' || !Number.isFinite(seconds) || seconds <= 0) return s;
-  let n = { ...s }, remaining = Math.min(seconds, 86400);
-  while (remaining > 1e-7 && n.status === 'playing') {
-    const step = Math.min(remaining, 1 - (n.elapsed % 1) || 1), before = chapter(n);
-    const depletion = netDrain(n), actual = Math.min(step, n.time / depletion);
-    n.time = Math.max(0, n.time - actual * depletion); n.elapsed += actual; remaining -= actual;
-    if (n.time <= 1e-7) { n.time = 0; n.status = 'failed'; n.message = '丧钟归零。圣约已经失效。不要回头。'; break; }
-    if (chapter(n) !== before) n.message = chapters[chapter(n)].note;
-    const waves = Math.floor((n.elapsed + 1e-7) / 120);
-    if (waves > n.waveCount) { n.waveCount = waves; n.message = `第 ${waves} 次侵袭已退去。趁低语远去，继续唤醒圣约机。`; }
-    if (n.elapsed + 1e-7 >= DAWN_TIME && n.levels.seal > 0) { n.status = 'won'; n.message = '裂隙已封闭。守夜人，外面的第一缕光是真的。'; break; }
-    if (autoRate(n)) {
-      n.autoCharge += actual * autoRate(n);
-      while (n.autoCharge >= 1 && n.status === 'playing') {
-        n.autoCharge -= 1;
-        const target = n.autoTarget !== 'clock' && !cost(n, n.autoTarget) ? 'clock' : n.autoTarget;
-        const count = volley(n);
-        n = registerShot(n, count);
-        for (let i = 0; i < count; i++) n = hit(n, target);
-      }
-    }
-  }
-  return n;
+  let remaining = Math.min(seconds, MAX_ACTIVE_STEP), n = { ...s, resources: { ...s.resources }, expeditionGains: { ...s.expeditionGains } };
+  while (remaining > 1e-9) { const step = Math.min(remaining, 0.25); remaining -= step; n.effectiveSeconds += step; const rates = productionRates(n); for (const k of Object.keys(rates) as Resource[]) { const gain = rates[k] * step; n.resources[k] += gain; n.expeditionGains[k] += gain } const hostile = creatureInRoom(n); if (hostile) { n.health -= CREATURE_KINDS[hostile.kind].attack * step; if (n.health <= 0) { n = defeat(n); break } } else n.health = Math.min(100, n.health + step * 2) } return n;
 }
-export function recommendation(s: GameState): { target: Target; text: string } {
-  if (s.guide === 1) return { target: 'splitter', text: '向分魂祭器射击，唤醒双重回响' };
-  if (s.guide === 2) return { target: 'clock', text: '向最右侧丧钟命中三枚铜币' };
-  if (s.time / netDrain(s) < 25) return { target: 'clock', text: '庇护即将耗尽。立刻向右侧丧钟献祭' };
-  const priorities: [Device, number, string][] = [
-    ['splitter', 2, '增加铸币枪齐射数量'], ['choir', 1, '唤醒灵仆，开始自动献祭'],
-    ['ward', 2, '唤醒祷告风琴，减缓庇护流失'], ['splitter', 3, '将铸币枪提升为四重回响'],
-    ['forge', 2, '淬炼铜币，为后续献祭提高效率'], ['lens', 2, '用黑曜棱镜放大铜币的力量'],
-    ['choir', 3, '强化灵仆，分担守夜的负担'], ['forge', 3, '将铜币淬炼为终祷的祭品'],
-    ['ward', 3, '加固结界，为最后的侵袭做准备'], ['seal', 1, '为黎明圣龛充能，准备封闭裂隙'],
-    ['choir', 4, '唤醒全部灵仆，继续守护丧钟'], ['forge', 5, '继续淬炼，等待黎明之约'],
-  ];
-  const next = priorities.find(([target, level]) => unlocked(s, target) && s.levels[target] < level);
-  if (next) return { target: next[0], text: next[2] };
-  return { target: 'clock', text: '守住丧钟，等待黎明之约' };
+export function assembleCannon(s: GameState): GameState {
+  if (s.room !== 'moonBattery' || s.cannonStage >= CANNON_STAGES.length) return s;
+  if (SAFE_ROOMS.some(id => !s.sanctuaries.includes(id))) return { ...s, message: '月亮炮拒绝响应：四处安全区尚未全部占领。' };
+  const stage = CANNON_STAGES[s.cannonStage]; if (stage.resource && s.resources[stage.resource] + 1e-7 < stage.cost) return { ...s, message: `${stage.name}仍缺 ${Math.ceil(stage.cost - s.resources[stage.resource])} ${resourceName(stage.resource)}。` };
+  const resources = { ...s.resources }; if (stage.resource) resources[stage.resource] -= stage.cost; return { ...s, resources, cannonStage: s.cannonStage + 1, message: `${stage.name}已经装入月亮炮（${s.cannonStage + 1} / 4）。` };
 }
+export function hitMoon(s: GameState): GameState { if (s.room !== 'moonBattery' || s.cannonStage < 4 || s.status !== 'playing') return s; const required = [3, 5][s.moonStage] ?? 0; if (!required) return s; const hits = s.moonHits + 1; if (hits < required) return { ...s, moonHits: hits, message: `月面裂纹正在扩散 ${hits} / ${required}` }; if (s.moonStage === 0) return { ...s, moonStage: 1, moonHits: 0, message: '第一层月壳碎裂。天空变成暗红，重新瞄准它。' }; return { ...s, moonStage: 2, moonHits: 0, status: 'won', message: '最后一枚银币贯穿月心。教堂第一次听见真正的寂静。' } }
+export function nearestSanctuary(s: GameState): RoomId { const q: RoomId[] = [s.room], seen = new Set<RoomId>(q); while (q.length) { const current = q.shift()!; if (s.sanctuaries.includes(current)) return current; for (const next of Object.values(room(current).exits) as RoomId[]) if (!seen.has(next)) { seen.add(next); q.push(next) } } return 'refuge' }
+export const resourceName = (r: Resource) => ({ silver: '银币充能', water: '圣水', crosses: '十字架' })[r];
+export const upgradeName = (u: Upgrade) => ({ volley: '齐射刻印', power: '净化威力', rate: '射击钟摆' })[u];
+export function ownedAbilities(s: GameState) { const result = [{ id: 'silver', name: '银币发射', text: '弹药无限；命中机器充能，命中怪物累积净化伤害。' }]; for (const kind of ['volley', 'power', 'rate'] as Upgrade[]) if (s.upgrades[kind] > 0) result.push({ id: kind, name: upgradeName(kind), text: `${s.upgrades[kind]} 级 · ${kind === 'volley' ? `每次 ${volley(s)} 枚` : kind === 'power' ? `每枚 ${power(s)} 点净化` : `间隔 ${fireInterval(s).toFixed(2)} 秒`}` }); return result }
+export function serializeSave(s: GameState) { return JSON.stringify({ version: SAVE_VERSION, state: s }) }
 export function readSave(raw: string | null): GameState | null {
   try {
     if (!raw) return null;
-    const data = JSON.parse(raw);
-    if (data.version !== 2) return null;
-    const s = data.state as GameState;
-    if (!s || !['playing', 'paused'].includes(s.status) || !TARGETS.includes(s.autoTarget)) return null;
-    for (const key of ['time', 'elapsed', 'shots', 'hits', 'upgrades', 'saved', 'waveCount', 'autoCharge'] as const) if (!Number.isFinite(s[key]) || s[key] < 0) return null;
-    for (const t of Object.keys(devices) as Device[]) if (!Number.isInteger(s.levels?.[t]) || s.levels[t] < 0 || s.levels[t] > devices[t].costs.length || !Number.isFinite(s.progress?.[t]) || s.progress[t] < 0) return null;
-    if (s.time <= 0 || s.time > capacity(s) || s.elapsed > 86400) return null;
-    return { ...s, status: 'paused', guide: 4, journalRead: true };
-  } catch { return null; }
+    const p = JSON.parse(raw), s = p.state as GameState;
+    const roomIds = new Set(ROOMS.map(r => r.id)), creatureIds = new Set(CREATURES.map(c => c.id));
+    const validRoomList = (value: unknown) => Array.isArray(value) && value.every(id => roomIds.has(id));
+    const validCreatureList = (value: unknown) => Array.isArray(value) && value.every(id => creatureIds.has(id));
+    if (p.version !== SAVE_VERSION || s?.version !== SAVE_VERSION) return null;
+    if (!roomIds.has(s.room) || !turnOrder.includes(s.facing) || !['playing', 'paused'].includes(s.status)) return null;
+    if (!validRoomList(s.visited) || !validRoomList(s.clearedRooms) || !validRoomList(s.sanctuaries) || !validCreatureList(s.producers)) return null;
+    if (![s.health, s.effectiveSeconds, s.cannonStage, s.moonStage, s.moonHits, s.shots, s.hits, s.tutorialStep, s.tutorialCharge].every(Number.isFinite)) return null;
+    if (s.health <= 0 || s.health > 100 || s.effectiveSeconds < 0 || !Number.isInteger(s.cannonStage) || s.cannonStage < 0 || s.cannonStage > 4 || !Number.isInteger(s.moonStage) || s.moonStage < 0 || s.moonStage > 2) return null;
+    if ((Object.keys(emptyResources()) as Resource[]).some(k => !Number.isFinite(s.resources?.[k]) || s.resources[k] < 0 || !Number.isFinite(s.expeditionGains?.[k]) || s.expeditionGains[k] < 0)) return null;
+    if ((['volley', 'power', 'rate'] as Upgrade[]).some(k => !Number.isInteger(s.upgrades?.[k]) || s.upgrades[k] < 0 || s.upgrades[k] > 3 || !Number.isFinite(s.machineCharge?.[k]) || s.machineCharge[k] < 0)) return null;
+    if (CREATURES.some(c => !Number.isFinite(s.creatureDamage?.[c.id]) || s.creatureDamage[c.id] < 0 || s.creatureDamage[c.id] > CREATURE_KINDS[c.kind].threshold)) return null;
+    return { ...s, status: 'paused' };
+  } catch { return null }
 }
+export function makeTestState(stage: 'explore' | 'cannon'): GameState { const s = beginGame({ ...beginTutorial(initialState()), tutorialStep: 3, journalRead: true }); if (stage === 'explore') return s; return { ...s, room: 'moonBattery', visited: ROOMS.map(r => r.id), clearedRooms: ROOMS.map(r => r.id), sanctuaries: ['refuge', ...SAFE_ROOMS], producers: CREATURES.map(c => c.id), resources: { silver: 18000, water: 1400, crosses: 900 }, message: '测试状态：规则门槛均由版本化构造器满足。' } }

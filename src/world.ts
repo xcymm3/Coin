@@ -1,582 +1,203 @@
 import * as T from 'three';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { GameAudio } from './audio';
-import { advance, beginNight, beginTutorial, canShoot, cost, devices, hit, initialState, inspectJournal, recommendation, registerShot, TARGETS, unlocked, volley, waveActive } from './rules';
-import type { GameState, Target } from './rules';
+import {
+  advance, beginGame, beginTutorial, canAct, CANNON_STAGES, CREATURES, CREATURE_KINDS, creatureInRoom,
+  fireInterval, initialState, inspectJournal, makeTestState, moveForward, room, ROOMS, shoot, turn,
+  upgradeCost, upgradeName,
+} from './rules';
+import type { Direction, GameState, RoomId, TargetId, Upgrade } from './rules';
 
-const C = { stone: 0x39333c, dark: 0x161319, trim: 0x78644c, brass: 0xb69960, pale: 0xc5b9a1, copper: 0xe7a65e, red: 0xda5345, blood: 0x3a141d, violet: 0x9472bc, green: 0x8cbaa3 };
-const positions: Record<Target, [number, number]> = { forge: [-4.25, -0.2], splitter: [-2.8, 0.45], choir: [-1.35, -0.25], ward: [0.1, 0.45], lens: [1.55, -0.25], seal: [3, 0.4], clock: [4.7, -0.1] };
-interface Shot { mesh: T.Mesh; start: T.Vector3; end: T.Vector3; age: number; delay: number; duration: number; target: Target | null; visualOnly: boolean }
-interface Model { group: T.Group; target: T.Mesh; aura: T.Mesh; animated: T.Object3D[]; flash: number; label: T.Sprite; labelKey: string; revealed: boolean; runes: T.Mesh[]; crowns: T.Mesh[]; lastLevel: number }
-export interface SceneView { hovered: Target | null; points: Partial<Record<Target, { x: number; y: number }>>; ready: boolean }
+const SCALE = 10;
+const COLORS = { stone: 0x252936, stone2: 0x343949, dark: 0x070912, silver: 0xcdd9f4, moon: 0xa9c8ff, blood: 0x5f1523, warm: 0xd5ad6d, safe: 0x78b3a3 };
+const facingYaw: Record<Direction, number> = { north: 0, east: -Math.PI / 2, south: Math.PI, west: Math.PI / 2 };
+const upgradeRooms: Record<Upgrade, RoomId> = { volley: 'naveWest', power: 'cloister', rate: 'choir' };
+
+export interface SceneView { ready: boolean; hovered: TargetId | null; targetPoint?: { x: number; y: number }; contextLost: boolean }
+interface TargetModel { root: T.Group; hit: T.Object3D; label?: T.Sprite }
 
 export class Scene {
   state = initialState();
   audio = new GameAudio();
   private renderer: T.WebGLRenderer;
   private world = new T.Scene();
-  private camera = new T.PerspectiveCamera(47, 1, 0.08, 70);
+  private camera = new T.PerspectiveCamera(56, 1, 0.08, 80);
   private ray = new T.Raycaster();
-  private mouse = new T.Vector2(0, 0);
-  private pointerInside = false;
-  private selected: Target = 'splitter';
-  private models = {} as Record<Target, Model>;
-  private gun = new T.Group();
-  private muzzle = new T.Object3D();
-  private muzzleFlash!: T.Mesh;
-  private fingers: T.Mesh[] = [];
-  private gunBarrels: T.Group[] = [];
-  private spirits: T.Mesh[] = [];
-  private barriers: T.Mesh[] = [];
-  private forgeFire!: T.Mesh;
-  private shots: Shot[] = [];
-  private coinGeo = new T.CylinderGeometry(0.07, 0.07, 0.02, 12);
-  private coinMat = new T.MeshStandardMaterial({ color: C.copper, metalness: 0.7, roughness: 0.3, emissive: C.copper, emissiveIntensity: 0.2 });
-  private sparks = new T.Group();
-  private motes!: T.Points;
-  private handsMat!: T.MeshStandardMaterial;
-  private clockFace!: T.CanvasTexture;
-  private clockCanvas = document.createElement('canvas');
-  private clockValue = -1;
-  private materials = new Map<string, T.MeshStandardMaterial>();
-  private textures: T.Texture[] = [];
-  private lights: T.PointLight[] = [];
-  private shadow!: T.SpotLight;
+  private pointer = new T.Vector2(0, 0);
+  private targetModels = new Map<TargetId, TargetModel>();
+  private doors: { mesh: T.Mesh; destination: RoomId }[] = [];
+  private cannonParts: T.Object3D[] = [];
+  private moon!: T.Mesh;
+  private muzzle!: T.PointLight;
   private observer: ResizeObserver;
   private frame = 0;
   private last = 0;
-  private uiTick = 0;
-  private animationTime = 0;
   private held = false;
-  private fireCooldown = 0;
-  private recoil = 0;
-  private lastAlarm = -1;
-  private currentHover: Target | null = null;
+  private cooldown = 0;
   private reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  private visualPosition = new T.Vector3();
+  private visualYaw = 0;
+  private desiredYaw = 0;
+  private aimYaw = 0;
+  private aimPitch = 0;
   private lost = false;
-  constructor(private canvas: HTMLCanvasElement, private onChange: (s: GameState) => void, private onView: (view: SceneView) => void, private onError: (message: string) => void) {
+  private materials: T.Material[] = [];
+  private geometries: T.BufferGeometry[] = [];
+  private textures: T.Texture[] = [];
+
+  constructor(private canvas: HTMLCanvasElement, private onChange: (state: GameState) => void, private onView: (view: SceneView) => void, private onError: (message: string) => void) {
     this.renderer = new T.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.35));
-    this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = T.PCFSoftShadowMap;
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1));
+    this.renderer.outputColorSpace = T.SRGBColorSpace;
     this.renderer.toneMapping = T.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.45;
-    this.world.background = new T.Color(0x030305);
-    this.world.fog = new T.FogExp2(0x030305, 0.043);
-    this.camera.position.set(0, 5, 12.6); this.camera.lookAt(0, 1.65, -0.6); this.world.add(this.camera);
-    this.buildRoom(); this.buildTable();
-    for (const t of TARGETS) this.buildMachine(t);
-    this.buildGun(); this.world.add(this.sparks);
+    this.renderer.toneMappingExposure = 1.25;
+    this.world.background = new T.Color(COLORS.dark);
+    this.world.fog = new T.FogExp2(COLORS.dark, 0.032);
+    this.world.add(this.camera, new T.HemisphereLight(0x8292bb, 0x080910, 0.48));
+    const moonLight = new T.DirectionalLight(0x9ab7ed, 1.4); moonLight.position.set(-8, 14, 10); this.world.add(moonLight);
+    this.muzzle = new T.PointLight(COLORS.silver, 0, 7, 2); this.camera.add(this.muzzle); this.muzzle.position.set(0, -0.25, -0.6);
+    this.buildCathedral();
+    const start = room('refuge'); this.visualPosition.set(start.x * SCALE, 1.65, start.z * SCALE); this.camera.position.copy(this.visualPosition);
     this.observer = new ResizeObserver(this.resize); this.observer.observe(canvas);
-    canvas.addEventListener('pointermove', this.pointerMove); canvas.addEventListener('pointerdown', this.pointerDown);
-    canvas.addEventListener('pointerleave', this.pointerLeave); canvas.addEventListener('webglcontextlost', this.contextLost);
-    window.addEventListener('pointerup', this.release); window.addEventListener('pointercancel', this.release); window.addEventListener('blur', this.blur);
-    document.addEventListener('visibilitychange', this.visibility);
-    this.resize(); this.frame = requestAnimationFrame(this.loop);
+    canvas.addEventListener('pointermove', this.pointerMove); canvas.addEventListener('pointerdown', this.pointerDown); canvas.addEventListener('pointerleave', this.pointerLeave);
+    canvas.addEventListener('webglcontextlost', this.contextLost); window.addEventListener('pointerup', this.release); window.addEventListener('pointercancel', this.release);
+    window.addEventListener('blur', this.blur); document.addEventListener('visibilitychange', this.visibility);
+    this.resize(); this.syncVisuals(); this.frame = requestAnimationFrame(this.loop);
+    queueMicrotask(() => this.onView(this.view()));
   }
-  private material(color: number, metal = 0, glow = 0) {
-    const key = `${color}/${metal}/${glow}`;
-    if (!this.materials.has(key)) this.materials.set(key, new T.MeshStandardMaterial({ color, roughness: metal ? 0.48 : 0.9, metalness: metal, emissive: color, emissiveIntensity: glow, flatShading: true }));
-    return this.materials.get(key)!;
-  }
-  private mesh(parent: T.Object3D, geometry: T.BufferGeometry, material: T.Material, x = 0, y = 0, z = 0) {
-    const m = new T.Mesh(geometry, material); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; parent.add(m); return m;
-  }
-  private box(parent: T.Object3D, w: number, h: number, d: number, x: number, y: number, z: number, color = C.stone, metal = 0) { return this.mesh(parent, new T.BoxGeometry(w, h, d), this.material(color, metal), x, y, z); }
-  private cylinder(parent: T.Object3D, r: number, h: number, x: number, y: number, z: number, color = C.brass, top = r, segments = 10) { return this.mesh(parent, new T.CylinderGeometry(top, r, h, segments), this.material(color, 0.45), x, y, z); }
-  private ring(parent: T.Object3D, r: number, tube: number, x: number, y: number, z: number, color = C.brass) { return this.mesh(parent, new T.TorusGeometry(r, tube, 5, 32), this.material(color, 0.55), x, y, z); }
-  private beam(parent: T.Object3D, a: T.Vector3, b: T.Vector3, radius: number, color: number) {
-    const direction = b.clone().sub(a), m = this.cylinder(parent, radius, direction.length(), 0, 0, 0, color, radius, 6);
-    m.position.copy(a).add(b).multiplyScalar(0.5); m.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), direction.normalize()); return m;
-  }
-  private arch(parent: T.Object3D, x: number, y: number, z: number, width: number, height: number, color = C.trim) {
-    const points = [new T.Vector3(x - width / 2, y, z), new T.Vector3(x - width / 2, y + height * 0.57, z), new T.Vector3(x - width * 0.33, y + height * 0.8, z), new T.Vector3(x, y + height, z), new T.Vector3(x + width * 0.33, y + height * 0.8, z), new T.Vector3(x + width / 2, y + height * 0.57, z), new T.Vector3(x + width / 2, y, z)];
-    return this.mesh(parent, new T.TubeGeometry(new T.CatmullRomCurve3(points), 28, width * 0.035, 5, false), this.material(color, 0.25));
-  }
-  private candle(parent: T.Object3D, x: number, y: number, z: number, tall = 0.4, light = false) {
-    this.cylinder(parent, 0.14, 0.09, x, y, z, C.trim); this.cylinder(parent, 0.067, tall, x, y + tall / 2, z, C.pale);
-    const flame = this.mesh(parent, new T.OctahedronGeometry(0.085), this.material(C.copper, 0, 2), x, y + tall + 0.09, z); flame.scale.set(0.65, 1.7, 0.65);
-    if (light) { const lamp = new T.PointLight(0xffb36e, 5, 5, 1.4); lamp.position.set(x, y + tall + 0.2, z); parent.add(lamp); this.lights.push(lamp); }
-  }
-  private skull(parent: T.Object3D, x: number, y: number, z: number, size = 0.18) {
-    const g = new T.Group(); g.position.set(x, y, z); parent.add(g);
-    const dome = this.mesh(g, new T.IcosahedronGeometry(size, 1), this.material(C.pale)); dome.scale.set(0.85, 1, 0.8);
-    for (const side of [-1, 1]) this.mesh(g, new T.IcosahedronGeometry(size * 0.25, 0), this.material(C.dark), side * size * 0.37, size * 0.06, size * 0.64);
-    this.mesh(g, new T.ConeGeometry(size * 0.12, size * 0.27, 3), this.material(C.dark), 0, -size * 0.2, size * 0.78);
-    for (let i = 0; i < 5; i++) this.box(g, size * 0.15, size * 0.24, size * 0.25, (i - 2) * size * 0.16, -size * 0.76, size * 0.3, C.pale);
-    return g;
-  }
-  private textTexture(text: string, color = '#d5c4a1', size = 40, width = 512, height = 96) {
-    const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
-    const c = canvas.getContext('2d')!; c.font = `${size}px Georgia, "Microsoft YaHei", serif`; c.fillStyle = color; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(text, width / 2, height / 2);
-    const tex = new T.CanvasTexture(canvas); tex.colorSpace = T.SRGBColorSpace; this.textures.push(tex); return tex;
-  }
-  private buildRoom() {
-    this.world.add(new T.HemisphereLight(0x8a829e, 0x16100e, 0.38));
-    const moon = new T.DirectionalLight(0x777fae, 0.9); moon.position.set(-3, 8, -2); this.world.add(moon);
-    this.shadow = new T.SpotLight(0xffcd9a, 100, 30, 0.65, 0.8, 1.3); this.shadow.position.set(-3, 8, 5); this.shadow.target.position.set(0, 0, 0); this.shadow.castShadow = true; this.shadow.shadow.mapSize.set(1024, 1024); this.shadow.shadow.bias = -0.001; this.world.add(this.shadow, this.shadow.target);
-    this.buildEnclosure();
-    // The apse is recessed beyond the altar, inside the continuous room shell.
-    const sanctuary = new T.Group(); sanctuary.position.z = -6; this.world.add(sanctuary);
-    this.box(sanctuary, 21, 16, 0.6, 0, 7.3, -5.5, 0x202028);
-    for (let y = 0; y < 8; y++) for (let x = -6; x <= 6; x++) {
-      this.box(sanctuary, 1.37, 0.69, 0.12, x * 1.43 + y % 2 * 0.7, y * 0.77 - 0.1, -5.16, (x + y) % 3 ? 0x302c35 : 0x39313a);
-    }
-    for (let x = -6.4; x <= 6.4; x += 3.2) {
-      this.box(sanctuary, 0.7, 0.4, 1, x, -0.1, -4.5);
-      this.cylinder(sanctuary, 0.23, 7, x, 3.3, -4.6, 0x49404b, 0.19, 8);
-      this.box(sanctuary, 0.68, 0.35, 0.8, x, 5.9, -4.6, C.trim);
-      this.arch(sanctuary, x + 1.6, 1.2, -4.8, 3, 5.5, 0x5b4b53);
-    }
-    // Central rose window; every spoke is actual geometry with depth.
-    this.cylinder(sanctuary, 0.2, 0.1, 0, 5, -4.9);
-    const rose = new T.Group(); rose.position.set(0, 5.4, -5); sanctuary.add(rose);
-    this.mesh(rose, new T.CircleGeometry(1.55, 48), this.material(0x341b32, 0, 0.55), 0, 0, -0.02);
-    this.ring(rose, 1.6, 0.11, 0, 0, 0, C.stone); this.ring(rose, 1.42, 0.045, 0, 0, 0.03, C.trim); this.ring(rose, 0.55, 0.06, 0, 0, 0.05);
-    for (let i = 0; i < 12; i++) {
-      const a = i / 12 * Math.PI * 2, x = Math.cos(a), y = Math.sin(a);
-      this.beam(rose, new T.Vector3(x * 0.52, y * 0.52, 0.05), new T.Vector3(x * 1.4, y * 1.4, 0.05), 0.035, C.trim);
-      const petal = this.ring(rose, 0.24, 0.028, x * 0.94, y * 0.94, 0.03, C.brass); petal.scale.set(0.65, 1.2, 1); petal.rotation.z = a - Math.PI / 2;
-    }
-    // Sealed pointed doorway beneath the rose.
-    this.box(sanctuary, 2.55, 3.7, 0.18, 0, 1.35, -4.85, C.dark); this.arch(sanctuary, 0, -0.35, -4.56, 2.8, 4.35, C.trim);
-    for (let x = -1; x <= 1; x += 0.25) this.box(sanctuary, 0.17, 3.5, 0.13, x, 1.25, -4.68, 0x322731);
-    for (const direction of [-1, 1]) this.beam(sanctuary, new T.Vector3(-1.2, 0.1 + (direction === 1 ? 0 : 2.4), -4.45), new T.Vector3(1.2, 2.5 - (direction === 1 ? 0 : 2.4), -4.45), 0.07, C.trim);
-    this.ring(sanctuary, 0.35, 0.045, 0, 1.4, -4.35, C.red);
-    for (let i = 0; i < 4; i++) {
-      const barrier = this.mesh(sanctuary, new T.TorusGeometry(1.35 + i * 0.14, 0.017, 4, 48), new T.MeshBasicMaterial({ color: C.green, transparent: true, opacity: 0.3, depthWrite: false }), 0, 1.65, -4.12 + i * 0.05);
-      barrier.scale.y = 1.32; barrier.visible = false; this.barriers.push(barrier);
-    }
-    for (const side of [-1, 1]) {
-      this.arch(sanctuary, side * 4.65, 0.6, -4.87, 1.4, 3.6);
-      this.box(sanctuary, 1.1, 2.6, 0.05, side * 4.65, 1.9, -4.99, C.dark);
-      for (let i = -1; i <= 1; i++) this.box(sanctuary, 0.04, 2.6, 0.1, side * 4.65 + i * 0.3, 1.9, -4.8, C.trim);
-      this.candle(sanctuary, side * 3.1, 1.1, -3.4, 0.8, true);
-      this.candle(sanctuary, side * 3.4, 1.1, -3.4, 0.5);
-      this.box(sanctuary, 1, 1.45, 0.8, side * 6, 0.2, -1.3, C.stone);
-      this.skull(sanctuary, side * 6, 1.05, -1.3, 0.29);
-      // Dark velvet banners with pointed ends.
-      const banner = this.box(sanctuary, 0.8, 3.2, 0.035, side * 2.2, 4.9, -4.25, C.blood);
-      const tail = this.mesh(sanctuary, new T.ConeGeometry(0.4, 0.55, 3), this.material(C.blood), side * 2.2, 3.15, -4.25); tail.rotation.z = Math.PI; tail.scale.z = 0.08; banner.rotation.z = side * 0.025;
-      this.box(sanctuary, 0.06, 1.1, 0.06, side * 2.2, 5.1, -4.18, C.trim); this.box(sanctuary, 0.5, 0.055, 0.06, side * 2.2, 5.25, -4.18, C.trim);
-    }
-    const dust = new Float32Array(100 * 3);
-    for (let i = 0; i < dust.length; i += 3) { dust[i] = Math.sin(i * 63) * 7; dust[i + 1] = (i % 41) / 7; dust[i + 2] = Math.cos(i * 27) * 5; }
-    const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.BufferAttribute(dust, 3));
-    this.motes = new T.Points(geo, new T.PointsMaterial({ color: C.pale, size: 0.017, transparent: true, opacity: 0.5, depthWrite: false })); this.world.add(this.motes);
-  }
-  private buildEnclosure() {
-    const room = new T.Group(); room.name = 'enclosed-chapel'; this.world.add(room);
-    // Solid shell extends behind the observer and beyond every supported camera angle.
-    this.box(room, 21.6, 0.4, 45, 0, -0.72, 10.4, 0x1b191e);
-    this.box(room, 21.6, 0.5, 45, 0, 14.6, 10.4, 0x0c0c10);
-    this.box(room, 21.6, 15.6, 0.6, 0, 7, 32.6, 0x111116);
-    for (const side of [-1, 1]) {
-      this.box(room, 0.6, 15.6, 45, side * 10.5, 7, 10.4, 0x1b1a22);
-      this.box(room, 0.8, 0.5, 44, side * 10.1, -0.2, 10.4, 0x29252c);
-      this.box(room, 0.9, 0.3, 44, side * 10.1, 5.4, 10.4, 0x2b2730);
-      // Side chapels have recessed black interiors, thick jambs and a visible sill.
-      for (const z of [-7, 0, 7, 14, 21, 28]) {
-        const bay = new T.Group(); bay.position.set(side * 10.13, 0, z); bay.rotation.y = -side * Math.PI / 2; room.add(bay);
-        this.box(bay, 3.5, 4.9, 0.08, 0, 2.1, 0, 0x050507);
-        this.arch(bay, 0, -0.45, 0.35, 3.7, 5.7, 0x37323d);
-        for (const x of [-1.75, 1.75]) this.box(bay, 0.26, 3.1, 0.6, x, 1.1, 0.22, 0x302b35);
-        this.box(bay, 3.8, 0.2, 0.7, 0, -0.35, 0.24, 0x383039);
-        this.box(bay, 0.07, 3.7, 0.13, 0, 1.8, 0.1, 0x25232d);
+
+  private mat(color: number, emissive = 0, transparent = false) { const m = new T.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: emissive, roughness: 0.83, metalness: color === COLORS.silver ? 0.65 : 0.08, flatShading: true, transparent, opacity: transparent ? 0.86 : 1 }); this.materials.push(m); return m }
+  private geo<G extends T.BufferGeometry>(g: G) { this.geometries.push(g); return g }
+  private mesh(parent: T.Object3D, geometry: T.BufferGeometry, material: T.Material, x: number, y: number, z: number) { const m = new T.Mesh(geometry, material); m.position.set(x, y, z); parent.add(m); return m }
+  private box(parent: T.Object3D, size: [number, number, number], pos: [number, number, number], color = COLORS.stone) { return this.mesh(parent, this.geo(new T.BoxGeometry(...size)), this.mat(color), ...pos) }
+  private arch(parent: T.Object3D, x: number, z: number, rotation = 0) { const shape = new T.Shape(); shape.moveTo(-2.2, 0); shape.lineTo(-2.2, 2.6); shape.quadraticCurveTo(0, 5.5, 2.2, 2.6); shape.lineTo(2.2, 0); const hole = new T.Path(); hole.moveTo(-1.55, 0); hole.lineTo(-1.55, 2.4); hole.quadraticCurveTo(0, 4.5, 1.55, 2.4); hole.lineTo(1.55, 0); shape.holes.push(hole); const mesh = this.mesh(parent, this.geo(new T.ExtrudeGeometry(shape, { depth: 0.35, bevelEnabled: false })), this.mat(COLORS.stone2), x, 0, z); mesh.rotation.y = rotation; return mesh }
+  private label(text: string, width = 512) { const c = document.createElement('canvas'); c.width = width; c.height = 128; const x = c.getContext('2d')!; x.fillStyle = 'rgba(5,7,14,.82)'; x.fillRect(0, 0, c.width, c.height); x.strokeStyle = '#8aa8d6'; x.strokeRect(3, 3, c.width - 6, c.height - 6); x.fillStyle = '#eef3ff'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = '28px "Microsoft YaHei", sans-serif'; x.fillText(text, c.width / 2, c.height / 2); const texture = new T.CanvasTexture(c); texture.colorSpace = T.SRGBColorSpace; this.textures.push(texture); const sprite = new T.Sprite(new T.SpriteMaterial({ map: texture, transparent: true, depthTest: false })); sprite.scale.set(4.8, 1.2, 1); return sprite }
+  private setLabel(sprite: T.Sprite | undefined, text: string) { const texture = (sprite?.material as T.SpriteMaterial | undefined)?.map; if (!texture) return; const c = texture.image as HTMLCanvasElement | undefined; if (!c) return; const x = c.getContext('2d')!; x.clearRect(0, 0, c.width, c.height); x.fillStyle = 'rgba(5,7,14,.82)'; x.fillRect(0, 0, c.width, c.height); x.strokeStyle = '#8aa8d6'; x.strokeRect(3, 3, c.width - 6, c.height - 6); x.fillStyle = '#eef3ff'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = '28px "Microsoft YaHei", sans-serif'; x.fillText(text, c.width / 2, c.height / 2); texture.needsUpdate = true }
+  private registerTarget(id: TargetId, root: T.Group, hit: T.Object3D, label?: T.Sprite) { root.traverse(o => { o.userData.target = id }); this.targetModels.set(id, { root, hit, label }) }
+
+  private buildCathedral() {
+    for (const r of ROOMS) {
+      const g = new T.Group(); g.position.set(r.x * SCALE, 0, r.z * SCALE); g.name = `room-${r.id}`; this.world.add(g);
+      const tint = r.area === '侧堂' ? 0x292736 : r.area === '终祷区' ? 0x202b40 : r.area === '地下侧室' ? 0x241f29 : COLORS.stone;
+      this.box(g, [8.8, 0.35, 8.8], [0, -0.2, 0], tint);
+      for (const x of [-3.6, 3.6]) { this.box(g, [0.7, 5.8, 0.7], [x, 2.7, -3.55], COLORS.stone2); this.box(g, [0.7, 5.8, 0.7], [x, 2.7, 3.55], COLORS.stone2) }
+      const exits = r.exits as Partial<Record<Direction, RoomId>>;
+      for (const direction of ['north', 'east', 'south', 'west'] as Direction[]) {
+        const destination = exits[direction]; const northSouth = direction === 'north' || direction === 'south'; const sign = direction === 'north' || direction === 'west' ? -1 : 1;
+        if (destination) {
+          this.arch(g, northSouth ? 0 : sign * 4.25, northSouth ? sign * 4.25 : 0, northSouth ? 0 : Math.PI / 2);
+          const curtain = this.box(g, northSouth ? [3.05, 4.1, 0.14] : [0.14, 4.1, 3.05], northSouth ? [0, 2.05, sign * 4.13] : [sign * 4.13, 2.05, 0], COLORS.dark); (curtain.material as T.MeshStandardMaterial).transparent = true; this.doors.push({ mesh: curtain, destination });
+        } else this.box(g, northSouth ? [8.8, 5.8, 0.5] : [0.5, 5.8, 8.8], northSouth ? [0, 2.7, sign * 4.35] : [sign * 4.35, 2.7, 0], tint);
       }
+      const rib = this.geo(new T.TorusGeometry(4.25, 0.12, 5, 20, Math.PI));
+      for (const rot of [0, Math.PI / 2]) { const vault = this.mesh(g, rib, this.mat(COLORS.stone2), 0, 5.2, 0); vault.rotation.set(Math.PI / 2, rot, 0) }
+      if ('sanctuary' in r && r.sanctuary) { const lamp = new T.PointLight(COLORS.warm, 0, 9, 2); lamp.position.set(0, 3, 0); g.add(lamp); lamp.userData.sanctuary = r.id; const altar = this.box(g, [2.3, 1, 1.1], [0, 0.45, 1.9], COLORS.stone2); altar.userData.safeAltar = r.id }
+      if (r.id === 'southAisle') { for (let i = 0; i < 7; i++) { const stain = this.mesh(g, this.geo(new T.CircleGeometry(.18 + i * .025, 7)), this.mat(COLORS.blood, .08), -2.4 + i * .65, 0.01, .4 + Math.sin(i) * .7); stain.rotation.x = -Math.PI / 2 } }
+      if (r.id === 'northAisle') for (let i = 0; i < 5; i++) { const candle = this.mesh(g, this.geo(new T.ConeGeometry(.12, .5, 5)), this.mat(COLORS.moon, 1.4), -2 + i, 4.6, 0); candle.rotation.z = Math.PI }
+      if (r.id === 'ossuary') for (let i = 0; i < 18; i++) this.mesh(g, this.geo(new T.DodecahedronGeometry(.22, 0)), this.mat(0x857f82), -3 + (i % 6) * 1.1, .15 + Math.floor(i / 6) * .35, 2.8);
     }
-    // Repeated nave pillars and vault ribs make the near, middle and far spaces overlap.
-    for (const z of [-8.8, -2, 5, 12, 19, 26]) {
-      for (const side of [-1, 1]) {
-        const x = side * 8.1;
-        this.box(room, 1.1, 0.35, 1.1, x, -0.32, z, 0x37303a);
-        this.cylinder(room, 0.39, 7.6, x, 3.6, z, 0x37313e, 0.32, 8);
-        for (const offset of [-0.29, 0.29]) this.cylinder(room, 0.1, 7.5, x + offset, 3.6, z + 0.24, 0x403747, 0.085, 6);
-        this.box(room, 1.0, 0.27, 0.95, x, 7.38, z, 0x413743);
-        // Buttresses join the nave to the side walls instead of ending in empty space.
-        this.beam(room, new T.Vector3(x, 7.5, z), new T.Vector3(side * 10.2, 8.8, z), 0.18, 0x302b36);
-      }
-      this.arch(room, 0, 3.8, z, 16.2, 9.6, 0x302b37);
-    }
-    this.beam(room, new T.Vector3(0, 13.4, -11), new T.Vector3(0, 13.4, 32), 0.15, 0x292631);
-    const chandelier = this.ring(room, 1.25, 0.055, 0, 6.7, -2.8, 0x4d3c36); chandelier.rotation.x = Math.PI / 2;
-    for (let i = 0; i < 6; i++) {
-      const angle = i * Math.PI / 3, x = Math.cos(angle) * 1.25, z = -2.8 + Math.sin(angle) * 1.25;
-      this.candle(room, x, 6.75, z, 0.26);
-      if (i % 2 === 0) this.beam(room, new T.Vector3(x, 6.7, z), new T.Vector3(0, 11.8, -2.8), 0.022, 0x3f3540);
-    }
-    const vaultGlow = new T.PointLight(0x9a8272, 20, 15, 2); vaultGlow.position.set(0, 7.3, -2.8); room.add(vaultGlow);
-    // Closed sloping vault surfaces meet the ribs; their upper faces disappear in darkness.
-    for (const side of [-1, 1]) {
-      const roof = this.box(room, 9.9, 0.3, 44, side * 4.3, 11.25, 10.4, 0x121219);
-      roof.rotation.z = -side * 0.48;
-    }
-    // Reuse one instanced mesh for the worn flagstones, keeping added draw calls small.
-    const tiles = new T.InstancedMesh(new T.BoxGeometry(1.68, 0.045, 1.73), this.material(0x38323a), 12 * 24);
-    const matrix = new T.Matrix4(), tint = new T.Color(); let tile = 0;
-    for (let row = 0; row < 24; row++) for (let col = 0; col < 12; col++) {
-      matrix.makeTranslation((col - 5.5) * 1.74, -0.493, -10.9 + row * 1.8);
-      tiles.setMatrixAt(tile, matrix);
-      tint.setScalar(0.42 + ((row * 7 + col * 13) % 9) * 0.04); tiles.setColorAt(tile++, tint);
-    }
-    tiles.receiveShadow = true; room.add(tiles);
-    // Raised apse steps and abandoned pews give the room depth behind the altar.
-    this.box(room, 13.9, 0.18, 3.9, 0, -0.4, -8.9, 0x302a32);
-    this.box(room, 13.3, 0.17, 3.2, 0, -0.23, -9.2, 0x353039);
-    for (const side of [-1, 1]) for (const z of [-5.8, -3.1, 4.5, 7.3]) {
-      const pew = new T.Group(); pew.position.set(side * 7.1, -0.43, z); room.add(pew);
-      this.box(pew, 1.5, 0.15, 0.65, 0, 0.53, 0, 0x281d23);
-      this.box(pew, 1.55, 0.77, 0.13, 0, 0.97, -0.28, 0x302129);
-      for (const x of [-0.62, 0.62]) this.box(pew, 0.15, 0.58, 0.55, x, 0.26, 0, 0x251b21);
-    }
-    // Small local pools of light reveal masonry without illuminating the whole shell.
-    for (const side of [-1, 1]) {
-      this.box(room, 0.6, 0.18, 0.65, side * 8.0, 2.5, 4.9, 0x39303a);
-      this.candle(room, side * 8.0, 2.6, 4.9, 0.5);
-    }
-    // Architecture is static: batch by material rather than draw every pillar/pew part.
-    room.updateMatrixWorld(true);
-    const batches = new Map<T.Material, T.Mesh[]>();
-    room.traverse(object => {
-      if (!(object instanceof T.Mesh) || object instanceof T.InstancedMesh || Array.isArray(object.material)) return;
-      const batch = batches.get(object.material) ?? []; batch.push(object); batches.set(object.material, batch);
-    });
-    for (const [material, meshes] of batches) {
-      const parts = meshes.map(mesh => mesh.geometry.clone().applyMatrix4(mesh.matrixWorld));
-      const geometry = mergeGeometries(parts);
-      parts.forEach(part => part.dispose());
-      if (!geometry) continue;
-      for (const mesh of meshes) { mesh.removeFromParent(); mesh.geometry.dispose(); }
-      this.mesh(room, geometry, material);
+    this.buildCreatures(); this.buildMachines(); this.buildMoonBattery();
+  }
+  private buildCreatures() {
+    for (const c of CREATURES) {
+      const r = room(c.room), root = new T.Group(); root.position.set(r.x * SCALE, 0, r.z * SCALE - 1.5); this.world.add(root); const hostile = this.mat(COLORS.blood, .18), pure = this.mat(COLORS.safe, .5); let hit: T.Mesh;
+      if (c.kind === 'hollow') { hit = this.mesh(root, this.geo(new T.CapsuleGeometry(.65, 1.7, 4, 7)), hostile, 0, 1.3, 0); const head = this.mesh(root, this.geo(new T.IcosahedronGeometry(.46, 0)), hostile, 0, 2.65, 0); head.scale.y = 1.35 }
+      else if (c.kind === 'penitent') { hit = this.mesh(root, this.geo(new T.BoxGeometry(1.8, .8, 2.4)), hostile, 0, .55, 0); for (const side of [-1, 1]) { const limb = this.box(root, [.24, .25, 1.8], [side * .9, .2, .35], COLORS.blood); limb.rotation.y = side * .38 } }
+      else { hit = this.mesh(root, this.geo(new T.ConeGeometry(1.05, 2.9, 7)), hostile, 0, 1.45, 0); for (let i = 0; i < 3; i++) { const ring = this.mesh(root, this.geo(new T.TorusGeometry(.72 + i * .2, .055, 5, 18)), hostile, 0, 2.2 + i * .28, 0); ring.rotation.x = Math.PI / 2 } }
+      hit.userData.hostileMaterial = hostile; hit.userData.pureMaterial = pure; const label = this.label(CREATURE_KINDS[c.kind].name); label.position.set(0, 3.8, 0); root.add(label); this.registerTarget(`creature:${c.id}`, root, hit, label);
     }
   }
-  private buildTable() {
-    this.box(this.world, 12.6, 0.45, 3.7, 0, 1.1, 0, 0x3c3038);
-    this.box(this.world, 12.8, 0.12, 3.9, 0, 1.35, 0, C.trim);
-    this.box(this.world, 12.3, 0.1, 3.4, 0, 1.43, 0, 0x403640);
-    for (const x of [-5.3, 5.3]) { this.box(this.world, 0.9, 1.5, 2.5, x, 0.3, 0, C.stone); this.arch(this.world, x, -0.25, 1.3, 0.7, 1.3); }
-    // Engraved sacrificial circles on the table, not printed UI cards.
-    for (const x of [-3.8, 0, 3.8]) {
-      const ring = this.ring(this.world, 1.2, 0.012, x, 1.5, 0.2, C.trim); ring.rotation.x = -Math.PI / 2;
-      for (let i = 0; i < 6; i++) {
-        const a = i * Math.PI / 3, b = a + Math.PI * 4 / 3;
-        this.beam(this.world, new T.Vector3(x + Math.cos(a), 1.5, 0.2 + Math.sin(a)), new T.Vector3(x + Math.cos(b), 1.5, 0.2 + Math.sin(b)), 0.009, C.trim);
-      }
-    }
-    for (let i = 0; i < 13; i++) this.arch(this.world, -5.8 + i * 0.97, 0.93, 1.96, 0.65, 0.3, C.trim);
-    this.candle(this.world, -5.9, 1.5, 0.9, 0.6, true); this.candle(this.world, -5.6, 1.5, 1.1, 0.3);
-    this.candle(this.world, 5.8, 1.5, 0.75, 0.8, true); this.candle(this.world, 5.5, 1.5, 1.1, 0.45);
-    this.skull(this.world, 5.8, 1.75, -1.1, 0.22);
-    const book = this.box(this.world, 0.75, 0.12, 0.5, -4.6, 1.58, 1.05, C.blood); book.rotation.y = 0.3;
-    for (let i = 0; i < 9; i++) { const coin = this.mesh(this.world, this.coinGeo, this.coinMat, -3.7 + i % 3 * 0.15, 1.55 + Math.floor(i / 3) * 0.023, 1.2); coin.rotation.z = i * 0.04; }
+  private buildMachines() {
+    const machines: { id: 'tutorial' | Upgrade; room: RoomId; x: number }[] = [{ id: 'tutorial', room: 'refuge', x: 0 }, { id: 'volley', room: 'naveWest', x: -1.8 }, { id: 'power', room: 'cloister', x: 1.8 }, { id: 'rate', room: 'choir', x: 0 }];
+    for (const machine of machines) { const r = room(machine.room), root = new T.Group(); root.position.set(r.x * SCALE + machine.x, 0, r.z * SCALE - 1.6); this.world.add(root); const base = this.mesh(root, this.geo(new T.CylinderGeometry(.85, 1.1, 1.25, 8)), this.mat(COLORS.stone2), 0, .62, 0); const core = this.mesh(root, this.geo(new T.OctahedronGeometry(.58)), this.mat(COLORS.silver, .85), 0, 1.75, 0); const label = this.label(machine.id === 'tutorial' ? '庇护机 · 充能 0 / 3' : `${upgradeName(machine.id)} · Lv.0`); label.position.set(0, 3, 0); root.add(label); root.add(base); this.registerTarget(`machine:${machine.id}`, root, core, label) }
   }
-  private buildMachine(target: Target) {
-    const group = new T.Group(), [x, z] = positions[target]; group.position.set(x, 1.5, z); this.world.add(group);
-    const coreColor = target === 'clock' ? C.red : target === 'lens' ? C.violet : target === 'ward' ? C.green : C.copper;
-    const animated: T.Object3D[] = [];
-    this.box(group, 1.03, 0.12, 0.91, 0, 0.06, 0, C.dark); this.box(group, 0.95, 0.09, 0.82, 0, 0.16, 0, C.trim);
-    let aimY = 0.83;
-    if (target === 'forge') {
-      this.box(group, 0.82, 0.95, 0.66, 0, 0.65, 0, C.stone); this.arch(group, 0, 0.22, 0.36, 0.65, 0.96);
-      this.box(group, 0.5, 0.55, 0.03, 0, 0.62, 0.34, C.dark);
-      this.forgeFire = this.mesh(group, new T.PlaneGeometry(0.39, 0.42), this.material(C.red, 0, 1).clone(), 0, 0.58, 0.361);
-      for (let i = 0; i < 5; i++) this.box(group, 0.025, 0.33, 0.03, (i - 2) * 0.1, 0.5, 0.4, C.dark);
-      for (const side of [-1, 1]) { this.cylinder(group, 0.085, 1.1, side * 0.45, 0.77, 0, C.dark); this.mesh(group, new T.ConeGeometry(0.14, 0.35, 5), this.material(C.trim), side * 0.45, 1.43, 0); }
-      this.skull(group, 0, 1.25, 0.2, 0.13);
-    } else if (target === 'splitter') {
-      this.cylinder(group, 0.3, 0.7, 0, 0.55, 0, C.dark, 0.2); this.ring(group, 0.37, 0.05, 0, 0.93, 0.1);
-      const orb = this.mesh(group, new T.IcosahedronGeometry(0.2, 0), this.material(C.copper, 0.6, 0.5), 0, 0.95, 0.12); animated.push(orb);
-      for (let i = 0; i < 3; i++) {
-        const a = (i - 1) * 0.75;
-        this.beam(group, new T.Vector3(0, 0.45, 0), new T.Vector3(Math.sin(a) * 0.48, 1.32, -0.1), 0.045, C.brass);
-        this.mesh(group, new T.ConeGeometry(0.08, 0.2, 4), this.material(C.pale), Math.sin(a) * 0.48, 1.38, -0.1);
-      }
-      for (let i = 0; i < 10; i++) this.box(group, 0.055, 0.08, 0.03, (i - 4.5) * 0.08, 0.26, 0.42, C.trim);
-    } else if (target === 'choir') {
-      this.box(group, 0.8, 0.6, 0.6, 0, 0.5, 0, C.dark); this.arch(group, 0, 0.4, 0.34, 0.75, 1.02);
-      for (const side of [-1, 1]) this.cylinder(group, 0.035, 0.95, side * 0.3, 0.94, 0.22, C.trim);
-      const spirit = this.mesh(group, new T.IcosahedronGeometry(0.24, 1), this.material(C.green, 0.2, 0.7), 0, 0.97, 0.1); animated.push(spirit);
-      const halo = this.ring(group, 0.34, 0.025, 0, 0.98, 0.1, C.pale); halo.rotation.y = 0.7; animated.push(halo);
-      for (let i = 0; i < 4; i++) { const familiar = this.mesh(group, new T.IcosahedronGeometry(0.07, 1), this.material(C.green, 0.1, 1.5), 0, 1, 0); familiar.visible = false; this.spirits.push(familiar); }
-    } else if (target === 'ward') {
-      this.box(group, 0.9, 0.6, 0.65, 0, 0.47, 0, C.blood);
-      for (let i = 0; i < 7; i++) { const h = 1.2 - Math.abs(i - 3) * 0.15; this.cylinder(group, 0.055, h, (i - 3) * 0.12, 0.6 + h / 2, 0, C.brass); }
-      for (let i = 0; i < 8; i++) this.box(group, 0.08, 0.045, 0.2, (i - 3.5) * 0.09, 0.76, 0.35, i % 3 ? C.pale : C.dark);
-      this.skull(group, 0, 0.44, 0.4, 0.14);
-    } else if (target === 'lens') {
-      this.cylinder(group, 0.31, 0.4, 0, 0.4, 0, C.dark, 0.2);
-      const gem = this.mesh(group, new T.OctahedronGeometry(0.4), this.material(C.violet, 0.65, 0.3), 0, 1.02, 0); gem.scale.y = 1.4; animated.push(gem);
-      const halo = this.ring(group, 0.52, 0.025, 0, 1, 0); halo.rotation.x = 0.7; animated.push(halo);
-      for (const side of [-1, 1]) this.mesh(group, new T.ConeGeometry(0.07, 0.8, 4), this.material(C.trim), side * 0.41, 0.8, 0);
-    } else if (target === 'seal') {
-      this.box(group, 0.78, 0.8, 0.6, 0, 0.6, 0, C.stone); this.arch(group, 0, 0.2, 0.32, 0.85, 1.34);
-      const star = this.mesh(group, new T.OctahedronGeometry(0.25), this.material(C.pale, 0.55, 0.2), 0, 0.86, 0.35); animated.push(star);
-      this.ring(group, 0.35, 0.035, 0, 0.85, 0.33);
-      for (const side of [-1, 1]) this.candle(group, side * 0.43, 0.2, 0.3, 0.55);
-    } else {
-      aimY = 1.1;
-      this.box(group, 1.05, 1.65, 0.55, 0, 1.02, 0, C.dark); this.arch(group, 0, 0.2, 0.33, 1.1, 2.25, C.brass);
-      for (const side of [-1, 1]) {
-        this.cylinder(group, 0.065, 1.8, side * 0.6, 1.13, 0, C.trim); this.mesh(group, new T.ConeGeometry(0.12, 0.4, 5), this.material(C.pale), side * 0.6, 2.17, 0);
-        this.skull(group, side * 0.47, 0.3, 0.35, 0.15);
-      }
-      this.ring(group, 0.37, 0.055, 0, 1.8, 0.35, C.trim);
-      const eye = this.mesh(group, new T.SphereGeometry(0.12, 12, 6), this.material(C.red, 0, 1.3), 0, 1.8, 0.35); eye.scale.x = 1.8;
-      this.mesh(group, new T.SphereGeometry(0.07, 8, 6), this.material(C.dark), 0, 1.8, 0.455);
-      this.clockCanvas.width = 512; this.clockCanvas.height = 256; this.clockFace = new T.CanvasTexture(this.clockCanvas); this.clockFace.colorSpace = T.SRGBColorSpace; this.textures.push(this.clockFace);
-      this.mesh(group, new T.PlaneGeometry(1.03, 0.65), new T.MeshBasicMaterial({ map: this.clockFace, transparent: true }), 0, 1.08, 0.34);
-      const pendulum = new T.Group(); pendulum.position.set(0, 0.8, 0.32); group.add(pendulum); this.cylinder(pendulum, 0.018, 0.45, 0, -0.2, 0, C.brass); this.mesh(pendulum, new T.OctahedronGeometry(0.12), this.material(C.red, 0.5), 0, -0.45, 0); animated.push(pendulum);
-    }
-    const targetMesh = this.mesh(group, new T.BoxGeometry(target === 'clock' ? 1.3 : 1.12, target === 'clock' ? 2.3 : 1.65, 0.9), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }), 0, aimY, 0.05);
-    targetMesh.userData.target = target;
-    const aura = this.mesh(group, new T.TorusGeometry(target === 'clock' ? 0.71 : 0.57, 0.013, 4, 48), this.material(coreColor, 0, 1), 0, 0.22, 0); aura.rotation.x = -Math.PI / 2;
-    const sprite = new T.Sprite(new T.SpriteMaterial({ map: this.textTexture('', '#ffffff', 40, 512, 384), transparent: true, depthWrite: false, toneMapped: false }));
-    sprite.position.set(0, 1.98, 0.12); sprite.scale.set(1.28, 0.96, 1); group.add(sprite);
-    sprite.visible = target !== 'clock';
-    const runes: T.Mesh[] = [], crowns: T.Mesh[] = [];
-    if (target !== 'clock') {
-      for (let i = 0; i < 10; i++) {
-        const angle = i / 10 * Math.PI * 2;
-        const rune = this.mesh(group, new T.OctahedronGeometry(0.043), this.material(coreColor, 0.4, 0).clone(), Math.cos(angle) * 0.49, 0.22, Math.sin(angle) * 0.45);
-        rune.scale.y = 0.6; runes.push(rune);
-      }
-      for (let i = 0; i < devices[target].costs.length; i++) {
-        const crown = this.ring(group, 0.37 + i * 0.035, 0.018, 0, 0.33 + i * 0.085, 0, coreColor);
-        crown.rotation.x = Math.PI / 2; crown.visible = false; crowns.push(crown);
-      }
-    }
-    this.models[target] = { group, target: targetMesh, aura, animated, flash: 0, label: sprite, labelKey: '', revealed: target === 'clock' || devices[target].at === 0, runes, crowns, lastLevel: 0 };
-    if (target !== 'clock' && devices[target].at > 0) { group.visible = false; const dormant = this.ring(this.world, 0.43, 0.012, x, 1.52, z, 0x55444e); dormant.rotation.x = -Math.PI / 2; }
+  private buildMoonBattery() {
+    const r = room('moonBattery'), root = new T.Group(); root.position.set(r.x * SCALE, 0, r.z * SCALE - 3.4); this.world.add(root);
+    const batteryLight = new T.PointLight(COLORS.moon, 9, 11, 2); batteryLight.position.set(0, 4.2, 1.5); root.add(batteryLight);
+    this.box(root, [3.4, 2.8, 1.2], [0, 1.4, 0], COLORS.stone2);
+    const assemblyCore = this.mesh(root, this.geo(new T.OctahedronGeometry(.62)), this.mat(COLORS.silver, 1.1), 0, 2.1, .72);
+    const part1 = this.mesh(root, this.geo(new T.CylinderGeometry(.55, .75, 4.8, 10)), this.mat(COLORS.silver), 0, 2.1, -1); part1.rotation.x = Math.PI / 2;
+    const part2 = this.mesh(root, this.geo(new T.TorusGeometry(.85, .14, 7, 22)), this.mat(0x7da9c4, .35), 0, 2.1, .2); part2.rotation.x = Math.PI / 2;
+    const part3 = new T.Group(); for (let i = 0; i < 4; i++) { const bar = this.box(part3, [1.8, .12, .12], [0, 2.1, -2.4], COLORS.silver); bar.rotation.z = i * Math.PI / 2 } root.add(part3);
+    const part4 = this.mesh(root, this.geo(new T.IcosahedronGeometry(.52, 1)), this.mat(COLORS.moon, 1.8), 0, 2.1, -2.45);
+    this.cannonParts = [part1, part2, part3, part4]; const label = this.label('月亮炮 · 射击组装炮身'); label.position.set(0, 3.15, 0); label.scale.set(3, .75, 1); root.add(label); this.registerTarget('machine:cannon', root, assemblyCore, label);
+    const moon = this.mesh(this.world, this.geo(new T.IcosahedronGeometry(4.4, 4)), this.mat(COLORS.moon, 1.2), r.x * SCALE, 10, r.z * SCALE - 34); this.moon = moon; moon.userData.target = 'moon';
   }
-  private updateUpgradeLabel(target: Exclude<Target, 'clock'>, model: Model) {
-    const level = this.state.levels[target], required = cost(this.state, target);
-    const remaining = Math.max(0, Math.ceil(required - this.state.progress[target]));
-    const key = `${level}/${required}/${remaining}`;
-    if (key === model.labelKey) return;
-    model.labelKey = key;
-    const texture = model.label.material.map as T.CanvasTexture;
-    const canvas = texture.image as HTMLCanvasElement, c = canvas.getContext('2d')!;
-    const maxLevel = devices[target].costs.length;
-    c.clearRect(0, 0, 512, 384);
-    c.fillStyle = '#100c13'; c.fillRect(8, 8, 496, 368);
-    c.strokeStyle = required ? '#a67f4e' : '#a3d6bf'; c.lineWidth = 5; c.strokeRect(8, 8, 496, 368);
-    c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.fillStyle = '#dfc8a7'; c.font = '32px "Microsoft YaHei", sans-serif'; c.fillText(devices[target].short, 256, 42);
-    c.fillStyle = required ? '#f1ce8d' : '#b2f0d1'; c.font = 'bold 59px Georgia, serif'; c.fillText(`Lv.${level}`, 256, 101);
-    for (let i = 0; i < maxLevel; i++) {
-      const x = 256 + (i - (maxLevel - 1) / 2) * 36;
-      c.fillStyle = i < level ? '#f1ce8d' : '#302934'; c.fillRect(x - 11, 143, 22, 13);
-    }
-    c.fillStyle = '#c9bba8'; c.font = '30px "Microsoft YaHei", sans-serif'; c.fillText(required ? '下次升级还需' : '契约圆满', 256, 194);
-    c.fillStyle = required ? '#fff1c9' : '#b2f0d1'; c.font = 'bold 94px Georgia, "Microsoft YaHei", serif';
-    c.fillText(required ? remaining.toLocaleString('en-US') : 'MAX', 256, 266);
-    c.fillStyle = '#c9bba8'; c.font = '27px "Microsoft YaHei", sans-serif';
-    c.fillText(required ? `点 / 本阶共 ${required.toLocaleString('en-US')} 点` : `已达最高 ${maxLevel} 级`, 256, 329);
-    c.fillStyle = '#302934'; c.fillRect(32, 355, 448, 6);
-    c.fillStyle = required ? '#f1ce8d' : '#b2f0d1'; c.fillRect(32, 355, 448 * (required ? Math.min(1, this.state.progress[target] / required) : 1), 6);
-    texture.needsUpdate = true;
+
+  private resize = () => { const b = this.canvas.getBoundingClientRect(); if (!b.width || !b.height) return; this.camera.aspect = b.width / b.height; this.camera.updateProjectionMatrix(); this.renderer.setSize(Math.max(1, Math.floor(b.width * .72)), Math.max(1, Math.floor(b.height * .72)), false); this.canvas.style.width = `${b.width}px`; this.canvas.style.height = `${b.height}px` };
+  private pointerMove = (event: PointerEvent) => { const b = this.canvas.getBoundingClientRect(); this.pointer.set((event.clientX - b.left) / b.width * 2 - 1, -(event.clientY - b.top) / b.height * 2 + 1); this.aimYaw = -this.pointer.x * .19; this.aimPitch = this.pointer.y * .11; this.onView(this.view()) };
+  private pointerDown = (event: PointerEvent) => { if (event.button !== 0) return; event.preventDefault(); this.audio.unlock(); this.canvas.focus({ preventScroll: true }); this.pointerMove(event); this.held = true; this.firePointer() };
+  private pointerLeave = () => { this.pointer.set(0, 0); this.aimYaw = 0; this.aimPitch = 0; this.release() };
+  private release = () => { this.held = false };
+  private blur = () => { this.release(); if (canAct(this.state)) this.pause() };
+  private visibility = () => { if (document.hidden) this.blur() };
+  private contextLost = (event: Event) => { event.preventDefault(); this.lost = true; this.pause(); this.onError('WebGL 视野已丢失；生产与危险均已冻结。重新载入后可选择继续。'); this.onView(this.view()) };
+  private targetAtPointer() {
+    this.ray.setFromCamera(this.pointer, this.camera);
+    const roots: T.Object3D[] = [...this.targetModels.entries()].filter(([id, model]) => model.root.visible && (id !== 'machine:cannon' || this.state.cannonStage < 4)).map(([, model]) => model.root);
+    if (this.moon.visible) roots.push(this.moon);
+    const hits = this.ray.intersectObjects(roots, true);
+    for (const hit of hits) { let o: T.Object3D | null = hit.object; while (o) { if (o.userData.target) return o.userData.target as TargetId; o = o.parent } }
+    return null;
   }
-  private buildGun() {
-    // Camera-mounted flintlock and two visible hands; the muzzle is the source of every player coin.
-    this.gun.position.set(0.65, -0.48, -2); this.gun.rotation.set(0.08, -0.1, -0.07); this.camera.add(this.gun);
-    const wood = 0x452932, steel = 0x5e555b;
-    const stock = this.box(this.gun, 0.22, 0.2, 0.85, 0, 0, 0.12, wood); stock.rotation.x = -0.13;
-    const grip = this.box(this.gun, 0.18, 0.4, 0.23, 0, -0.22, 0.4, wood); grip.rotation.x = -0.4;
-    for (let i = 0; i < 5; i++) {
-      const b = new T.Group(); b.position.set((i - 2) * 0.09, 0.16, -0.26); this.gun.add(b);
-      const barrel = this.cylinder(b, 0.052, 0.98, 0, 0, 0, steel, 0.048, 8); barrel.rotation.x = Math.PI / 2;
-      const opening = this.cylinder(b, 0.037, 0.012, 0, 0, -0.501, C.dark, 0.037, 8); opening.rotation.x = Math.PI / 2;
-      for (const z of [-0.35, 0.05, 0.36]) { const band = this.cylinder(b, 0.057, 0.045, 0, 0, z, C.brass); band.rotation.x = Math.PI / 2; }
-      b.visible = i === 2; this.gunBarrels.push(b);
-    }
-    this.box(this.gun, 0.025, 0.11, 0.07, 0, 0.25, -0.65, C.brass);
-    const lock = this.ring(this.gun, 0.095, 0.025, 0.12, -0.16, 0.27); lock.rotation.y = Math.PI / 2;
-    this.box(this.gun, 0.065, 0.23, 0.07, 0.17, 0.16, 0.26, C.brass).rotation.z = -0.35;
-    this.skull(this.gun, 0, 0.05, 0.52, 0.08);
-    this.handsMat = this.material(0x8d6b62);
-    // Right hand curls around the grip; left hand supports the barrel.
-    const palm = this.mesh(this.gun, new T.CapsuleGeometry(0.09, 0.16, 3, 6), this.handsMat, 0.12, -0.25, 0.45); palm.rotation.x = -0.3;
-    for (let i = 0; i < 4; i++) { const finger = this.mesh(this.gun, new T.CapsuleGeometry(0.025, 0.13, 2, 5), this.handsMat, 0.04, -0.15 - i * 0.055, 0.57); finger.rotation.z = Math.PI / 2; this.fingers.push(finger); }
-    const thumb = this.mesh(this.gun, new T.CapsuleGeometry(0.035, 0.13, 2, 5), this.handsMat, 0.17, -0.09, 0.45); thumb.rotation.z = -0.4;
-    const sleeve = this.box(this.gun, 0.27, 0.55, 0.26, 0.1, -0.6, 0.55, 0x201e2b); sleeve.rotation.z = -0.17;
-    this.box(this.gun, 0.28, 0.1, 0.28, 0.05, -0.38, 0.5, C.trim);
-    this.mesh(this.gun, new T.BoxGeometry(0.25, 0.14, 0.3), this.handsMat, -0.12, -0.14, -0.08);
-    const leftSleeve = this.box(this.gun, 0.25, 0.28, 0.8, -0.28, -0.3, 0.23, 0x24202c); leftSleeve.rotation.y = -0.45; leftSleeve.rotation.x = -0.3;
-    this.muzzle.position.set(0, 0.16, -0.78); this.gun.add(this.muzzle);
-    this.muzzleFlash = this.mesh(this.gun, new T.OctahedronGeometry(0.16), new T.MeshBasicMaterial({ color: C.copper, transparent: true, opacity: 0.8 }), 0, 0.16, -0.85); this.muzzleFlash.visible = false;
-    this.gun.traverse(obj => { if (obj instanceof T.Mesh) { obj.castShadow = false; obj.receiveShadow = false; } });
-  }
-  private resize = () => { const box = this.canvas.getBoundingClientRect(); if (!box.width || !box.height) return; this.camera.aspect = box.width / box.height; this.camera.fov = T.MathUtils.radToDeg(2 * Math.atan(Math.tan(T.MathUtils.degToRad(47 / 2)) * Math.max(1, 1.6 / this.camera.aspect))); this.camera.updateProjectionMatrix(); this.renderer.setSize(box.width, box.height, false); };
-  private pointerMove = (e: PointerEvent) => { const b = this.canvas.getBoundingClientRect(); this.mouse.set((e.clientX - b.left) / b.width * 2 - 1, -(e.clientY - b.top) / b.height * 2 + 1); this.pointerInside = true; };
-  private pointerDown = (e: PointerEvent) => { if (e.button !== 0) return; e.preventDefault(); this.canvas.focus({ preventScroll: true }); this.pointerMove(e); this.held = true; this.shootPointer(); };
-  private pointerLeave = () => { this.pointerInside = false; this.release(); };
-  private release = () => { this.held = false; };
-  private blur = () => { this.release(); if (canShoot(this.state)) this.pause(); };
-  private visibility = () => { if (document.hidden) this.blur(); };
-  private contextLost = (e: Event) => { e.preventDefault(); this.lost = true; this.pause(); this.onError('圣约视野中断。请重新载入；已开始的守夜可从存档继续。'); };
-  startTutorial = () => { this.audio.unlock(); this.state = beginTutorial(this.state); this.publish(); this.select('splitter'); };
-  start = () => { this.audio.unlock(); this.state = beginNight(this.state); this.last = 0; this.publish(); };
-  resume = () => { this.audio.unlock(); this.state = { ...this.state, status: this.state.guide < 4 ? 'tutorial' : 'playing' }; this.last = 0; this.publish(); };
-  restore = (state: GameState) => { this.state = { ...state, status: 'playing' }; this.last = 0; this.publish(); };
-  restart = () => { this.clearShots(); this.state = initialState(); this.recoil = 0; this.held = false; this.lastAlarm = -1; this.start(); };
-  pause = () => { this.release(); if (canShoot(this.state)) this.state = { ...this.state, status: 'paused' }; else if (this.state.status === 'paused') this.resume(); this.publish(); };
-  setAutoTarget = (target: Target) => { if (unlocked(this.state, target)) this.state = { ...this.state, autoTarget: target }; this.publish(); };
-  inspectUpgrades = () => { this.state = inspectJournal(this.state); this.publish(); };
-  select = (target: Target) => { if (!unlocked(this.state, target)) return; this.selected = target; this.pointerInside = false; this.onView(this.view()); };
-  fireSelected = () => { const model = this.models[this.selected]; if (model && unlocked(this.state, this.selected)) this.shoot(model.target.getWorldPosition(new T.Vector3()).add(new T.Vector3(0, 0, 0.5)), this.selected); };
-  private intersection() {
-    this.ray.setFromCamera(this.mouse, this.camera);
-    const intersections = this.ray.intersectObjects(TARGETS.filter(t => unlocked(this.state, t)).map(t => this.models[t].target), false);
-    if (intersections.length) return { point: intersections[0].point, target: intersections[0].object.userData.target as Target };
-    const point = new T.Vector3(); const plane = new T.Plane(new T.Vector3(0, 1, 0), -1.5);
-    return { point: this.ray.ray.intersectPlane(plane, point) || this.ray.ray.at(12, new T.Vector3()), target: null };
-  }
-  private shootPointer() { const { point, target } = this.intersection(); if (target) this.selected = target; this.shoot(point, target); }
-  private shoot(end: T.Vector3, target: Target | null) {
-    if (!canShoot(this.state) || this.fireCooldown > 0 || this.shots.length > 90) return;
-    this.audio.unlock(); this.audio.fire(); this.fireCooldown = 0.16; this.recoil = 1;
-    const count = volley(this.state); this.state = registerShot(this.state, count);
-    const origin = this.muzzle.getWorldPosition(new T.Vector3());
-    for (let i = 0; i < count; i++) {
-      const mesh = this.mesh(this.world, this.coinGeo, this.coinMat); mesh.scale.setScalar(1.5);
-      const destination = end.clone(); destination.x += (i - (count - 1) / 2) * 0.045;
-      this.shots.push({ mesh, start: origin.clone(), end: destination, age: 0, delay: i * 0.018, duration: 0.28, target, visualOnly: false });
-    }
+  private firePointer() { this.fire(this.targetAtPointer()) }
+  private fire(target: TargetId | null) {
+    if (!canAct(this.state) || this.cooldown > 0) return;
+    const before = this.state;
+    this.cooldown = fireInterval(this.state);
+    this.state = shoot(this.state, target);
+    this.audio.fire();
+    if (target) this.audio.hit(target);
+    if (this.state.producers.length > before.producers.length) this.audio.purify();
+    if (this.state.cannonStage > before.cannonStage) this.audio.machine();
+    this.muzzle.intensity = 8;
     this.publish();
+    this.syncVisuals();
   }
-  private impact(shot: Shot) {
-    if (!shot.visualOnly) {
-      const before = this.state.upgrades;
-      this.state = hit(this.state, shot.target); this.audio.hit(shot.target);
-      if (this.state.upgrades > before) this.audio.upgrade();
-    }
-    if (shot.target) this.models[shot.target].flash = 1;
-    for (let i = 0; i < 5 && this.sparks.children.length < 100; i++) {
-      const spark = this.mesh(this.sparks, new T.OctahedronGeometry(0.023), this.material(shot.target === 'clock' ? C.red : C.copper, 0, 2));
-      spark.position.copy(shot.end); spark.userData = { life: 0.45, velocity: new T.Vector3((Math.random() - 0.5) * 1.8, Math.random() * 1.5, Math.random()) };
-    }
-    this.publish();
-  }
-  private clearShots() { for (const s of this.shots) this.world.remove(s.mesh); this.shots = []; }
-  private publish() { this.onChange({ ...this.state }); }
-  private view(): SceneView {
-    const points: SceneView['points'] = {};
-    for (const t of TARGETS) {
-      if (!unlocked(this.state, t)) continue;
-      const v = this.models[t].target.getWorldPosition(new T.Vector3()).project(this.camera); points[t] = { x: (v.x + 1) * 50, y: (1 - v.y) * 50 };
-    }
-    return { hovered: this.pointerInside ? this.currentHover : this.selected, points, ready: true };
-  }
-  private loop = (now: number) => {
-    if (this.lost) return;
-    const real = this.last ? Math.max(0, (now - this.last) / 1000) : 0, dt = Math.min(real, 0.07); this.last = now;
-    const active = canShoot(this.state);
-    if (active || this.state.status === 'ready') this.animationTime += dt;
-    if (active) {
-      const before = this.state.status, oldHits = this.state.hits, oldUpgrades = this.state.upgrades;
-      const spiritTarget = this.state.autoTarget !== 'clock' && !cost(this.state, this.state.autoTarget) ? 'clock' : this.state.autoTarget;
-      this.state = advance(this.state, real);
-      if (this.state.hits > oldHits) {
-        this.models[spiritTarget].flash = 0.65;
-        const mesh = this.mesh(this.world, this.coinGeo, this.coinMat);
-        this.shots.push({ mesh, start: this.models.choir.target.getWorldPosition(new T.Vector3()), end: this.models[spiritTarget].target.getWorldPosition(new T.Vector3()), age: 0, delay: 0, duration: 0.35, target: spiritTarget, visualOnly: true });
-      }
-      if (this.state.upgrades > oldUpgrades) this.audio.upgrade();
-      if (this.state.status !== before) { this.held = false; this.publish(); }
-      this.fireCooldown = Math.max(0, this.fireCooldown - real); this.recoil = Math.max(0, this.recoil - dt * 7);
-      if (this.held && this.fireCooldown <= 0) this.shootPointer();
-      this.shots = this.shots.filter(shot => {
-        shot.age += dt;
-        if (shot.age < shot.delay) { shot.mesh.visible = false; return true; }
-        shot.mesh.visible = true;
-        const t = Math.min(1, (shot.age - shot.delay) / shot.duration);
-        shot.mesh.position.lerpVectors(shot.start, shot.end, t); shot.mesh.position.y += Math.sin(t * Math.PI) * 0.12; shot.mesh.rotation.set(t * 18, t * 5, 0);
-        if (t >= 1) { this.impact(shot); this.world.remove(shot.mesh); return false; } return true;
-      });
-      if (this.state.time < 30 && Math.floor(this.state.elapsed / 2) !== this.lastAlarm) { this.lastAlarm = Math.floor(this.state.elapsed / 2); this.audio.alarm(); }
-    }
-    const aim = this.pointerInside && !this.reduced ? this.mouse.x : 0;
-    this.camera.position.x = T.MathUtils.lerp(this.camera.position.x, aim * 0.22, dt * 4);
-    this.camera.lookAt(aim * 0.45, 1.65 + (this.pointerInside && !this.reduced ? this.mouse.y * 0.12 : 0), -0.6);
-    this.gun.position.set(0.65 + aim * 0.025, -0.48 - this.recoil * 0.04 + (this.reduced ? 0 : Math.sin(this.animationTime * 1.8) * 0.008), -2 + this.recoil * 0.12);
-    this.gun.rotation.x = 0.08 + this.recoil * 0.12 - (this.pointerInside ? this.mouse.y * 0.12 : 0);
-    this.gun.rotation.y = -0.1 - aim * 0.22;
-    this.muzzleFlash.visible = this.recoil > 0.72 && active; this.muzzleFlash.rotation.z += dt * 6;
-    for (let i = 0; i < 5; i++) {
-      const present = Math.abs(i - 2) <= Math.floor(volley(this.state) / 2) && (volley(this.state) % 2 === 1 || i !== 2 + Math.floor(volley(this.state) / 2));
-      const barrel = this.gunBarrels[i];
-      if (present && !barrel.visible) barrel.scale.setScalar(0.01);
-      barrel.visible = present;
-      if (present) barrel.scale.lerp(new T.Vector3(1, 1, 1), this.reduced ? 1 : dt * 5);
-    }
-    const coinColor = [C.copper, 0xe3d7bd, 0xf4c56f, 0xe9b6a1, 0xcac3f5, 0xf6e5af][this.state.levels.forge];
-    this.coinMat.color.setHex(coinColor); this.coinMat.emissive.setHex(coinColor);
-    this.coinMat.emissiveIntensity = 0.15 + this.state.levels.forge * 0.12 + this.state.levels.lens * 0.15;
-    for (let i = 0; i < this.spirits.length; i++) {
-      const spirit = this.spirits[i]; spirit.visible = i < this.state.levels.choir;
-      const angle = this.animationTime * 1.4 + i * Math.PI / 2;
-      spirit.position.set(Math.cos(angle) * 0.44, 1.05 + Math.sin(angle * 0.7) * 0.16, Math.sin(angle) * 0.36);
-    }
-    for (let i = 0; i < this.barriers.length; i++) {
-      const barrier = this.barriers[i]; barrier.visible = i < this.state.levels.ward;
-      (barrier.material as T.MeshBasicMaterial).opacity = this.reduced ? 0.32 : 0.22 + Math.sin(this.animationTime * 1.3 + i) * 0.1;
-    }
-    this.world.updateMatrixWorld(true); this.currentHover = this.pointerInside ? this.intersection().target : null;
-    for (const target of TARGETS) {
-      const m = this.models[target], visible = unlocked(this.state, target); m.group.visible = visible;
-      if (!visible) { m.revealed = false; continue; }
-      if (!m.revealed) { m.group.scale.setScalar(0.01); m.revealed = true; }
-      const modelScale = target === 'clock' ? 1.2 : 1;
-      m.group.scale.lerp(new T.Vector3(modelScale, modelScale, modelScale), this.reduced ? 1 : dt * 2);
-      if (active) m.flash = Math.max(0, m.flash - dt * 3);
-      if (target !== 'clock') {
-        this.updateUpgradeLabel(target, m);
-        const level = this.state.levels[target], required = cost(this.state, target);
-        const progress = required ? this.state.progress[target] / required : 1;
-        if (level > m.lastLevel) m.flash = 2;
-        m.lastLevel = level;
-        m.crowns.forEach((crown, i) => { crown.visible = i < level; });
-        m.runes.forEach((rune, i) => {
-          const lit = progress > i / 10, material = rune.material as T.MeshStandardMaterial;
-          material.emissiveIntensity = lit ? 1.1 + m.flash : 0;
-          material.color.setHex(lit ? target === 'ward' ? C.green : target === 'lens' ? C.violet : C.copper : C.trim);
-        });
-        if (target === 'forge') {
-          const flame = this.forgeFire.material as T.MeshStandardMaterial;
-          flame.emissiveIntensity = 0.8 + progress + level * 0.18 + m.flash * 0.5;
-          flame.color.setHex(coinColor); flame.emissive.setHex(coinColor);
-        }
-        if (target === 'lens' || target === 'seal') for (const ornament of m.animated) {
-          ornament.scale.setScalar(1 + level * 0.12 + (target === 'seal' ? progress * 0.35 : 0));
-        }
-      }
-      const highlight = (this.pointerInside ? this.currentHover : this.selected) === target || (this.state.status === 'tutorial' && recommendation(this.state).target === target);
-      m.aura.scale.setScalar(1 + m.flash * 0.12); m.aura.visible = highlight || m.flash > 0;
-      for (let i = 0; i < m.animated.length; i++) {
-        const a = m.animated[i];
-        if (target === 'clock') a.rotation.z = this.reduced ? 0 : Math.sin(this.animationTime * 2.3) * 0.3;
-        else if (!this.reduced) { a.rotation.y = this.animationTime * (i ? -0.5 : 0.5); a.rotation.z = Math.sin(this.animationTime * 0.5) * 0.12; }
-      }
-    }
-    const value = Math.ceil(this.state.time);
-    if (value !== this.clockValue) {
-      this.clockValue = value; const c = this.clockCanvas.getContext('2d')!; c.clearRect(0, 0, 512, 256); c.fillStyle = value < 30 ? '#ff6552' : '#edbea0'; c.textAlign = 'center'; c.font = '150px Georgia'; c.fillText(String(value).padStart(3, '0'), 256, 172); c.font = '20px Georgia'; c.fillStyle = '#c4a391'; c.fillText('MEMENTO MORI', 256, 223); this.clockFace.needsUpdate = true;
-    }
-    if (active) for (const obj of [...this.sparks.children]) { obj.userData.life -= dt; obj.position.addScaledVector(obj.userData.velocity, dt); obj.userData.velocity.y -= dt * 2; if (obj.userData.life <= 0) { this.sparks.remove(obj); (obj as T.Mesh).geometry.dispose(); } }
-    this.lights.forEach((l, i) => { l.intensity = this.reduced ? 5 : 5 + Math.sin(this.animationTime * 7 + i) * 0.55; });
-    if (!this.reduced) this.motes.rotation.y = this.animationTime * 0.018;
-    this.shadow.color.setHex(waveActive(this.state) ? 0xe67c6a : 0xffcd9a);
-    this.renderer.render(this.world, this.camera);
-    this.uiTick += real;
-    if (this.uiTick > 0.1 || !this.last) { this.uiTick = 0; this.publish(); this.onView(this.view()); }
-    this.frame = requestAnimationFrame(this.loop);
+
+  startTutorial = () => { this.audio.unlock(); this.audio.whisper(-1); this.state = beginTutorial(initialState()); this.publish(); this.syncVisuals() };
+  start = () => { this.audio.unlock(); this.state = beginGame(this.state.status === 'ready' ? { ...initialState(), tutorialStep: 3, journalRead: true } : this.state); this.last = 0; this.publish(); this.syncVisuals() };
+  restore = (state: GameState) => { this.state = { ...state, status: 'playing' }; this.last = 0; this.publish(); this.syncVisuals(true) };
+  restart = () => { this.state = initialState(); this.startTutorial() };
+  pause = () => { if (canAct(this.state)) this.state = { ...this.state, status: 'paused' }; this.publish() };
+  resume = () => { if (this.state.status === 'paused') this.state = { ...this.state, status: this.state.tutorialStep < 3 ? 'tutorial' : 'playing' }; this.last = 0; this.publish() };
+  inspectUpgrades = () => { this.state = inspectJournal(this.state); this.publish() };
+  move = () => { const before = this.state; this.state = moveForward(this.state); if (this.state.room !== before.room) { this.audio.step(); if (creatureInRoom(this.state)) this.audio.whisper(room(this.state.room).x < 0 ? -1 : 1) } this.publish(); this.syncVisuals() };
+  turn = (side: 'left' | 'right') => { this.state = turn(this.state, side); this.audio.step(); this.publish(); this.syncVisuals() };
+  fireCenter = () => { this.pointer.set(0, 0); this.firePointer() };
+  beginCenterFire = () => { this.pointer.set(0, 0); this.held = true; this.firePointer() };
+  endFire = () => { this.release() };
+  shutdownAudio = () => this.audio.dispose();
+  targetPoint = (target: TargetId) => {
+    const object = target === 'moon' ? this.moon : this.targetModels.get(target)?.hit;
+    if (!object?.visible || target !== 'moon' && !this.targetModels.get(target)?.root.visible) return null;
+    this.camera.updateMatrixWorld(true); object.updateWorldMatrix(true, false);
+    const point = object.getWorldPosition(new T.Vector3()).project(this.camera), bounds = this.canvas.getBoundingClientRect();
+    return { x: bounds.left + (point.x + 1) * bounds.width / 2, y: bounds.top + (1 - point.y) * bounds.height / 2 };
   };
-  destroy() {
-    cancelAnimationFrame(this.frame); this.observer.disconnect(); this.audio.dispose();
-    this.canvas.removeEventListener('pointermove', this.pointerMove); this.canvas.removeEventListener('pointerdown', this.pointerDown); this.canvas.removeEventListener('pointerleave', this.pointerLeave); this.canvas.removeEventListener('webglcontextlost', this.contextLost);
-    window.removeEventListener('pointerup', this.release); window.removeEventListener('pointercancel', this.release); window.removeEventListener('blur', this.blur); document.removeEventListener('visibilitychange', this.visibility);
-    const geometries = new Set<T.BufferGeometry>(), materials = new Set<T.Material>();
-    this.world.traverse(o => { if (o instanceof T.Mesh || o instanceof T.Points) { geometries.add(o.geometry); (Array.isArray(o.material) ? o.material : [o.material]).forEach((m: T.Material) => materials.add(m)); } if (o instanceof T.Sprite) materials.add(o.material); });
-    geometries.forEach(g => g.dispose()); materials.forEach(m => m.dispose()); this.textures.forEach(t => t.dispose()); this.renderer.dispose();
+  setTestState = (stage: 'explore' | 'cannon') => { this.state = makeTestState(stage); this.publish(); this.syncVisuals(true) };
+
+  private syncVisuals(snap = false) {
+    const r = room(this.state.room), desired = new T.Vector3(r.x * SCALE, 1.65, r.z * SCALE); this.desiredYaw = facingYaw[this.state.facing];
+    if (snap || this.reduced) { this.visualPosition.copy(desired); this.visualYaw = this.desiredYaw }
+    for (const door of this.doors) { const visited = this.state.visited.includes(door.destination); (door.mesh.material as T.MeshStandardMaterial).opacity = visited ? .05 : .9; door.mesh.visible = !visited || door.destination === 'moonBattery' && !this.state.visited.includes('moonBattery') }
+    this.world.traverse(o => { if (o instanceof T.PointLight && o.userData.sanctuary) o.intensity = this.state.sanctuaries.includes(o.userData.sanctuary) ? 12 : 0 });
+    for (const c of CREATURES) { const model = this.targetModels.get(`creature:${c.id}`)!; const produced = this.state.producers.includes(c.id); const current = c.room === this.state.room; model.root.visible = current || produced && this.state.visited.includes(c.room); (model.hit as T.Mesh).material = produced ? (model.hit.userData.pureMaterial as T.Material) : (model.hit.userData.hostileMaterial as T.Material); const d = CREATURE_KINDS[c.kind]; this.setLabel(model.label, produced ? `${d.name} · 已净化 · ${d.rate}/秒` : `${d.name} · ${this.state.creatureDamage[c.id]} / ${d.threshold}`) }
+    const tutorial = this.targetModels.get('machine:tutorial')!; tutorial.root.visible = this.state.room === 'refuge' && this.state.tutorialStep < 3; this.setLabel(tutorial.label, `庇护机 · 充能 ${this.state.tutorialCharge} / 3`);
+    for (const kind of ['volley', 'power', 'rate'] as Upgrade[]) { const model = this.targetModels.get(`machine:${kind}`)!; model.root.visible = this.state.room === upgradeRooms[kind] && this.state.sanctuaries.includes(upgradeRooms[kind]); const total = upgradeCost(this.state, kind); this.setLabel(model.label, total ? `${upgradeName(kind)} · Lv.${this.state.upgrades[kind]} · 还差 ${total - this.state.machineCharge[kind]} / ${total}` : `${upgradeName(kind)} · MAX`) }
+    const cannon = this.targetModels.get('machine:cannon')!; cannon.root.visible = this.state.room === 'moonBattery'; this.cannonParts.forEach((part, i) => part.visible = i < this.state.cannonStage); const next = CANNON_STAGES[this.state.cannonStage]; this.setLabel(cannon.label, next ? `月亮炮 · 射击组装${next.name}` : '月亮炮 · 瞄准月亮开火');
+    this.moon.visible = this.state.room === 'moonBattery' && this.state.cannonStage >= 4; const moonMat = this.moon.material as T.MeshStandardMaterial; moonMat.color.setHex(this.state.moonStage ? 0xa63445 : COLORS.moon); moonMat.emissive.setHex(this.state.moonStage ? 0x64111f : COLORS.moon);
+    if (snap) { this.camera.position.copy(desired); this.visualPosition.copy(desired) }
   }
+  private publish() { this.onChange({ ...this.state }) }
+  private view(): SceneView { let targetPoint: { x: number; y: number } | undefined; const id: TargetId = this.state.tutorialStep < 2 ? 'machine:tutorial' : `creature:${creatureInRoom(this.state)?.id}` as TargetId; const model = this.targetModels.get(id); if (model?.root.visible) { const p = model.hit.getWorldPosition(new T.Vector3()).project(this.camera); targetPoint = { x: (p.x + 1) * 50, y: (1 - p.y) * 50 } } return { ready: true, hovered: this.targetAtPointer(), targetPoint, contextLost: this.lost } }
+  private loop = (now: number) => {
+    const dt = this.last ? Math.min(.1, (now - this.last) / 1000) : 0; this.last = now; this.cooldown = Math.max(0, this.cooldown - dt); this.muzzle.intensity *= .65;
+    if (!document.hidden && document.hasFocus() && !this.lost && this.state.status === 'playing') { const before = this.state; this.state = advance(this.state, dt); if (this.state !== before) this.publish() }
+    if (this.held && this.cooldown <= 0) this.firePointer();
+    const r = room(this.state.room), desired = new T.Vector3(r.x * SCALE, 1.65, r.z * SCALE); const blend = this.reduced ? 1 : 1 - Math.exp(-dt * 10); this.visualPosition.lerp(desired, blend); let delta = T.MathUtils.euclideanModulo(this.desiredYaw - this.visualYaw + Math.PI, Math.PI * 2) - Math.PI; this.visualYaw += delta * blend;
+    this.camera.position.copy(this.visualPosition); this.camera.rotation.set(this.aimPitch, this.visualYaw + this.aimYaw, 0, 'YXZ');
+    const current = creatureInRoom(this.state); const target = current && this.targetModels.get(`creature:${current.id}`); if (target && !this.reduced) target.root.rotation.y = Math.sin(now * .0017) * .12;
+    this.renderer.render(this.world, this.camera); this.onView(this.view()); this.frame = requestAnimationFrame(this.loop);
+  };
+  destroy() { cancelAnimationFrame(this.frame); this.observer.disconnect(); this.canvas.removeEventListener('pointermove', this.pointerMove); this.canvas.removeEventListener('pointerdown', this.pointerDown); this.canvas.removeEventListener('pointerleave', this.pointerLeave); this.canvas.removeEventListener('webglcontextlost', this.contextLost); window.removeEventListener('pointerup', this.release); window.removeEventListener('pointercancel', this.release); window.removeEventListener('blur', this.blur); document.removeEventListener('visibilitychange', this.visibility); this.renderer.dispose(); void this.audio.dispose(); this.geometries.forEach(g => g.dispose()); this.materials.forEach(m => m.dispose()); this.textures.forEach(t => t.dispose()) }
 }

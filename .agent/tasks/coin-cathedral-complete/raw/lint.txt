@@ -1,0 +1,5 @@
+# Static verification
+
+- `git diff --check`: PASS with no whitespace errors.
+- Standard and GitHub Pages TypeScript/Vite builds: PASS.
+- `dist/index.html`: 7/7 absolute asset references use `/Coin/` in the Pages build.

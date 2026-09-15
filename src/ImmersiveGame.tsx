@@ -1,141 +1,109 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Scene } from './world';
 import type { SceneView } from './world';
-import { canShoot, chapter, chapters, devices, initialState, ownedUpgrades, readSave, recommendation, SAVE_KEY, TARGETS, timeLabel, unlocked, waveActive } from './rules';
-import type { GameState } from './rules';
+import {
+  CANNON_STAGES, CREATURE_KINDS, creatureInRoom, fireInterval, initialState, movementUnlocked, ownedAbilities,
+  productionRates, readSave, resourceName, room, ROOMS, SAVE_KEY, serializeSave, volley, power,
+} from './rules';
+import type { GameState, Resource } from './rules';
+
+declare global { interface Window { __COIN_TEST__?: { setStage: (stage: 'explore' | 'cannon') => void; state: () => GameState; point: (target: Parameters<Scene['targetPoint']>[0]) => { x: number; y: number } | null; shutdown: () => Promise<void> } } }
+type Panel = 'book' | 'pause' | 'map' | null;
 
 export default function ImmersiveGame() {
-  const canvas = useRef<HTMLCanvasElement>(null), engine = useRef<Scene | null>(null);
-  const [s, setState] = useState(initialState), [view, setView] = useState<SceneView>({ hovered: null, points: {}, ready: false });
-  const [error, setError] = useState(''), [saved, setSaved] = useState<GameState | null>(null);
-  const [panel, setPanel] = useState<'journal' | 'pause' | null>(null), [muted, setMuted] = useState(false);
-  const [subtitle, setSubtitle] = useState(''), [hint, setHint] = useState(false);
-  const dialog = useRef<HTMLDialogElement>(null), closeButton = useRef<HTMLButtonElement>(null);
-  const resumeJournal = useRef(false), lastSave = useRef(-1), lastChapter = useRef(0), previousWave = useRef(false), previousStatus = useRef(s.status);
-  const subtitleTimer = useRef<ReturnType<typeof setTimeout> | null>(null), hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const canvas = useRef<HTMLCanvasElement>(null), scene = useRef<Scene | null>(null), dialog = useRef<HTMLDialogElement>(null);
+  const [state, setState] = useState(initialState), [view, setView] = useState<SceneView>({ ready: false, hovered: null, contextLost: false });
+  const [panel, setPanel] = useState<Panel>(null), [error, setError] = useState(''), [saved, setSaved] = useState<GameState | null>(null), [muted, setMuted] = useState(false);
+  const resumeAfterPanel = useRef(false), lastSaveBucket = useRef(-1);
 
   useEffect(() => {
-    try { setSaved(readSave(localStorage.getItem(SAVE_KEY))); } catch { /* Local saves are optional. */ }
-    try { engine.current = new Scene(canvas.current!, setState, setView, setError); }
-    catch { setError('圣堂的视野未能建立。请开启浏览器硬件加速后重新接入。'); }
-    return () => {
-      engine.current?.destroy(); engine.current = null;
-      if (subtitleTimer.current) clearTimeout(subtitleTimer.current);
-      if (hintTimer.current) clearTimeout(hintTimer.current);
-    };
+    try { setSaved(readSave(localStorage.getItem(SAVE_KEY))); } catch { /* Storage is optional. */ }
+    try { scene.current = new Scene(canvas.current!, setState, setView, setError) } catch { setError('无法建立 WebGL 2 视野。请开启硬件加速或更换支持 WebGL 2 的浏览器。') }
+    if (navigator.webdriver) window.__COIN_TEST__ = { setStage: stage => scene.current?.setTestState(stage), state: () => scene.current?.state ?? initialState(), point: target => scene.current?.targetPoint(target) ?? null, shutdown: () => scene.current?.shutdownAudio() ?? Promise.resolve() };
+    return () => { delete window.__COIN_TEST__; scene.current?.destroy(); scene.current = null };
   }, []);
-  useEffect(() => { if (engine.current) engine.current.audio.muted = muted; }, [muted]);
+  useEffect(() => { if (scene.current) scene.current.audio.muted = muted }, [muted]);
   useEffect(() => {
-    try {
-      if (s.status === 'playing' || (s.status === 'paused' && s.guide >= 4)) {
-        const bucket = Math.floor(s.elapsed / 5);
-        if (bucket !== lastSave.current || s.status === 'paused') { localStorage.setItem(SAVE_KEY, JSON.stringify({ version: 2, state: s })); lastSave.current = bucket; }
-      } else if (s.status === 'failed' || s.status === 'won') {
-        localStorage.removeItem(SAVE_KEY);
-        const record = Number(localStorage.getItem('last-coin-best')) || 0;
-        localStorage.setItem('last-coin-best', String(Math.max(record, s.elapsed)));
-      }
-    } catch { /* Private mode must not interrupt the vigil. */ }
-  }, [s]);
+    if (state.status !== 'playing' && state.status !== 'paused') return;
+    const bucket = Math.floor(state.effectiveSeconds / 5);
+    if (bucket === lastSaveBucket.current && state.status !== 'paused') return;
+    try { localStorage.setItem(SAVE_KEY, serializeSave(state)); lastSaveBucket.current = bucket } catch { /* Private browsing must not stop play. */ }
+  }, [state]);
+  useEffect(() => { if (panel && !dialog.current?.open) dialog.current?.showModal(); else if (!panel && dialog.current?.open) dialog.current.close() }, [panel]);
+  useEffect(() => { if (state.status === 'paused' && !panel && !error) setPanel('pause') }, [state.status, panel, error]);
 
-  function speak(text: string) {
-    setSubtitle(text);
-    if (subtitleTimer.current) clearTimeout(subtitleTimer.current);
-    subtitleTimer.current = setTimeout(() => setSubtitle(''), 6500);
-  }
-  useEffect(() => {
-    if (s.status === 'playing') {
-      if (previousStatus.current === 'ready' || previousStatus.current === 'tutorial') {
-        setHint(true); if (hintTimer.current) clearTimeout(hintTimer.current);
-        hintTimer.current = setTimeout(() => setHint(false), 5500);
-        speak('临时庇护已撤除。让丧钟继续呼吸，守到黎明。');
-      }
-      const currentChapter = chapter(s), wave = waveActive(s);
-      if (currentChapter > lastChapter.current) speak(chapters[currentChapter].note);
-      else if (wave && !previousWave.current) speak('不要回应。门外的声音不是活人。');
-      lastChapter.current = currentChapter; previousWave.current = wave;
-    }
-    previousStatus.current = s.status;
-    if (s.status === 'paused' && panel === null && !error) setPanel('pause');
-  }, [s.status, s.elapsed, panel, error]);
+  const openPanel = (next: Exclude<Panel, null>) => {
+    if (!scene.current || error || state.status === 'ready' || state.status === 'won') return;
+    if (next === 'book') scene.current.inspectUpgrades();
+    resumeAfterPanel.current = state.status === 'playing' || state.status === 'tutorial';
+    if (resumeAfterPanel.current) scene.current.pause();
+    setPanel(next);
+  };
+  const closePanel = () => { setPanel(null); if (resumeAfterPanel.current && !document.hidden) scene.current?.resume(); resumeAfterPanel.current = false; canvas.current?.focus({ preventScroll: true }) };
+  const begin = () => { lastSaveBucket.current = -1; scene.current?.startTutorial(); canvas.current?.focus() };
+  const restore = () => { if (!saved) return; lastSaveBucket.current = -1; scene.current?.restore(saved); setSaved(null); canvas.current?.focus() };
+  const leaveRefuge = () => { setPanel(null); scene.current?.start(); canvas.current?.focus() };
+  const fullscreen = () => document.fullscreenElement ? void document.exitFullscreen().catch(() => {}) : void document.documentElement.requestFullscreen?.().catch(() => {});
 
   useEffect(() => {
-    if (panel && !dialog.current?.open) dialog.current?.showModal();
-    if (!panel && dialog.current?.open) dialog.current.close();
-    if (panel) closeButton.current?.focus();
-  }, [panel]);
-
-  function openJournal() {
-    const current = engine.current;
-    if (!current || !['playing', 'tutorial', 'paused'].includes(current.state.status) || error) return;
-    resumeJournal.current = canShoot(current.state);
-    if (resumeJournal.current) current.pause();
-    current.inspectUpgrades(); setPanel('journal'); setSubtitle(''); setHint(false);
-  }
-  function closePanel() {
-    if (panel === 'journal' && !resumeJournal.current) { setPanel('pause'); return; }
-    setPanel(null);
-    if (engine.current?.state.status === 'paused' && !document.hidden) engine.current.resume();
-    canvas.current?.focus({ preventScroll: true });
-  }
-  function pause() {
-    if (panel) { closePanel(); return; }
-    if (engine.current && canShoot(engine.current.state)) { engine.current.pause(); setPanel('pause'); }
-  }
-  function fullscreen() {
-    if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
-    else if (document.documentElement.requestFullscreen) void document.documentElement.requestFullscreen().catch(() => {});
-  }
-  useEffect(() => {
-    const keydown = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
-      if (e.code === 'KeyB') { e.preventDefault(); if (!e.repeat) { if (panel === 'journal') closePanel(); else openJournal(); } return; }
-      if (e.code === 'Escape' || e.code === 'KeyP') { if (panel && e.code === 'Escape') return; e.preventDefault(); if (!e.repeat) pause(); return; }
-      if (panel || error || e.target instanceof HTMLButtonElement || e.target instanceof HTMLSelectElement) return;
-      if (e.code === 'KeyF' && !e.repeat) { e.preventDefault(); fullscreen(); }
-      if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) engine.current?.fireSelected(); }
-      const index = Number(e.code.replace('Digit', '')) - 1;
-      if (e.code.startsWith('Digit') && TARGETS[index]) { e.preventDefault(); engine.current?.select(TARGETS[index]); }
+    const key = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.code === 'KeyB') { event.preventDefault(); if (!event.repeat) panel === 'book' ? closePanel() : openPanel('book'); return }
+      if (event.code === 'KeyM') { event.preventDefault(); if (!event.repeat) panel === 'map' ? closePanel() : openPanel('map'); return }
+      if (event.code === 'Escape' || event.code === 'KeyP') { if (event.code === 'Escape' && panel) return; event.preventDefault(); if (!event.repeat) panel ? closePanel() : openPanel('pause'); return }
+      if (panel || error || event.target instanceof HTMLButtonElement) return;
+      if (event.code === 'KeyW') { event.preventDefault(); if (!event.repeat) scene.current?.move() }
+      if (event.code === 'KeyA') { event.preventDefault(); if (!event.repeat) scene.current?.turn('left') }
+      if (event.code === 'KeyD') { event.preventDefault(); if (!event.repeat) scene.current?.turn('right') }
+      if (event.code === 'Space') { event.preventDefault(); scene.current?.fireCenter() }
+      if (event.code === 'KeyF' && !event.repeat) fullscreen();
     };
-    window.addEventListener('keydown', keydown); return () => window.removeEventListener('keydown', keydown);
-  }, [panel, error]);
+    window.addEventListener('keydown', key); return () => window.removeEventListener('keydown', key);
+  }, [panel, error, state.status]);
 
-  function begin(tutorial: boolean) {
-    lastSave.current = -1; lastChapter.current = 0; previousWave.current = false;
-    if (tutorial) engine.current?.startTutorial(); else engine.current?.start();
-    canvas.current?.focus();
-  }
-  function restore() {
-    if (!saved) return;
-    lastChapter.current = chapter(saved); previousWave.current = waveActive(saved); lastSave.current = -1;
-    engine.current?.restore(saved); canvas.current?.focus();
-  }
-  function restart() {
-    setPanel(null); setSubtitle(''); lastSave.current = -1; lastChapter.current = 0; previousWave.current = false;
-    engine.current?.restart(); canvas.current?.focus();
-  }
-  const owned = ownedUpgrades(s), guidePoint = view.points[recommendation(s).target];
-  return <main className="game-screen" aria-label="最后一枚：全屏守夜">
-    <canvas ref={canvas} className="game-world" tabIndex={0} aria-label="圣堂三维场景，手持铸币枪。鼠标瞄准并发射，B 查看已有契约，Esc 暂停。" aria-description={`剩余庇护 ${Math.ceil(s.time)} 秒；${s.status === 'paused' ? '时间暂停' : s.status === 'playing' ? '守夜进行中' : '等待契约'}。`} />
-    <div className="game-vignette" aria-hidden="true" />
-    {!view.ready && !error && <div className="game-loading" role="status">烛火正在重新点燃……</div>}
+  const rates = productionRates(state), hostile = creatureInRoom(state), abilities = ownedAbilities(state);
+  const currentRoom = room(state.room), elapsed = Math.floor(state.effectiveSeconds), cannonNext = CANNON_STAGES[state.cannonStage];
+  const objective = useMemo(() => {
+    if (state.status === 'tutorial') return state.message;
+    if (hostile) return `净化${CREATURE_KINDS[hostile.kind].name} · ${state.creatureDamage[hostile.id]} / ${CREATURE_KINDS[hostile.kind].threshold}`;
+    if (state.room === 'moonBattery' && cannonNext) return `射击炮座组装${cannonNext.name}${cannonNext.resource ? ` · 需 ${cannonNext.cost} ${resourceName(cannonNext.resource)}` : ''}`;
+    if (state.room === 'moonBattery' && state.cannonStage === 4) return `瞄准月亮射击 · 阶段 ${state.moonStage + 1} / 2`;
+    return state.message;
+  }, [state, hostile, cannonNext]);
 
-    {s.status === 'ready' && !error && view.ready && <section className="arrival" aria-label="守夜接入"><span className="arrival-mark" aria-hidden="true">✥</span><p className="arrival-identity">末日生存系统 · 找到尚存的心跳</p><h1>最后一枚</h1><p className="arrival-voice">守夜人，握紧你的枪。<br />面前的圣约机，能抵御门外的恐怖诡异。<br />献上铜币，让它继续庇护你。</p><button className="covenant-button" onClick={() => begin(true)}>握紧铸币枪 <span>↗</span></button>{saved && <button className="arrival-secondary" onClick={restore}>继续上次守夜</button>}<button className="arrival-secondary subdued" onClick={() => begin(false)}>我已知晓契约</button></section>}
+  return <main className={`cathedral ${state.moonStage ? 'moon-wounded' : ''}`} aria-label="最后一枚：可探索教堂">
+    <canvas ref={canvas} className="cathedral__world" tabIndex={0} aria-label="Three.js 透视三维教堂。W 前进，A D 转向，鼠标瞄准，左键发射无限银币。" />
+    <div className="cathedral__veil" aria-hidden="true" /><div className="crosshair" aria-hidden="true"><i /></div>
+    {!view.ready && !error && <p className="loading" role="status">月光正在穿过彩窗……</p>}
 
-    {s.status === 'tutorial' && !panel && !error && <>
-      {s.guide < 3 && guidePoint && <div className="ritual-beacon" style={{ left: `${guidePoint.x}%`, top: `${guidePoint.y}%` }} aria-hidden="true"><i /></div>}
-      <section className="guide-voice" aria-live="polite"><span className="voice-identity">末日生存系统</span><p>{s.message}</p>{s.guide === 1 && <small>瞄准亮起的祭器 · 左键 / 按住发射</small>}{s.guide === 2 && <small>最右侧的丧钟正在等待你的献祭</small>}{s.guide === 3 && !s.journalRead && <button className="journal-invitation" onClick={openJournal}><kbd>B</kbd> 展开契约烙印</button>}{s.guide === 3 && s.journalRead && <button className="covenant-button" onClick={() => begin(false)}>我将守到黎明 <span>↗</span></button>}</section>
+    {state.status !== 'ready' && state.status !== 'won' && <>
+      <section className="hud hud--place" aria-label="当前位置"><small>{currentRoom.area}</small><strong>{currentRoom.name}</strong><span>{state.facing === 'north' ? '北' : state.facing === 'east' ? '东' : state.facing === 'south' ? '南' : '西'} · {state.visited.length}/{ROOMS.length}</span></section>
+      <section className="hud hud--resources" aria-label="资源与生产">
+        {(['silver', 'water', 'crosses'] as Resource[]).map(key => <span key={key}><small>{resourceName(key)}</small><strong data-testid={`resource-${key}`}>{Math.floor(state.resources[key])}</strong><em>+{rates[key].toFixed(2)}/秒</em></span>)}
+      </section>
+      <section className="hud hud--vital" aria-label="生命与武器"><span>生命 <b>{Math.ceil(state.health)}</b></span><span>齐射 {volley(state)} · 威力 {power(state)} · {fireInterval(state).toFixed(2)}秒</span></section>
+      <p className="objective" role="status">{objective}</p>
+      <button className="map-toggle" onClick={() => openPanel('map')} aria-label="打开教堂地图">M</button>
     </>}
-    {s.status === 'playing' && !panel && subtitle && <p className="passing-voice" role="status">{subtitle}</p>}
-    {s.status === 'playing' && !panel && hint && <span className="fading-controls"><kbd>B</kbd> 契约烙印 <i /> <kbd>Esc</kbd> 暂停</span>}
-    {canShoot(s) && !panel && !error && <div className="touch-gestures"><button aria-label="查看已有契约" onClick={openJournal}>B</button><button aria-label="暂停守夜" onClick={pause}>Ⅱ</button></div>}
 
-    {error && <section className="ending-veil" role="alert"><div className="ending-content"><span aria-hidden="true">✥</span><h2>视野中断</h2><p>{error}</p><button className="covenant-button" onClick={() => location.reload()}>重新接入</button></div></section>}
-    {(s.status === 'failed' || s.status === 'won') && !error && <section className={`ending-veil ${s.status === 'won' ? 'sunrise' : ''}`} aria-label="守夜结算"><div className="ending-content"><span aria-hidden="true">{s.status === 'won' ? '☼' : '♰'}</span><h2>{s.status === 'won' ? '这一次，黎明是真的。' : '别回头。它已在你身后。'}</h2><p>{s.message}</p><small>你守了 {timeLabel(s.elapsed)}，抵御了 {s.waveCount} 次侵袭。</small><button className="covenant-button" onClick={restart}>{s.status === 'won' ? '再守一夜' : '重新签订契约'} <span>↻</span></button></div></section>}
+    {state.status === 'ready' && view.ready && !error && <section className="arrival" aria-label="开始游戏"><span aria-hidden="true">◯</span><p>月下低语 · 第七码头仍有回声</p><h1>最后一枚</h1><blockquote>“银币不用于购买。它用于让不该活着的东西，记起自己已经死去。”</blockquote><button className="primary" onClick={begin}>听从月下低语</button>{saved && <button className="secondary" onClick={restore}>继续上次探索</button>}</section>}
 
-    <dialog ref={dialog} className={`in-world-menu ${panel === 'journal' ? 'contract-book' : 'pause-ritual'}`} aria-label={panel === 'journal' ? '已有契约烙印' : '暂停守夜'} onCancel={e => { e.preventDefault(); closePanel(); }}>
-      <button ref={closeButton} className="seal-close" onClick={closePanel} aria-label={panel === 'journal' ? '合上契约烙印' : '继续守夜'}>×</button>
-      {panel === 'journal' ? <><div className="book-heading"><span aria-hidden="true">✥</span><p>灵魂记得每一次回响</p><h2>已有契约烙印</h2></div>{owned.length ? <ul className="owned-contracts">{owned.map(item => <li key={item.id}><span className="owned-rune" aria-hidden="true">{devices[item.id].rune}</span><div><h3>{item.name}</h3><p>{item.description}</p></div><span className="owned-seals" aria-label={`${item.level} 道烙印`}>{'✧'.repeat(item.level)}</span></li>)}</ul> : <p className="unmarked-soul">你的灵魂还没有新的烙印。<br />向祭器献上铜币，留意它与手中枪械的变化。</p>}{s.levels.choir > 0 && <section className="spirit-orders"><label htmlFor="spirit-orders">让灵仆聆听你的意志</label><select id="spirit-orders" value={s.autoTarget} onChange={e => engine.current?.setAutoTarget(e.target.value as typeof s.autoTarget)}>{TARGETS.filter(t => unlocked(s, t)).map(t => <option key={t} value={t}>{t === 'clock' ? '末日丧钟' : devices[t].name}</option>)}</select></section>}<p className="book-footnote">这里只铭记你已经获得的力量。<br /><kbd>B</kbd> 或 <kbd>Esc</kbd> 合上 · 查阅时庇护不会流失</p><button className="covenant-button" onClick={closePanel}>合上烙印，回到圣堂 <span>↗</span></button></> : <><span className="pause-symbol" aria-hidden="true">✥</span><h2>烛火替你守着。</h2><p>时间与献祭已暂停。</p><button className="covenant-button" onClick={closePanel}>继续守夜 <span>↗</span></button><button className="menu-line" onClick={openJournal}>查看已有契约 <kbd>B</kbd></button><button className="menu-line" onClick={() => setMuted(!muted)} aria-pressed={muted}>{muted ? '开启声音' : '关闭声音'}</button><button className="menu-line" onClick={fullscreen}>切换全屏 <kbd>F</kbd></button><p className="pause-controls">移动鼠标瞄准 · 左键 / 按住发射<br />1–7 选择祭器 · 空格开枪 · 7 为右侧丧钟<br />B 查阅已有契约 · Esc / P 暂停</p></>}
+    {state.status === 'tutorial' && !panel && !error && <section className="whisper" aria-live="polite"><small>月下低语</small><p>{state.message}</p>{state.tutorialStep === 2 && <button className="primary" onClick={() => openPanel('book')}>按 B 查看能力</button>}{state.tutorialStep === 3 && <button className="primary" onClick={leaveRefuge}>推开庇护地的门</button>}</section>}
+    {view.targetPoint && state.status === 'tutorial' && state.tutorialStep === 1 && <span className="target-mark" style={{ left: `${view.targetPoint.x}%`, top: `${view.targetPoint.y}%` }} aria-hidden="true" />}
+
+    {movementUnlocked(state) && !panel && !error && <nav className="touch-controls" aria-label="触屏操作">
+      <button onClick={() => scene.current?.turn('left')} aria-label="左转九十度">A</button><button onClick={() => scene.current?.move()} aria-label="前进一格">W</button><button onClick={() => scene.current?.turn('right')} aria-label="右转九十度">D</button>
+      <button className="touch-fire" onPointerDown={event => { event.preventDefault(); scene.current?.beginCenterFire() }} onPointerUp={() => scene.current?.endFire()} onPointerCancel={() => scene.current?.endFire()} onPointerLeave={() => scene.current?.endFire()} aria-label="发射银币">发射</button><button onClick={() => openPanel('book')} aria-label="查看能力">B</button><button onClick={() => openPanel('pause')} aria-label="暂停">Ⅱ</button>
+    </nav>}
+
+    {error && <section className="ending" role="alert"><div><span aria-hidden="true">◌</span><h2>视野中断</h2><p>{error}</p><button className="primary" onClick={() => location.reload()}>重新载入视野</button></div></section>}
+    {state.status === 'won' && !error && <section className="ending ending--won" aria-label="胜利结算"><div><span aria-hidden="true">☾</span><h2>月亮已经沉默</h2><p>{state.message}</p><small>有效游戏时间 {Math.floor(elapsed / 60)} 分 {elapsed % 60} 秒 · 净化 {state.producers.length} 个生物 · 点亮 {state.sanctuaries.length - 1} 处安全区</small><button className="primary" onClick={() => scene.current?.restart()}>重新聆听低语</button></div></section>}
+
+    <dialog ref={dialog} className="overlay" aria-label={panel === 'book' ? '已获得能力' : panel === 'map' ? '教堂地图' : '暂停菜单'} onCancel={event => { event.preventDefault(); closePanel() }}>
+      <button className="overlay__close" onClick={closePanel} aria-label="关闭">×</button>
+      {panel === 'book' && <><header><small>B · 契约册</small><h2>已获得能力</h2><p>打开期间，生产和危险均冻结。未来能力不会提前显示。</p></header><ul className="abilities">{abilities.map(a => <li key={a.id}><strong>{a.name}</strong><span>{a.text}</span></li>)}</ul><section className="rate-summary"><h3>全局生产速率</h3>{(['silver', 'water', 'crosses'] as Resource[]).map(k => <p key={k}><span>{resourceName(k)}</span><b>{rates[k].toFixed(2)} / 秒</b></p>)}</section>{state.tutorialStep >= 3 && state.status !== 'playing' && <button className="primary" onClick={() => { closePanel(); leaveRefuge() }}>合上契约册</button>}</>}
+      {panel === 'map' && <><header><small>M · 方位图</small><h2>被月光记住的房间</h2><p>实线为已走过的空间；未知门后仍由黑暗遮挡。</p></header><div className="map-grid" aria-label="教堂拓扑图">{ROOMS.map(r => <div key={r.id} className={`map-node ${state.room === r.id ? 'is-current' : ''} ${state.visited.includes(r.id) ? 'is-visited' : ''} ${state.sanctuaries.includes(r.id) ? 'is-safe' : ''}`} style={{ gridColumn: r.x + 3, gridRow: r.z + 3 }}><span>{state.visited.includes(r.id) ? r.name : '未知'}</span></div>)}</div><button className="primary" onClick={closePanel}>收起地图</button></>}
+      {panel === 'pause' && <><header><small>暂停</small><h2>烛火替你守着</h2><p>生产、危险与有效游戏时间都已冻结；恢复时不补算。</p></header><button className="primary" onClick={closePanel}>继续探索</button><button className="menu-line" onClick={() => setMuted(v => !v)} aria-pressed={muted}>{muted ? '开启声音' : '静音'}<span>{muted ? '关' : '开'}</span></button><button className="menu-line" onClick={fullscreen}>切换全屏 <kbd>F</kbd></button><button className="menu-line" onClick={() => { setPanel(null); scene.current?.restart() }}>重新开始</button></>}
     </dialog>
   </main>;
 }

@@ -1,0 +1,87 @@
+{
+  "task_id": "coin-cathedral-complete",
+  "overall_verdict": "PASS",
+  "criteria": [
+    {
+      "id": "AC1",
+      "status": "PASS",
+      "reason": "本轮 fresh Playwright 在真实 WebGL 2 画布重新完成教程、首个生物净化与在线生产、四次玩家炮座命中、八次玩家月面命中和胜利结算；当前 App → NightGame → ImmersiveGame 入口仅渲染全屏教堂主界面，规则状态没有倒计时胜负字段。"
+    },
+    {
+      "id": "AC2",
+      "status": "PASS",
+      "reason": "fresh unit 证明教程锁、离散 90° 转向、单格移动和墙体阻挡；fresh Playwright 证明三次真实庇护机射线命中并实际打开 B 后才解锁 W/A/D，四种窄屏的六个等价触控控件可操作；当前 Scene 按射速处理按住指针连续发射且规则不扣弹药。"
+    },
+    {
+      "id": "AC3",
+      "status": "PASS",
+      "reason": "当前规则定义 13 个拓扑相连节点、四个可永久占领安全生产节点和终区双重门控；fresh unit 通过拓扑、门控及永久净化，fresh 六视口 trace 的后期状态包含 13 个已访问/净化房间和含起点在内的五处庇护地；Three.js 当前场景按节点建立拱门、墙体、暗门、安全灯光及区域异常。"
+    },
+    {
+      "id": "AC4",
+      "status": "PASS",
+      "reason": "fresh unit 证明齐射、威力和射速均改变射击规则，且威力升级减少同类怪物所需扳机次数；fresh 浏览器流程重新证明真实机器/生物射线命中；当前 3D 机器铭牌展示等级、总需求和剩余点数，B 只读取已获得能力与全局速率，活动入口和文档玩家文案使用银币。"
+    },
+    {
+      "id": "AC5",
+      "status": "PASS",
+      "reason": "fresh unit 证明三类生物具有不同阈值、攻击、产物和效率，净化后自动生产银币充能、圣水及十字架；fresh 浏览器流程证明首个生产者出现后资源在线增长，六视口后期 trace 显示三类总速率分别为 3.20、0.24、0.16 每秒；当前 Three.js 按三类构造不同轮廓并在净化后保留原位及更换材质。"
+    },
+    {
+      "id": "AC6",
+      "status": "PASS",
+      "reason": "fresh unit 证明敌对区击倒后按拓扑返回最近已占领庇护点，只扣本次探索所得 20%，同时保留升级、净化生物、生产者、安全区和主线字段；当前规则没有使 clearedRooms、sanctuaries 或 producers 回退的路径。"
+    },
+    {
+      "id": "AC7",
+      "status": "PASS",
+      "reason": "fresh unit 证明 30 秒粗步进与 0.25 秒细步进等价、异常大步长截断、暂停/B 冻结，并通过依赖三类在线生产且在 6000 秒（100 分钟）达到终局门槛的确定性策略；fresh Playwright 证明 B、暂停、刷新继续与失焦期间均不补算生产。"
+    },
+    {
+      "id": "AC8",
+      "status": "PASS",
+      "reason": "当前规则同时门控四安全区和三类资源，Three.js 逐段显示炮身、圣水冷却、十字架瞄具与银币弹芯；本轮 fresh Playwright 重新通过后期真实三维画布流程，玩家必须连续命中炮座完成四段组装，再实际命中月面推进两阶段并进入胜利结算。"
+    },
+    {
+      "id": "AC9",
+      "status": "PASS",
+      "reason": "fresh unit 证明版本化完整状态 round-trip，并安全拒绝损坏、旧版和非法存档；fresh Playwright 证明刷新后必须明确继续且无离线增长，B、暂停、失焦和 WebGL 上下文丢失均冻结，后者显示可恢复界面；当前 React 构造异常 catch 还提供 WebGL 创建失败恢复提示。"
+    },
+    {
+      "id": "AC10",
+      "status": "PASS",
+      "reason": "本轮 fresh Playwright 在真实 WebGL 2 中重新通过 320/375/414/768 四种窄屏的零页面溢出与六类触控操作，并通过 1440×900、1440×1100、reduced-motion、静音和 WebGL 丢失检查；所有 9 项均未报告页面错误。当前音频仅由用户手势 unlock，覆盖环境、低语、脚步、射击、怪物、机器、净化与月炮事件。"
+    },
+    {
+      "id": "AC11",
+      "status": "PASS",
+      "reason": "本轮 pnpm test 8/8、pnpm build、PAGES_BASE_PATH=/Coin/ pnpm build 和 pnpm test:e2e 9/9 全部通过；/Coin/ 产物 7/7 绝对资源引用均使用正确前缀。rules.ts 不导入 React、DOM 或 Three.js，运行依赖无后端/远程素材，README 与 GAME_DESIGN 覆盖操作、13 节点、三类生产、20% 回撤、冻结/存档、100 分钟策略及玩家射击终局。"
+    }
+  ],
+  "commands_run": [
+    "pnpm test -> PASS (8/8, 198.7ms)",
+    "pnpm build -> PASS (TypeScript + Vite; standard base)",
+    "$env:PAGES_BASE_PATH='/Coin/'; pnpm build -> PASS; dist/index.html 7/7 absolute asset references use /Coin/; standard base restored",
+    "pnpm test:e2e -- --output=D:\\mydoc\\React\\Coins\\.agent\\deadline-carl-scratch\\coin-cathedral-complete\\iteration-015-verify\\playwright-output -> PASS (9/9, 1.7m)",
+    "git diff --check -> PASS"
+  ],
+  "artifacts_used": [
+    ".agent/deadline-carl-scratch/coin-cathedral-complete/iteration-015-verify/pnpm-test.log",
+    ".agent/deadline-carl-scratch/coin-cathedral-complete/iteration-015-verify/pnpm-build-standard.log",
+    ".agent/deadline-carl-scratch/coin-cathedral-complete/iteration-015-verify/pnpm-build-pages.log",
+    ".agent/deadline-carl-scratch/coin-cathedral-complete/iteration-015-verify/pnpm-build-restore-standard.log",
+    ".agent/deadline-carl-scratch/coin-cathedral-complete/iteration-015-verify/pages-assets.json",
+    ".agent/deadline-carl-scratch/coin-cathedral-complete/iteration-015-verify/pnpm-test-e2e.log",
+    ".agent/deadline-carl-scratch/coin-cathedral-complete/iteration-015-verify/playwright-output",
+    "src/rules.ts",
+    "src/rules.test.ts",
+    "src/world.ts",
+    "src/ImmersiveGame.tsx",
+    "src/audio.ts",
+    "src/immersive.css",
+    "tokens.css",
+    "tests/night.spec.ts",
+    "README.md",
+    "GAME_DESIGN.md"
+  ]
+}

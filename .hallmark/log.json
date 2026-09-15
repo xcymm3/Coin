@@ -1,1 +1,11 @@
-[{ "date": "2026-09-14", "macrostructure": "gothic sanctuary with rightmost death clock", "theme": "custom", "theme_axes": "dark / serif / pale copper and blood", "enrichment": "interactive Three.js scene", "brief": "持枪守夜十二分钟，神秘祭器递进显现", "nav": "covenant utilities", "footer": "survival record" }, { "date": "2026-09-14", "macrostructure": "bespoke game workbench", "theme": "custom", "theme_axes": "dark / mono / copper", "enrichment": "interactive canvas pixel art", "brief": "末日地堡投币增量游戏 Demo", "nav": "edge-aligned utility", "footer": "inline telemetry" }]
+[
+  {
+    "date": "2026-09-14",
+    "macrostructure": "Map / Diagram",
+    "theme": "custom",
+    "theme_axes": "dark / classical-serif / cool",
+    "vibe": "moonlit enclosed gothic pixel horror",
+    "enrichment": "Three.js spatial world",
+    "brief": "最后一枚可探索教堂增量游戏"
+  }
+]

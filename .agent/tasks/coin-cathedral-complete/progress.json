@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "task_id": "coin-cathedral-complete",
+  "plan_sha256": "440fac1fd6fb2cef12bb56230f07067aa8ec0296a162b272f48b3c8f712ec432",
+  "items": [
+    {
+      "id": "WI-001",
+      "state": "implemented",
+      "note": "已建立版本 3 领域模型，包含 13 节点拓扑、房间/安全区、资源、生产者、三类怪物与升级、月炮阶段和安全存档 schema；主循环不含倒计时胜负。",
+      "proof": [
+        "src/rules.ts",
+        "pnpm test: 13 节点拓扑与版本化存档测试通过"
+      ]
+    },
+    {
+      "id": "WI-002",
+      "state": "implemented",
+      "note": "确定性规则已覆盖离散移动、射击/净化、三类升级与在线生产、永久占领、20% 探索损失、终区门控、四段组装和两阶段月亮战。",
+      "proof": [
+        "src/rules.ts",
+        "pnpm test: 8/8 规则测试通过"
+      ]
+    },
+    {
+      "id": "WI-003",
+      "state": "implemented",
+      "note": "Three.js 世界已实现封闭教堂节点、门与黑暗遮挡、格点相机、真实射线、区域异常、三类怪物、升级机、四安全区、四段月炮和月亮阶段；补充月炮局部照明与可瞄准组装核心。",
+      "proof": [
+        "src/world.ts",
+        "scratch/auxiliary/hallmark/screens/cannon-1440x900.png 视觉复核",
+        "pnpm test:e2e: WebGL2、真实命中和月炮链路通过"
+      ]
+    },
+    {
+      "id": "WI-004",
+      "state": "implemented",
+      "note": "React 编排已串联强制射击/B 教程、探索战斗、生产升级、击倒、终局、HUD/地图/契约/暂停覆盖层、键鼠触控、存档继续与生命周期冻结。",
+      "proof": [
+        "src/ImmersiveGame.tsx",
+        "src/world.ts",
+        "pnpm test:e2e: 教程、输入、覆盖层、保存恢复与终局通过"
+      ]
+    },
+    {
+      "id": "WI-005",
+      "state": "implemented",
+      "note": "规则测试覆盖教程锁、拓扑阻挡、三类净化生产、升级效果、粗细步进等价、异常步长上限、20% 回撤、存档拒绝和 100 分钟三资源终局策略。",
+      "proof": [
+        "src/rules.test.ts",
+        "pnpm test: 8/8 通过，约 0.23 秒"
+      ]
+    },
+    {
+      "id": "WI-006",
+      "state": "implemented",
+      "note": "已完成自定义月蓝 OKLCH token、低分辨率像素化暗场、血迹/倒悬烛火/骨库与净化差异，以及用户手势后启用的环境、低语、脚步、生物、机器、银币、净化和月炮程序化音效。",
+      "proof": [
+        "tokens.css",
+        "src/immersive.css",
+        "src/audio.ts",
+        "src/world.ts"
+      ]
+    },
+    {
+      "id": "WI-007",
+      "state": "implemented",
+      "note": "UI 具备清晰焦点/按钮状态、44px 触控目标、reduced-motion、WebGL 丢失恢复、内部滚动覆盖层和 320/375/414/768 及两种桌面高度适配。",
+      "proof": [
+        "src/immersive.css",
+        "pnpm test:e2e: 四种窄屏实际触控、1440×900/1100、reduced-motion 与 WebGL 丢失通过",
+        "scratch/auxiliary/hallmark/screens/explore-320x900.png 视觉复核"
+      ]
+    },
+    {
+      "id": "WI-008",
+      "state": "implemented",
+      "note": "Playwright 已覆盖真实 WebGL2、教程射线、W/A/D、真实首怪净化与产出、B/暂停冻结、保存恢复、四段月炮和玩家射击胜利、四种窄屏触控、桌面高度、reduced-motion、上下文丢失及零页面错误。",
+      "proof": [
+        "tests/night.spec.ts",
+        "pnpm test:e2e: 9/9 通过，约 1.8 分钟",
+        ".agent/deadline-carl-scratch/coin-cathedral-complete/iteration-004-build/playwright-final-pass"
+      ]
+    },
+    {
+      "id": "WI-009",
+      "state": "implemented",
+      "note": "README 与 GAME_DESIGN 已记录操作、13 节点地图、三类生产、失败/存档、100 分钟参考策略和月亮炮终局；标准与 /Coin/ 构建均通过。",
+      "proof": [
+        "README.md",
+        "GAME_DESIGN.md",
+        "pnpm build: 通过",
+        "PAGES_BASE_PATH=/Coin/ pnpm build: 通过且 dist/index.html 资产引用均为 /Coin/assets/"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+# Unit verification
+
+`pnpm test`: PASS, 8/8 tests.
+
+Covered tutorial locking, 13-node topology, three creature types, projectile upgrades, deterministic production, defeat rollback, versioned saves, and the 100–140 minute reference progression.
+
+Full TAP output remains in `unit-test.txt`.
