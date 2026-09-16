@@ -109,21 +109,12 @@
 .actor-player.worker-act { translate: 24px -22px; z-index: 120 !important; }.actor-player.worker-act .sprite { scale: 1; }.actor-player .pour-stream { right: auto; left: -5px; top: 55%; }
 .seed-station .pixel-crate .sprite { width: 30px; height: 30px; transform: translateY(-12px); }
 /* Selected tools act at the plant; only animal helpers occupy the garden paths. */
-.garden-tools { display: flex; flex-wrap: wrap; align-items: stretch; gap: 7px; padding: 8px 10px; background: #142e37; border: 3px solid #395d5b; box-shadow: inset 0 2px #759184; }
-.tool-button { display: flex; align-items: center; justify-content: center; gap: 5px; padding: 5px 8px; border: 2px solid #496b69; background: #204752; color: #eee7c9; font: inherit; font-size: 11px; cursor: pointer; }
-.tool-button .sprite,.tool-button .pixel-icon { width: 30px; height: 30px; flex-shrink: 0; }.tool-button small { display: block; font-size: 8px; opacity: .7; margin-top: 3px; }
-.tool-button.selected { border-color: #f1d574; background: #53613c; box-shadow: inset 0 0 0 1px #9b8847; }.tool-button:disabled { opacity: .45; cursor: not-allowed; }
-.watering-tool { display: flex; align-items: center; gap: 7px; }.tool-charge { width: 68px; color: #a8dee1; font-size: 9px; }.tool-charge .progress { margin-top: 5px; height: 7px; }.tool-charge .progress > span { background: #66cdd8; }.refill-button { padding: 5px; border: 1px solid #587d79; color: #d4e8da; background: #254c51; font: inherit; font-size: 10px; cursor: pointer; }.refill-button:disabled { opacity: .4; cursor: default; }
-.tool-hint { flex-basis: 100%; margin: 0; color: #b7c6ab; font-size: 10px; line-height: 1.5; }
-.garden-floor .move-source { outline: 2px dashed #f4d571; outline-offset: -7px; }.garden-floor .move-destination:hover { background: #e1d98722; }
 .tool-pour { position: absolute; width: 50%; height: 50%; left: 61%; top: 1%; z-index: 8; pointer-events: none; animation: tool-pour-in .9s ease-in-out both; }
 .tool-pour .sprite { width: 100%; height: 100%; rotate: -30deg; }.tool-water-stream { position: absolute; left: -4%; top: 60%; color: #a9edff; font-size: 15px; text-shadow: 1px 2px #2485af; animation: pouring .22s steps(3) infinite; }.tool-water-stream i,.tool-water-stream b { position: absolute; left: -4px; top: 8px; font-size: 10px; }.tool-water-stream b { left: -7px; top: 15px; }
 @keyframes tool-pour-in { 0% { opacity: 0; translate: 6px -6px; } 15%,80% { opacity: 1; translate: 0; } 100% { opacity: 0; } }
 .tool-cart-animation { position: absolute; top: 38%; left: 20%; z-index: 9; color: #f3d485; pointer-events: none; animation: cart-delivery .9s ease-out both; }.tool-cart-animation .pixel-icon { width: 50px; height: 50px; fill: #f3d485; }
 @keyframes cart-delivery { from { translate: -20px 0; opacity: 1; } to { translate: 25px -10px; opacity: 0; } }
 .observation-mode .garden-tools { display: none; }.water-station .pixel-pool { margin: 10px auto 5px; }
-@media (min-width:981px) and (max-height:850px) { .garden-tools { padding: 5px 8px; gap: 5px; }.tool-button { padding: 3px 5px; }.tool-button .sprite,.tool-button .pixel-icon { width: 25px; height: 25px; } }
-@media(max-width:620px) { .garden-tools { gap: 5px; padding: 7px; }.tool-button { font-size: 9px; padding: 4px; }.tool-button .sprite,.tool-button .pixel-icon { width: 24px; height: 24px; }.tool-charge { width: 55px; font-size: 8px; }.watering-tool { gap: 4px; }.tool-hint { font-size: 9px; }.tool-cart-animation .pixel-icon { width: 30px; height: 30px; } }
 .tool-dig-animation { position: absolute; left: 40%; top: 8%; z-index: 9; pointer-events: none; animation: digging .65s ease-in-out both; }.tool-dig-animation .pixel-icon { width: 45px; height: 45px; fill: #e4c488; filter: drop-shadow(2px 2px #38291c); }.tool-dig-animation i { position: absolute; top: 35px; left: -9px; width: 5px; height: 5px; background: #67452b; box-shadow: 25px 8px #785433; animation: dirt-scatter .8s ease-out both; }.tool-dig-animation i:nth-of-type(2) { left: 15px; animation-delay: .08s; }.tool-dig-animation i:nth-of-type(3) { left: 30px; animation-delay: .12s; }
 @keyframes digging { 0% { rotate: -35deg; translate: 0 -12px; } 45% { rotate: 15deg; translate: 0 12px; } 100% { rotate: -30deg; translate: 5px -10px; opacity: 0; } }
 @keyframes dirt-scatter { to { translate: -12px 15px; opacity: 0; } }
@@ -180,3 +171,25 @@
 @media(max-width:620px){.upgrade-tabs button{display:flex;flex-direction:column;align-items:center;gap:3px}.upgrade-tabs .sprite,.upgrade-tabs .pixel-icon,.upgrade-tabs .animal-art{width:24px;height:24px}}
 .shop-location{padding:7px 10px;color:#f0d599;text-align:center;font-size:13px}.shop-location small{display:block;font-size:10px;color:#b9cfb5;margin-top:4px}.shop-empty{padding:22px 12px;line-height:1.8;font-size:12px;color:#cadbbd}.upgrade-tabs{grid-template-columns:repeat(3,minmax(0,1fr))}.garden-expansion{display:flex;justify-content:flex-end;margin:0 0 5px}.garden-expansion button{font-size:11px;padding:5px 10px}.garden-expansion small{font-size:10px;color:#ccd5b2}.shop-location+.upgrade-tabs{margin-top:0}.upgrade-copy small{display:block;color:#a8c3b4;font-size:9px;margin-top:6px}
 .task-animal{width:clamp(26px,6cqw,46px)}.worker-equipment{position:absolute;left:-19%;top:4%;width:62%;height:62%;z-index:2;filter:drop-shadow(1px 1px #152e2a);transform:scaleX(var(--facing))}.gear-water{left:6%;top:12%;width:55%;height:55%}.gear-sow{left:0;top:39%;width:53%;height:53%}.gear-harvest.gear-tier-2,.gear-harvest.gear-tier-3,.gear-harvest.gear-tier-4{left:-32%;top:24%;width:77%;height:77%}.task-animal .animal-basket{fill:var(--gear-color)}.task-animal .cargo-pips{top:-7%;z-index:4}.equipment-glint{animation:equipment-glint 1.8s steps(3) infinite alternate}@keyframes equipment-glint{to{opacity:.3}}.reduce-motion .equipment-glint{animation:none}@media(prefers-reduced-motion:reduce){.equipment-glint{animation:none}}.material-4 .worker-equipment{filter:drop-shadow(0 0 2px #adf1ee)}
+/* Wooden cubbies keep the tools tangible and readable at garden scale. */
+.garden-tools{padding:0;background:#543520;border:3px solid #38271d;box-shadow:inset 0 2px #bc8750,0 3px #231f17;flex-shrink:0}
+.tool-slots{display:flex;align-items:stretch;gap:0;padding:4px;background:repeating-linear-gradient(0deg,#7b492a 0 5px,#804e2e 5px 8px,#754426 8px 18px);border-bottom:2px solid #302218}
+.tool-button,.tool-refill-slot{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;flex:0 1 84px;min-width:0;aspect-ratio:1;gap:0;padding:3px 4px 6px;border:3px solid #442919;border-top-color:#a16c3b;border-left-color:#a16c3b;background:linear-gradient(115deg,#976139,#764323 70%);box-shadow:inset 2px 2px #b77a4240,inset -3px -3px #3b251e70;cursor:pointer;color:#fff0c6;font:inherit;text-shadow:1px 2px #39251c}
+.tool-button:hover,.tool-refill-slot:not(:disabled):hover{background:#a06b3a}
+.tool-button.selected{border-color:#ffe572;background:linear-gradient(120deg,#a88237,#68672f);box-shadow:inset 0 0 0 2px #d6b452,0 0 0 1px #382919;z-index:1}
+.tool-button:focus-visible,.tool-refill-slot:focus-visible{outline:3px solid #fff4ae;outline-offset:1px;z-index:2}
+.garden-tool-art{width:65%;height:auto;max-height:60px;flex:1;min-height:0;filter:drop-shadow(2px 3px #35261988)}
+.tool-button>span:last-child,.refill-caption{font-size:11px;line-height:1.2;white-space:nowrap}
+.tool-quantity{position:absolute;right:3px;bottom:21px;font-size:12px;color:#fff2c2;text-shadow:2px 2px #38251c,-1px -1px #38251c}
+.tool-refill-slot{flex-basis:66px;background:linear-gradient(110deg,#685031,#503b27);gap:2px}
+.tool-refill-slot:disabled{cursor:default}
+.water-reservoir{position:relative;display:block;width:23px;height:30px;overflow:hidden;border:3px solid #312c20;box-shadow:inset 2px 0 #b9cabe;background:#213e40}
+.water-reservoir i{position:absolute;bottom:0;left:0;right:0;background:repeating-linear-gradient(0deg,#47a8bb 0 6px,#74d4d6 6px 8px);border-top:2px solid #d3ffff;transition:height .2s}
+.water-reservoir b{position:absolute;inset:1px auto 1px 2px;width:3px;background:#c7f4ef66}
+.tool-charge{color:#cdf8f4;font-size:11px;font-variant-numeric:tabular-nums;line-height:1.1}
+.tool-refill-slot .progress{position:absolute;bottom:1px;left:3px;right:3px;height:4px;width:auto}
+.tool-hint{margin:0;padding:4px 9px;color:#e2cba1;background:#3f3024;font-size:10px;line-height:1.4;min-height:22px}
+.seed-panel .tier-list{max-height:none;overflow:visible}
+@media(max-width:620px){.tool-button{flex-basis:64px;padding:2px 2px 5px;border-width:2px}.tool-refill-slot{flex-basis:49px;padding:2px;border-width:2px}.tool-button>span:last-child,.refill-caption{font-size:9px}.tool-charge{font-size:9px}.tool-quantity{font-size:10px;bottom:17px;right:2px}.water-reservoir{height:23px;width:18px;border-width:2px}.tool-hint{font-size:9px}.tool-slots{padding:3px}.tool-cart-animation .pixel-icon{width:30px;height:30px}}
+@media(prefers-reduced-motion:reduce){.water-reservoir i{transition:none}}.reduce-motion .water-reservoir i{transition:none}
+.tool-button .garden-tool-art{position:absolute;left:6%;top:0;width:88%;height:78%;max-height:none;flex:none}.tool-button>span:last-child{position:absolute;bottom:5px;left:0;right:0;text-align:center}
