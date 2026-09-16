@@ -10,7 +10,13 @@ const asset = `${import.meta.env.BASE_URL}assets/garden-atlas.png`
 function Sprite({ id, className = '' }: { id: number; className?: string }) {
   return <span aria-hidden="true" className={`sprite ${className}`} style={{ backgroundImage: `url(${asset})`, backgroundPosition: `${id % 4 * 100 / 3}% ${Math.floor(id / 4) * 100 / 3}%` }} />
 }
+function Animal({ kind }: { kind: 'harvest' | 'sow' }) {
+  return <svg className={`animal-art animal-${kind}`} viewBox="0 0 32 28" aria-hidden="true" shapeRendering="crispEdges">
+    {kind === 'harvest' ? <><path className="animal-outline" d="M4 7h3v3h3V5h13v5h4v3h3v3h-3v6h-4v3H9v-3H5v-6H2v-3h5V9H4Z" /><path className="animal-shell" d="M9 7h12v3h3v11h-3v2H10v-3H7v-9h2Z" /><path className="animal-outline" d="M15 8h2v15h-2ZM10 12h3v3h-3ZM19 17h3v3h-3Z" /><path className="animal-face" d="M24 10h5v9h-5Z" /><path className="animal-eye" d="M26 11h2v3h-2Z" /><path className="animal-basket" d="M9 1h12v5H9ZM11 0h8v2h-8Z" /></> : <><path className="animal-outline" d="M2 5h3V2h6v3h3v9h4V8h3V3h4v4h3v5h3v8h-4v3h-5v3H10v-3H6v-6H3v-5H1V5Z" /><path className="animal-fur" d="M4 5h6v3h2v8H8v-4H5V9H3V6Zm7 11h9v-6h3V6h2v6h3v7h-4v4H11v-3H8v-5Z" /><path className="animal-face" d="M19 17h7v4h-4v3h-7v-5h4Z" /><path className="animal-eye" d="M25 12h2v3h-2Z" /><path className="animal-basket" d="M8 14h8v8H8ZM10 12h4v3h-4Z" /></>}
+  </svg>
+}
 function Icon({ name }: { name: string }) {
+  if (name === 'beetle' || name === 'squirrel') return <Animal kind={name === 'beetle' ? 'harvest' : 'sow'} />
   const sprites: Record<string, number> = { coin: 15, seed: 13, water: 14, snail: 12, pot: 10, star: 9 }
   if (name in sprites) return <Sprite id={sprites[name]} className="icon-sprite" />
   const paths: Record<string, string> = {
@@ -65,6 +71,7 @@ export default function Garden() {
   const won = s.wonAt !== null && !victoryDismissed && screen === 'game'
   const paused = screen !== 'game' || panel !== null || won
   const selected = PLANTS[s.selected]
+  const possibilities = PLANTS.filter(p => p.tier === selected.tier)
 
   useEffect(() => { current.current = s }, [s])
   useEffect(() => {
@@ -108,7 +115,7 @@ export default function Garden() {
     const p = s.pots[index]
     let text = ''
     if (p.plant === null) {
-      if (s.coins < price(s, selected)) { setToast(`金币不足：${selected.name}需要 ${price(s, selected)} 金币。低级种子始终免费。`); return }
+      if (s.coins < price(s, selected)) { setToast(`金币不足：${TIERS[selected.tier]}需要 ${price(s, selected)} 金币。低级种子始终免费。`); return }
       text = '种下了！'; sound('plant')
     } else if (p.growth >= PLANTS[p.plant].seconds) { text = `+${reward(s, PLANTS[p.plant])}`; sound('coin') }
     else { text = `+${p.plant === 9 ? '0.5' : clickPower(s).toFixed(0)}秒`; sound('water') }
@@ -138,14 +145,14 @@ export default function Garden() {
           const open = unlocked(s, i as Tier), active = selected.tier === i
           return <button key={name} className={`tier-card blue-button tier-${i} ${active ? 'selected' : ''}`} aria-pressed={active} disabled={!open} onClick={() => choose(i * 3)}>
             <span className="seed-bag"><Sprite id={13} />{!open && <span className="lock">◆</span>}</span>
-            <span className="tier-copy"><strong>{name}</strong><b>{i === 0 ? '免费 · 无限' : i === 3 ? '6,500 金币' : `${i === 1 ? '30' : '200'} 金币起`}</b><small>{open ? i === 3 ? '种出星星 · 完成旅程' : `${[0, 1, 2].filter(j => s.discovered.includes(i * 3 + j)).length} / 3 已培育` : i === 3 ? '培育全部 3 种高级植物' : `累计收益 ${i === 1 ? '120' : '1,800'} 解锁`}</small></span>
+            <span className="tier-copy"><strong>{name}</strong><b>{i === 0 ? '免费 · 无限' : `${number(price(s, PLANTS[i * 3]))} 金币`}</b><small>{open ? i === 3 ? '种出星星 · 完成旅程' : `${[0, 1, 2].filter(j => s.discovered.includes(i * 3 + j)).length} / 3 已培育` : i === 3 ? '培育全部 3 种高级植物' : `累计收益 ${i === 1 ? '120' : '1,800'} 解锁`}</small></span>
           </button>
         })}</div>
-        <div className="seed-selection"><div className="eyebrow">选择品种 <span>{TIERS[selected.tier]}</span></div>
-          <div className="species-list">{PLANTS.filter(p => p.tier === selected.tier).map(p => <button key={p.id} className={`species-button ${s.selected === p.id ? 'selected' : ''}`} aria-label={`选择${p.name}`} aria-pressed={s.selected === p.id} onClick={() => choose(p.id)}><Sprite id={p.id} /><span>{p.name}</span></button>)}</div>
-          <div className="plant-details"><h3>{selected.name}</h3><div className="plant-numbers"><span>◷ {formatTime(selected.seconds)}</span><span className="gold-text">收获 {reward(s, selected)} 金币</span></div><div className="plant-purchase">种子 {price(s, selected) === 0 ? '免费' : `${price(s, selected)} 金币`} · 约 {Math.ceil(selected.seconds / (selected.tier === 3 ? .5 : clickPower(s)))} 次浇水</div><p>{selected.effect}</p></div>
+        <div className="seed-selection"><div className="eyebrow">{selected.tier === 3 ? '唯一奇植' : '可能长出的植物'} <span>{selected.tier === 3 ? '100%' : '各 1/3 概率'}</span></div>
+          <div className="species-list seed-outcomes">{possibilities.map(p => <div key={p.id} className="species-button"><Sprite id={p.id} /><span>{p.name}</span></div>)}</div>
+          <div className="plant-details"><h3>{TIERS[selected.tier]}</h3><div className="plant-numbers"><span>◷ {formatTime(possibilities[0].seconds)}{possibilities.length > 1 ? `–${formatTime(possibilities.at(-1)!.seconds)}` : ''}</span><span className="gold-text">收获 {reward(s, possibilities[0])}{possibilities.length > 1 ? `–${reward(s, possibilities.at(-1)!)}` : ''} 金币</span></div><div className="plant-purchase">每包 {price(s, selected) === 0 ? '免费' : `${price(s, selected)} 金币`}</div><p>{selected.tier === 3 ? selected.effect : '每次播种随机长出本级三种植物之一。植物的特殊效果可在图鉴中查看。'}</p></div>
         </div>
-        <div className="shop-note"><Icon name="seed" /><p>选好种子，点击空花盆<br />即购买并播种。</p></div>
+        <div className="shop-note"><Icon name="seed" /><p>选好等级，点击空花盆<br />购买并随机播种。</p></div>
       </aside>
 
       <section className={`garden-section ${mobilePanel === 'garden' ? 'mobile-active' : ''}`} aria-label="花园">
@@ -182,8 +189,17 @@ export default function Garden() {
               const watering = s.upgrades.snail > 0 && pose.resting && target?.plant != null && target.growth < PLANTS[target.plant].seconds
               return <div key={i} aria-hidden="true" className={`garden-resident ${pose.resting ? 'resident-resting' : 'resident-walking'} ${watering ? 'resident-watering' : ''}`} style={{ left: `${pose.x}%`, top: `${pose.y}%`, zIndex: Math.round(pose.y), '--facing': pose.facing, '--rest-x': `${8 + i * 9}%` } as CSSProperties}><span className="resident-shadow" /><Sprite id={12} /><span className="resident-water">▪<i>▪</i><b>▪</b></span>{!s.upgrades.snail && <small>z z</small>}</div>
             })}
+            {(['harvest', 'sow'] as const).filter(kind => s.upgrades[kind] > 0).map(kind => {
+              const w = s.workers[kind], on = kind === 'harvest' ? s.autoHarvest : s.autoSow && s.selected !== 9
+              const name = kind === 'harvest' ? '收获甲虫' : '播种松鼠'
+              return <div key={kind} data-testid={`worker-${kind}`} data-phase={w.phase} data-target={w.target ?? ''} className={`garden-resident task-animal ${on ? `worker-${w.phase}` : 'worker-paused'}`} style={{ left: `${w.x}%`, top: `${w.y}%`, zIndex: Math.round(w.y) + 1, '--facing': w.facing } as CSSProperties} aria-label={`${name}：${!on ? '休息中' : w.phase === 'walk' ? `前往花盆${(w.target ?? 0) + 1}` : w.phase === 'act' ? '正在操作' : w.phase === 'done' ? '完成照料' : '等待目标'}`}>
+                <span className="resident-shadow" /><Animal kind={kind} />
+                {on && w.phase === 'act' && <span className="worker-action">{kind === 'harvest' ? '采摘' : '播种'}<Progress value={w.clock / .9} gold={kind === 'harvest'} /></span>}
+                {on && w.phase === 'done' && <PixelBurst kind={kind === 'harvest' ? 'coin' : 'plant'} />}
+              </div>
+            })}
           </div>
-          <div className="garden-scene-caption"><span>{inspectedPot !== null && s.pots[inspectedPot] ? (() => { const pot = s.pots[inspectedPot]; const p = pot.plant === null ? null : PLANTS[pot.plant]; return p ? `${p.name} · ${pot.growth >= p.seconds ? '已成熟，点击收获' : `成长 ${Math.floor(pot.growth / p.seconds * 100)}%`} · 收获 ${reward(s, p)} 金币` : '空花盆 · 点击种下当前选择的种子' })() : '点击盆栽照料 · 成熟时会亮起星光'}</span><small>{s.upgrades.snail ? `${s.upgrades.snail} 只蜗牛在园中漫游` : '小蜗牛在花园门口打盹'}</small></div>
+          <div className="garden-scene-caption"><span>{inspectedPot !== null && s.pots[inspectedPot] ? (() => { const pot = s.pots[inspectedPot]; const p = pot.plant === null ? null : PLANTS[pot.plant]; return p ? `${p.name} · ${pot.growth >= p.seconds ? '已成熟，点击收获' : `成长 ${Math.floor(pot.growth / p.seconds * 100)}%`} · 收获 ${reward(s, p)} 金币` : '空花盆 · 点击随机种下当前等级的植物' })() : '点击盆栽照料 · 成熟时会亮起星光'}</span><small>{s.upgrades.snail ? `${s.upgrades.snail} 只蜗牛在园中漫游` : '小蜗牛在花园门口打盹'}</small></div>
         </div>
         <div className="quest-panel"><Sprite id={9} /><div><div className="quest-caption"><span>{s.wonAt !== null ? '旅程完成' : '星之花的约定'}</span><b>{Math.min(100, Math.floor(goalProgress * 100))}%</b></div><p>{nextGoal}</p><Progress value={goalProgress} gold /></div></div>
       </section>
@@ -224,7 +240,7 @@ export default function Garden() {
       <p className="settings-note">切到其他标签页时音乐会暂停。每 3 秒自动保存，最多结算 30 分钟离线成长；菜单和设置暂停当前游戏。</p>
       <div className="modal-actions"><button className="primary-button" onClick={() => setPanel(null)}>返回{screen === 'game' ? '花园' : '菜单'}</button>{screen === 'game' && <button className="blue-button" onClick={() => { setPanel(null); setScreen('menu') }}>开始菜单</button>}</div>
     </Modal>}
-    {panel === 'help' && <Modal title="玩法指南" close={() => setPanel(null)}><h2>园丁的小手册</h2><ol className="help-list"><li><b>选种、播种</b><p>左侧选择品种，点击空花盆购买并播种。三种低级种子永远免费。</p></li><li><b>浇水、收获</b><p>植物会自然生长，点击可加速。长出完整外观后特殊效果生效；进度满后再次点击收获金币。</p></li><li><b>扩建、雇用助手</b><p>右侧三个分类共有 12 种升级。建议先买园艺手套，再雇用浇水蜗牛。自动播种使用当前种子，金币不足时种嫩芽豆。</p></li><li><b>种出第一颗星星</b><p>培育出三种高级植物即可购买终极种子。星之花自然生长需 8 分钟，点击和蜗牛可小幅加速，其他加成无效。成熟即通关，之后可以继续种植。</p></li></ol><p className="settings-note">星之花不会被自动收获或自动播种。可关闭自动收获，保留植物光环。相邻指上下左右花盆。</p><button className="primary-button" onClick={() => setPanel(null)}>知道了</button></Modal>}
+    {panel === 'help' && <Modal title="玩法指南" close={() => setPanel(null)}><h2>园丁的小手册</h2><ol className="help-list"><li><b>选种、播种</b><p>左侧选择种子等级，点击空花盆随机种出本级一种植物，三种等概率。每级统一价格，低级种子永远免费；终极种子固定种出星之花。</p></li><li><b>浇水、收获</b><p>植物会自然生长，点击可加速。长出完整外观后特殊效果生效；进度满后再次点击收获金币。</p></li><li><b>扩建、雇用助手</b><p>右侧三个分类共有 12 种升级。建议先买园艺手套，再雇用浇水蜗牛。收获甲虫和播种松鼠会寻找目标、走到盆边并完成动作，一次处理一盆。松鼠使用当前等级随机播种，金币不足时使用免费随机种子。</p></li><li><b>种出第一颗星星</b><p>培育出三种高级植物即可购买终极种子。星之花自然生长需 8 分钟，点击和蜗牛可小幅加速，其他加成无效。成熟即通关，之后可以继续种植。</p></li></ol><p className="settings-note">星之花不会被自动收获或自动播种。可关闭自动收获，保留植物光环。相邻指上下左右花盆。</p><button className="primary-button" onClick={() => setPanel(null)}>知道了</button></Modal>}
     {panel === 'book' && <Modal title="植物图鉴" className="book-modal" close={() => setPanel(null)}><h2>奇植图鉴 <small>{s.discovered.length} / 10</small></h2><p className="modal-intro">培育至成熟，便能点亮它的名字。成株阶段为 50% 进度。</p><div className="book-grid">{PLANTS.map(p => <article key={p.id} className={s.discovered.includes(p.id) ? 'discovered' : ''}><Sprite id={p.id} /><div><h3>{p.name}<small>{TIERS[p.tier].replace('种子', '')} · {s.discovered.includes(p.id) ? '已培育' : '未培育'}</small></h3><p>{p.effect}</p><span>{p.lore}</span></div></article>)}</div></Modal>}
     {panel === 'reset' && <Modal title="开始新的花园" close={() => setPanel(null)}><h2>重新种下第一颗种子？</h2><p className="modal-intro">这会替换本机的花园存档，金币、植物和升级会重新开始。音效设置会保留。</p><div className="modal-actions"><button className="blue-button" onClick={() => setPanel(null)}>保留我的花园</button><button className="primary-button" onClick={reset}>开始新的花园</button></div></Modal>}
     {won && !panel && <Modal title="星之花绽放，通关成功" className="victory-modal"><div className="victory-stars" aria-hidden="true"><PixelBurst kind="star" /><PixelBurst kind="coin" /></div><span className="menu-eyebrow">一颗星星，为你而开</span><Sprite id={9} /><h2>星之花，绽放了。</h2><p>从第一颗小小的种子，到一整个星光花园。<br />谢谢你的每一次照料。</p><div className="victory-stats"><div><small>通关用时</small><strong data-testid="win-time">{formatTime(s.wonAt ?? 0)}</strong></div><div><small>收获植物</small><strong>{s.harvests}</strong></div><div><small>发现奇植</small><strong>{s.discovered.length}/10</strong></div></div><button className="primary-button" onClick={() => setVictoryDismissed(true)}>继续照料花园</button><small className="menu-footnote">旅程完成了，花园的故事还在继续。</small></Modal>}
