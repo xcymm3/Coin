@@ -1,3 +1,5 @@
+import { DECORATIONS } from './collectibles.ts'
+export * from './collectibles.ts'
 import { plantPosition } from './gardenScene.ts'
 import { PLANTS, ULTIMATE_ID, ULTIMATE_TIER, INITIAL_POTS, TIER_PLANTS, SEED_UNLOCK, SEED_ODDS, SPECIES_ODDS, seedPlantId, type Tier, type Plant } from './catalog.ts'
 export * from './catalog.ts'
@@ -18,9 +20,10 @@ export const upgradeChapter = (s: GameState) => UPGRADES.find(u=>!s.purchases.in
 export const WATER_DURATION = 1.2
 export const GERMINATION_SECONDS = 5
 export const isGerminating = (p: Pot) => p.plant !== null && (p.germination ?? p.growth) < GERMINATION_SECONDS
-export type Pot = { germination?: number; revealedAt?: number; watering?: number; plant: number | null; growth: number; wateredAt: number }
+export type Pot = { variant?: number; germination?: number; revealedAt?: number; watering?: number; plant: number | null; growth: number; wateredAt: number }
 export type Team = { snails: Worker[]; workers: Record<WorkerKind,Worker>; cursor: number }
 export type GameState = {
+  fertilizer: number; extraRandom: number; variants: string[]; decorations: string[]; hiddenDecorations: string[]; weather: {kind:number;started:number;next:number};
   campaignVersion: 3; activeGarden: number; extraTeams: Team[]; purchases: string[]; stats: { manualGrowth: number; autoGrowth: number; manualCoins: number; autoCoins: number };
   logistics: 1; player: Worker; snails: Worker[]; randomState: number; workers: Record<WorkerKind, Worker>;
   economyVersion: 2; version: 1; coins: number; earned: number; elapsed: number; pots: Pot[];
@@ -32,7 +35,7 @@ export type GameState = {
 const newTeam = (): Team => ({ snails: Array.from({length:3},(_,i)=>newWorker(8+i*7)), workers:{harvest:newWorker(88),sow:newWorker(48)},cursor:0 })
 const emptyPot = (): Pot => ({ plant: null, growth: 0, wateredAt: -10 })
 export function newGame(): GameState {
-  return { campaignVersion: 3, activeGarden: 0, extraTeams: [], purchases: [], stats: {manualGrowth:0,autoGrowth:0,manualCoins:0,autoCoins:0}, economyVersion: 2, logistics: 1, player: newWorker(8, 4), snails: Array.from({ length: 3 }, (_, i) => newWorker(8 + i * 7)), randomState: Math.floor(Math.random() * 4294967296), workers: { harvest: newWorker(6), sow: newWorker(16) }, version: 1, coins: 0, earned: 0, elapsed: 0, pots: Array.from({ length: INITIAL_POTS }, emptyPot),
+  return { fertilizer:0, extraRandom:Math.floor(Math.random()*4294967296), variants:[], decorations:[], hiddenDecorations:[], weather:{kind:0,started:-20,next:300+Math.random()*300}, campaignVersion: 3, activeGarden: 0, extraTeams: [], purchases: [], stats: {manualGrowth:0,autoGrowth:0,manualCoins:0,autoCoins:0}, economyVersion: 2, logistics: 1, player: newWorker(8, 4), snails: Array.from({ length: 3 }, (_, i) => newWorker(8 + i * 7)), randomState: Math.floor(Math.random() * 4294967296), workers: { harvest: newWorker(6), sow: newWorker(16) }, version: 1, coins: 0, earned: 0, elapsed: 0, pots: Array.from({ length: INITIAL_POTS }, emptyPot),
     upgrades: Object.fromEntries(EFFECT_IDS.map(id => [id, 0])) as GameState['upgrades'], selected: 0,
     discovered: [], harvestCounts: PLANTS.map(() => 0), untrackedHarvests: 0, harvests: 0, clicks: 0, wonAt: null, autoClock: 0, cursor: 0,
     autoHarvest: true, autoSow: true, lastSaved: Date.now(), started: false }
@@ -64,6 +67,8 @@ function grow(s: GameState, i: number, amount: number) {
   }
   pot.growth = Math.min(plant.seconds, pot.growth + amount)
   if (pot.growth >= plant.seconds) {
+    const key = `${plant.id}:${pot.variant ?? 0}`
+    if (pot.variant && !s.variants.includes(key)) s.variants.push(key)
     if (!s.discovered.includes(plant.id)) s.discovered.push(plant.id)
     if (plant.tier === ULTIMATE_TIER && s.wonAt === null) s.wonAt = s.elapsed
   }
@@ -87,6 +92,10 @@ export function randomPlant(s: GameState, tier: Tier) {
   const level = weightedIndex(randomValue(s), SEED_ODDS[tier])
   return TIER_PLANTS[level][weightedIndex(randomValue(s), SPECIES_ODDS)]
 }
+function extraRandom(s: GameState) {
+  s.extraRandom = (Math.imul(s.extraRandom,1664525)+1013904223) >>> 0
+  return s.extraRandom / 4294967296
+}
 function plantIn(s: GameState, i: number, id: number) {
   if (s.pots[i].plant !== null) return
   const tier = PLANTS[id].tier
@@ -95,7 +104,8 @@ function plantIn(s: GameState, i: number, id: number) {
   id = randomPlant(s, tier)
   const plant = PLANTS[id]
   s.coins -= cost
-  s.pots[i] = { plant: id, germination: 0, growth: plant.seconds * (1 - 2 ** -s.upgrades.lantern), wateredAt: -10 }
+  const roll=extraRandom(s), variant=roll<.94?0:roll<.97?1:roll<.99?2:3
+  s.pots[i] = { variant, plant: id, germination: 0, growth: plant.seconds * (1 - 2 ** -s.upgrades.lantern), wateredAt: -10 }
 }
 function harvest(s: GameState, i: number, carrier?: Worker) {
   const p = s.pots[i]
@@ -103,6 +113,7 @@ function harvest(s: GameState, i: number, carrier?: Worker) {
   const id = p.plant
   const coins = reward(s, PLANTS[id], Math.floor(i/15))
   if (carrier) { carrier.cargo += coins; carrier.count++ } else { addCoins(s, coins); s.stats.manualCoins += coins }
+  if (extraRandom(s) < .01) s.fertilizer++
   s.harvests++
   s.harvestCounts[id]++
   s.pots[i] = emptyPot()
@@ -185,6 +196,7 @@ function advanceWorker(s: GameState, kind: ActorKind, w: Worker, dt: number, pag
 }
 function advance(s: GameState, dt: number) {
   s.elapsed += dt
+  while (s.elapsed >= s.weather.next) { const started=s.weather.next; s.weather={kind:Math.floor(extraRandom(s)*3),started,next:started+300+extraRandom(s)*300} }
   s.pots.forEach((_, i) => grow(s, i, dt * growthRate(s, Math.floor(i/15))))
   s.pots.forEach((p, i) => {
     if ((p.watering ?? 0) > 0) {
@@ -200,7 +212,7 @@ function advance(s: GameState, dt: number) {
     if(s.upgrades.sow && s.autoSow && !(page===s.activeGarden && s.selected===ULTIMATE_ID)) advanceWorker(s,'sow',team.workers.sow,dt,page)
   }
 }
-export type Action = { type: 'garden'; index: number } | { type: 'dig'; index: number } | { type: 'water'; index: number } | { type: 'move'; from: number; to: number } | { type: 'refill' } | { type: 'tick'; dt: number } | { type: 'pot'; index: number } | { type: 'select'; id: number }
+export type Action = {type:'fertilize';index:number} | {type:'decorate';id:string} | {type:'decoration-toggle';id:string} | { type: 'garden'; index: number } | { type: 'dig'; index: number } | { type: 'water'; index: number } | { type: 'move'; from: number; to: number } | { type: 'refill' } | { type: 'tick'; dt: number } | { type: 'pot'; index: number } | { type: 'select'; id: number }
   | { type: 'buy'; id: UpgradeId } | { type: 'toggle'; key: 'autoHarvest' | 'autoSow' } | { type: 'start' } | { type: 'reset' }
 export function reducer(state: GameState, action: Action): GameState {
   if (action.type === 'reset') return { ...newGame(), started: true }
@@ -209,11 +221,24 @@ export function reducer(state: GameState, action: Action): GameState {
   if (action.type === 'start') return { ...state, started: true }
   if (action.type === 'toggle') return { ...state, [action.key]: !state[action.key] }
   const clone = (w: Worker): Worker => ({ ...w, path: w.path.map(p => ({ ...p })) })
-  const s = { ...state, player: clone(state.player), snails: state.snails.map(clone), workers: Object.fromEntries(Object.entries(state.workers).map(([key, w]) => [key, { ...w, path: w.path.map(p => ({ ...p })) }])) as GameState['workers'], pots: state.pots.map(p => ({ ...p })), upgrades: { ...state.upgrades }, discovered: [...state.discovered], harvestCounts: [...state.harvestCounts], purchases: [...state.purchases], stats: {...state.stats}, extraTeams: state.extraTeams.map(t=>({cursor:t.cursor,snails:t.snails.map(clone),workers:{harvest:clone(t.workers.harvest),sow:clone(t.workers.sow)}})) }
+  const s = { ...state, variants:[...state.variants], decorations:[...state.decorations], hiddenDecorations:[...state.hiddenDecorations], weather:{...state.weather}, player: clone(state.player), snails: state.snails.map(clone), workers: Object.fromEntries(Object.entries(state.workers).map(([key, w]) => [key, { ...w, path: w.path.map(p => ({ ...p })) }])) as GameState['workers'], pots: state.pots.map(p => ({ ...p })), upgrades: { ...state.upgrades }, discovered: [...state.discovered], harvestCounts: [...state.harvestCounts], purchases: [...state.purchases], stats: {...state.stats}, extraTeams: state.extraTeams.map(t=>({cursor:t.cursor,snails:t.snails.map(clone),workers:{harvest:clone(t.workers.harvest),sow:clone(t.workers.sow)}})) }
   if (action.type === 'tick' && s.started) {
     let remaining = Math.min(1800, Math.max(0, action.dt))
     // Fixed upper step preserves effect and automation ordering during offline catch-up.
     while (remaining > 0) { const dt = Math.min(remaining, .5); advance(s, dt); remaining -= dt }
+  }
+  if (action.type === 'fertilize') {
+    const p=s.pots[action.index]
+    if(s.fertilizer>0 && p?.plant != null && p.plant!==ULTIMATE_ID && p.growth<PLANTS[p.plant].seconds) {
+      s.fertilizer--;p.watering=0;grow(s,action.index,PLANTS[p.plant].seconds)
+    }
+  }
+  if(action.type==='decorate') {
+    const item=DECORATIONS.find(d=>d.id===action.id)
+    if(item && !s.decorations.includes(item.id) && s.coins>=item.cost){s.coins-=item.cost;s.decorations.push(item.id)}
+  }
+  if(action.type==='decoration-toggle' && s.decorations.includes(action.id)) {
+    s.hiddenDecorations=s.hiddenDecorations.includes(action.id)?s.hiddenDecorations.filter(id=>id!==action.id):[...s.hiddenDecorations,action.id]
   }
   if (action.type === 'pot' && s.pots[action.index]) {
     const p = s.pots[action.index]
@@ -264,6 +289,18 @@ export function parseSave(raw: string | null): GameState | null {
     if (!raw) return null
     const s = JSON.parse(raw) as GameState
     const finite = (n: unknown) => typeof n === 'number' && Number.isFinite(n) && n >= 0
+    // Legacy saves start with no invented collection history or consumables.
+    if(s.fertilizer===undefined)s.fertilizer=0
+    if(s.extraRandom===undefined)s.extraRandom=(s.randomState??s.lastSaved)>>>0
+    if(s.variants===undefined)s.variants=[]
+    if(s.decorations===undefined)s.decorations=[]
+    if(s.hiddenDecorations===undefined)s.hiddenDecorations=[]
+    if(s.weather===undefined)s.weather={kind:0,started:-20,next:s.elapsed+300}
+    if(!Number.isSafeInteger(s.fertilizer)||s.fertilizer<0||!Number.isInteger(s.extraRandom)||s.extraRandom<0||s.extraRandom>4294967295
+      ||!Array.isArray(s.variants)||new Set(s.variants).size!==s.variants.length||s.variants.some(k=>typeof k!=='string'||!/^([0-9]|1[0-9]|20):[1-3]$/.test(k))
+      ||![s.decorations,s.hiddenDecorations].every(a=>Array.isArray(a)&&new Set(a).size===a.length&&a.every(id=>DECORATIONS.some(d=>d.id===id)))
+      ||s.hiddenDecorations.some(id=>!s.decorations.includes(id))||!s.weather||![0,1,2].includes(s.weather.kind)||!Number.isFinite(s.weather.started)||!finite(s.weather.next)||s.weather.next<=s.elapsed
+      ||s.pots?.some(p=>p.variant!==undefined&&![0,1,2,3].includes(p.variant)))return null
     if (s.economyVersion === undefined && s.version === 1 && Array.isArray(s.pots) && s.upgrades
       && Number.isInteger(s.upgrades.pots) && s.upgrades.pots >= 0 && s.upgrades.pots <= 9 && s.pots.length === 6 + s.upgrades.pots) {
       const oldSeconds = [20, 30, 42, 35, 45, 55, 70, 90, 110, 480]
