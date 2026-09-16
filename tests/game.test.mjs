@@ -22,7 +22,8 @@ test('free seeds prevent a zero-coin soft lock; grow, discover and harvest', () 
 test('click adds growth; insufficient funds never charge or plant', () => {
   let s = tap(start(), 0)
   s = tap(s, 0)
-  assert.equal(s.pots[0].growth, 2)
+  assert.equal(s.pots[0].growth, 0)
+  s=tick(s,3);assert.equal(s.pots[0].growth,5);assert.equal(s.player.stock,3)
   s.earned = 120; s.selected = 3
   s = tap(s, 1)
   assert.equal(s.pots[1].plant, null)
@@ -36,20 +37,19 @@ test('unlock gates use lifetime income and all three advanced discoveries', () =
   s.discovered = [6,7]; assert.equal(unlocked(s, 3), false)
   s.discovered.push(8); assert.equal(unlocked(s, 3), true)
 })
-test('water flower shares with orthogonal neighbors without row wrapping', () => {
-  const s = start(); s.pots[4] = planted(3); s.pots[3] = planted(0); s.pots[5] = planted(0)
-  const n = tap(s, 4)
-  assert.equal(n.pots[3].growth, 2)
-  assert.equal(n.pots[5].growth, 0)
-  assert.equal(s.pots[3].growth, 0, 'reducer never mutates prior state')
+test('watering affects one plant only, including the water flower and upgraded can', () => {
+  const s=start();s.upgrades.splash=3;s.pots[4]=planted(3);s.pots[3]=planted(2);s.pots[5]=planted(2)
+  const n=tick(tap(s,4),4)
+  assert.equal(n.pots[4].growth,8);assert.equal(n.pots[3].growth,4);assert.equal(n.pots[5].growth,4)
+  assert.equal(s.pots[4].growth,0);assert.equal(n.player.stock,3)
 })
 test('moon, crystal and bell effects require the adult growth stage', () => {
   let s = start(); s.pots[0] = planted(4, 22.5); s.pots[1] = planted(7,45); s.pots[2] = planted(8,55)
   assert.equal(growthRate(s),1.15)
   assert.equal(clickPower(s),2.6)
-  s.upgrades.snail = 1; s.cursor = 3; s.pots[3] = planted(1)
-  s = tick(s,4)
-  assert.ok(Math.abs(s.pots[3].growth - (4 * 1.15 + 3 * 1.4)) < .01)
+  s.upgrades.snail = 1; s.snails[0]={...s.snails[0],x:69,y:33,phase:'act',target:3,stock:3}; s.pots[3] = planted(1)
+  s = tick(s,1)
+  assert.ok(Math.abs(s.pots[3].growth - (1.15 + 3 * 1.4)) < .01)
 })
 test('sunflower produces passive income, including when ready', () => {
   let s = start(); s.pots[0] = planted(5,55)
@@ -79,12 +79,12 @@ test('soil, click, profit, compost and lantern change the relevant results', () 
   s.upgrades.soil=2;s.upgrades.click=2;s.upgrades.profit=2;s.upgrades.compost=2;s.upgrades.lantern=2
   assert.equal(price(s,PLANTS[3]),40); assert.equal(reward(s,PLANTS[3]),147)
   s=tap(s,0);const initial=PLANTS[s.pots[0].plant].seconds*.2;assert.equal(s.pots[0].growth,initial)
-  s=tap(s,0);assert.equal(s.pots[0].growth,initial+6)
-  s=tick(s,1);assert.ok(Math.abs(s.pots[0].growth-(initial+7.3))<.001)
+  s=tap(s,0);assert.equal(s.pots[0].growth,initial)
+  s=tick(s,3);assert.ok(Math.abs(s.pots[0].growth-(initial+9.9+(s.pots[0].plant===3?2:0)))<.001)
 })
 test('automatic harvesting and reseeding fall back to a free seed', () => {
   let s = start();s.earned=2000;s.selected=8;s.upgrades.harvest=1;s.upgrades.sow=1;s.pots[0]=planted(0,12)
-  s=tick(s,4)
+  s=tick(s,7)
   assert.equal(s.harvests,1)
   assert.ok(s.pots.some(p=>p.plant===null), 'animals cannot fill the whole garden at once')
   assert.ok(s.pots.some(p=>p.plant!==null && PLANTS[p.plant].tier===0))
@@ -96,7 +96,7 @@ test('automation toggles pause harvesting and planting independently', () => {
 })
 test('ultimate has independent growth, wins on maturity, and continues afterward', () => {
   let s=start();s.pots[0]=planted(9,478);s.upgrades.soil=4;s.upgrades.click=5;s.upgrades.harvest=1;s.upgrades.sow=1;s.selected=9
-  s=tap(s,0);assert.equal(s.pots[0].growth,478.5)
+  s=tap(s,0);assert.equal(s.pots[0].growth,478)
   s=tick(s,2);assert.equal(s.wonAt,1.5)
   assert.equal(s.pots[0].plant,9);assert.equal(s.harvests,0)
   s=tap(s,0);assert.equal(s.coins,10000)
@@ -137,23 +137,45 @@ test('harvest only settles after travel and the entire picking action', () => {
   assert.equal(s.workers.harvest.phase,'act');assert.equal(s.harvests,0)
   assert.equal(s.workers.harvest.x,12);assert.equal(s.workers.harvest.y,33)
   s=tick(s,.6);assert.equal(s.harvests,0)
-  s=tick(s,.3);assert.equal(s.harvests,1);assert.equal(s.coins,20)
+  s=tick(s,.3);assert.equal(s.harvests,1);assert.equal(s.coins,0);assert.equal(s.workers.harvest.cargo,20)
+  s=tick(s,10);assert.equal(s.coins,20);assert.equal(s.workers.harvest.cargo,0)
   assert.equal(original.workers.harvest.y,91);assert.equal(original.workers.harvest.phase,'idle')
 })
 test('manual intervention cancels stale jobs and disabled workers cannot finish actions', () => {
   let s=start();s.upgrades.harvest=1;s.pots[0]=planted(0,12)
   s=tick(s,.5);s=tap(s,0);s=tap(s,0)
   s=tick(s,1);assert.equal(s.harvests,1);assert.equal(s.workers.harvest.phase,'idle')
-  s.upgrades.sow=1;s.workers.sow={x:31,y:33,facing:1,phase:'act',target:1,clock:.8,path:[]}
+  s.upgrades.sow=1;s.workers.sow={...s.workers.sow,stock:3,x:31,y:33,facing:1,phase:'act',target:1,clock:.8,path:[]}
   s.autoSow=false;s=tick(s,1);assert.equal(s.pots[1].plant,null);assert.equal(s.workers.sow.clock,.8)
   s.autoSow=true;s=tick(s,.1);assert.notEqual(s.pots[1].plant,null)
 })
 test('save migration and mid-action resume preserve RNG and exactly-once completion', () => {
   let s=start();s.upgrades.sow=1;s.randomState=42
-  s.workers.sow={x:12,y:33,facing:1,phase:'act',target:0,clock:.7,path:[]}
+  s.workers.sow={...s.workers.sow,stock:3,x:12,y:33,facing:1,phase:'act',target:0,clock:.7,path:[]}
   const loaded=parseSave(JSON.stringify(s));assert.deepEqual(tick(loaded,.3),tick(s,.3))
-  const old={...s,selected:8};delete old.workers;delete old.randomState
+  const old={...s,selected:8};delete old.workers;delete old.randomState;delete old.logistics;delete old.player;delete old.snails
   const migrated=parseSave(JSON.stringify(old));assert.equal(migrated.selected,6);assert.equal(migrated.workers.sow.phase,'idle')
   assert.ok(Number.isInteger(migrated.randomState))
   const invalid={...s,workers:{...s.workers,sow:{...s.workers.sow,x:Infinity}}};assert.equal(parseSave(JSON.stringify(invalid)),null)
+})
+
+test('empty player can refuses watering; refilling takes travel and service time',()=>{
+  let s=start();s.player.stock=0;s.pots[0]=planted(8)
+  s=tap(s,0);assert.equal(s.player.phase,'idle');assert.equal(s.pots[0].growth,0)
+  s=reducer(s,{type:'refill'});assert.equal(s.player.phase,'return');assert.equal(s.player.stock,0)
+  s=tick(s,.5);assert.equal(s.player.stock,0)
+  s=tick(s,3);assert.equal(s.player.stock,4);assert.equal(s.player.phase,'idle')
+  s=tick(tap(s,0),3);assert.equal(s.player.stock,3);assert.equal(s.clicks,1)
+})
+test('seed and water helpers refill before work; upgraded baskets hold more',()=>{
+  let s=start();s.upgrades.sow=3;s.upgrades.water=2;s.upgrades.snail=1;s.pots[0]=planted(8)
+  s=tick(s,.5);assert.equal(s.workers.sow.stock,0);assert.equal(s.snails[0].stock,0);assert.equal(s.pots[0].wateredAt,-10)
+  s=tick(s,3);assert.equal(s.workers.sow.stock,7);assert.equal(s.snails[0].stock,5)
+  s=tick(s,10);assert.ok(s.clicks===0);assert.ok(s.pots.some(p=>p.wateredAt>0));assert.ok(s.workers.sow.stock<7)
+})
+test('carried rewards persist across saving and settle once; reset clears all logistics',()=>{
+  let s=start();s.upgrades.harvest=1;s.workers.harvest.cargo=100;s.workers.harvest.count=1
+  s=tick(s,.5);s=parseSave(JSON.stringify(s));assert.ok(s)
+  s=tick(s,10);assert.equal(s.coins,100);s=tick(s,10);assert.equal(s.coins,100)
+  const reset=reducer(s,{type:'reset'});assert.equal(reset.coins,0);assert.equal(reset.player.stock,4);assert.equal(reset.workers.harvest.cargo,0);assert.equal(reset.pots.length,6);assert.equal(reset.elapsed,0);assert.equal(reset.started,true)
 })

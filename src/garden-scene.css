@@ -78,3 +78,33 @@
 .task-animal .pixel-burst { top: 15%; }
 .seed-outcomes .species-button { cursor: default; text-align: center; }
 .seed-outcomes .species-button:hover { border-color: var(--color-wood-deep); }
+/* Supply props and equipment stay in the same pixel-art greenhouse. */
+.supply-station { position: absolute; top: 99%; z-index: 95; width: 64px; transform: translate(-50%,-55%); text-align: center; color: var(--color-blue-dark); font-size: 10px; }
+.supply-station .sprite { width: 38px; height: 38px; margin: auto; display: block; }
+.supply-station b { display: block; font-size: 10px; }
+.supply-station button { border: 0; padding: 0; background: none; color: inherit; cursor: pointer; }
+.supply-station button:disabled { cursor: default; opacity: .7; }
+.supply-station small { display: block; font-size: 10px; color: var(--color-blue-dark); }
+.pixel-pool { display: block; width: 43px; height: 21px; border: 4px solid var(--color-floor-edge); background: repeating-linear-gradient(0deg,#55bfcd 0 4px,#a3e8df 4px 6px); box-shadow: 3px 3px #394f45,inset 2px 2px #267d92; }
+.pixel-crate { display: block; width: 40px; height: 25px; margin: 8px auto 5px; background: repeating-linear-gradient(0deg,#956137 0 6px,#503824 6px 9px); border: 3px solid #503824; box-shadow: inset 3px 0 #d39c59; }
+.cargo-pips { position: absolute; left: 50%; top: 4%; translate: -50% 0; display: flex; gap: 2px; padding: 2px; background: #163339cc; }
+.cargo-pips i { width: 4px; height: 5px; background: #435b60; }.cargo-pips .filled { background: #78dae4; }.actor-harvest .cargo-pips .filled { background: #f7cc57; }.actor-sow .cargo-pips .filled { background: #a4d67b; }
+.task-animal .animal-basket { transform: scale(var(--equipment-scale)); transform-origin: 14px 8px; }
+.actor-player { width: clamp(27px,6cqw,48px); }.actor-player .sprite { transform: scale(var(--equipment-scale)); }
+.worker-walk .sprite,.worker-return .sprite,.worker-return .animal-art { animation: snail-crawl .6s steps(4) infinite; }
+.actor-player.worker-act .sprite { rotate: -32deg; transform-origin: 65% 70%; transition: rotate .2s; }
+.pour-stream { position: absolute; right: -3px; top: 0; font-size: 14px; color: #a4edff; text-shadow: 2px 2px #298daa; animation: pouring .3s steps(3) infinite; }
+.pour-stream i,.pour-stream b { position: absolute; right: 4px; top: 8px; }.pour-stream b { right: 8px; top: 16px; }
+@keyframes pouring { to { translate: 0 5px; opacity: .5; } }
+.worker-service .sprite,.worker-service .animal-art { animation: animal-work .4s steps(3) infinite alternate; }
+.wearing-boots::after { content: ''; position: absolute; bottom: 23%; left: 19%; width: 9px; height: 4px; background: #ce634f; box-shadow: 13px 0 #ce634f; }
+.scene-lanterns { position: absolute; inset: -25px 0 auto; }.scene-lanterns span { position: absolute; color: #ffe39a; background: #5e452b; padding: 2px 5px; box-shadow: 0 0 22px #ffdc8588; }
+.observation-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 20px; color: var(--color-paper); font-size: 12px; }.observation-toolbar button { padding: 8px 14px; }.observation-toolbar small { opacity: .6; }
+.observation-mode .topbar,.observation-mode .seed-panel,.observation-mode .upgrade-panel,.observation-mode .mobile-nav,.observation-mode .quest-panel,.observation-mode .statusbar,.observation-mode .garden-heading,.observation-mode .toast,.observation-mode .garden-scene-caption { display: none !important; }
+.observation-mode .game-layout { display: block; width: min(1100px,100%); margin: auto; }.observation-mode .garden-section { display: block; }.observation-mode .zen-garden { min-height: min(78vh,750px); }
+.observation-mode .pot-sign,.observation-mode .plant-name,.observation-mode .worker-action,.observation-mode .cargo-pips,.observation-mode .ground-marker,.observation-mode .supply-station b,.observation-mode .supply-station small { visibility: hidden; }
+.observation-mode .garden-floor .pot,.observation-mode .supply-station button { pointer-events: none; }.observation-mode .ripe-sparkles { animation: none; opacity: .5; }.reset-link { margin-top: 18px; color: var(--color-gold-light); }
+@media(max-width:620px) { .supply-station { width: 52px; }.supply-station b,.supply-station small { font-size: 8px; }.observation-toolbar { font-size: 10px; padding: 10px 4px; }.observation-mode .zen-garden { min-height: 72vh; } }
+@media(prefers-reduced-motion:reduce) { .pour-stream,.task-animal .sprite,.task-animal .animal-art { animation: none; }.garden-resident { transition: none; } }
+.actor-player.worker-act { translate: 24px -22px; z-index: 120 !important; }.actor-player.worker-act .sprite { scale: 1; }.actor-player .pour-stream { right: auto; left: -5px; top: 55%; }
+.seed-station .pixel-crate .sprite { width: 30px; height: 30px; transform: translateY(-12px); }
