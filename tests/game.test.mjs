@@ -4,6 +4,7 @@ import { PLANTS, UPGRADES, newGame, reducer, unlocked, price, reward, upgradePri
 
 const start = () => reducer(newGame(), { type: 'start' })
 const tick = (s, dt) => reducer(s, { type: 'tick', dt })
+const water = (s, index) => reducer(s, { type: 'water', index })
 const tap = (s, index) => reducer(s, { type: 'pot', index })
 const planted = (id, growth = 0) => ({ plant: id, growth, wateredAt: -10 })
 
@@ -21,7 +22,7 @@ test('free seeds prevent a zero-coin soft lock; grow, discover and harvest', () 
 })
 test('click adds growth; insufficient funds never charge or plant', () => {
   let s = tap(start(), 0)
-  s = tap(s, 0)
+  s = water(s, 0)
   assert.equal(s.pots[0].growth, 0)
   s=tick(s,3);assert.equal(s.pots[0].growth,5);assert.equal(s.player.stock,3)
   s.earned = 120; s.selected = 3
@@ -39,7 +40,7 @@ test('unlock gates use lifetime income and all three advanced discoveries', () =
 })
 test('watering affects one plant only, including the water flower and upgraded can', () => {
   const s=start();s.upgrades.splash=3;s.pots[4]=planted(3);s.pots[3]=planted(2);s.pots[5]=planted(2)
-  const n=tick(tap(s,4),4)
+  const n=tick(water(s,4),4)
   assert.equal(n.pots[4].growth,8);assert.equal(n.pots[3].growth,4);assert.equal(n.pots[5].growth,4)
   assert.equal(s.pots[4].growth,0);assert.equal(n.player.stock,3)
 })
@@ -79,7 +80,7 @@ test('soil, click, profit, compost and lantern change the relevant results', () 
   s.upgrades.soil=2;s.upgrades.click=2;s.upgrades.profit=2;s.upgrades.compost=2;s.upgrades.lantern=2
   assert.equal(price(s,PLANTS[3]),40); assert.equal(reward(s,PLANTS[3]),147)
   s=tap(s,0);const initial=PLANTS[s.pots[0].plant].seconds*.2;assert.equal(s.pots[0].growth,initial)
-  s=tap(s,0);assert.equal(s.pots[0].growth,initial)
+  s=water(s,0);assert.equal(s.pots[0].growth,initial)
   s=tick(s,3);assert.ok(Math.abs(s.pots[0].growth-(initial+9.9+(s.pots[0].plant===3?2:0)))<.001)
 })
 test('automatic harvesting and reseeding fall back to a free seed', () => {
@@ -96,7 +97,7 @@ test('automation toggles pause harvesting and planting independently', () => {
 })
 test('ultimate has independent growth, wins on maturity, and continues afterward', () => {
   let s=start();s.pots[0]=planted(9,478);s.upgrades.soil=4;s.upgrades.click=5;s.upgrades.harvest=1;s.upgrades.sow=1;s.selected=9
-  s=tap(s,0);assert.equal(s.pots[0].growth,478)
+  s=water(s,0);assert.equal(s.pots[0].growth,478)
   s=tick(s,2);assert.equal(s.wonAt,1.5)
   assert.equal(s.pots[0].plant,9);assert.equal(s.harvests,0)
   s=tap(s,0);assert.equal(s.coins,10000)
@@ -159,13 +160,13 @@ test('save migration and mid-action resume preserve RNG and exactly-once complet
   const invalid={...s,workers:{...s.workers,sow:{...s.workers.sow,x:Infinity}}};assert.equal(parseSave(JSON.stringify(invalid)),null)
 })
 
-test('empty player can refuses watering; refilling takes travel and service time',()=>{
+test('empty tool refuses watering; refilling charges in place without travel',()=>{
   let s=start();s.player.stock=0;s.pots[0]=planted(8)
-  s=tap(s,0);assert.equal(s.player.phase,'idle');assert.equal(s.pots[0].growth,0)
-  s=reducer(s,{type:'refill'});assert.equal(s.player.phase,'return');assert.equal(s.player.stock,0)
+  s=water(s,0);assert.equal(s.player.phase,'idle');assert.equal(s.pots[0].growth,0)
+  s=reducer(s,{type:'refill'});assert.equal(s.player.phase,'service');assert.equal(s.player.stock,0)
   s=tick(s,.5);assert.equal(s.player.stock,0)
   s=tick(s,3);assert.equal(s.player.stock,4);assert.equal(s.player.phase,'idle')
-  s=tick(tap(s,0),3);assert.equal(s.player.stock,3);assert.equal(s.clicks,1)
+  s=tick(water(s,0),3);assert.equal(s.player.stock,3);assert.equal(s.clicks,1)
 })
 test('seed and water helpers refill before work; upgraded baskets hold more',()=>{
   let s=start();s.upgrades.sow=3;s.upgrades.water=2;s.upgrades.snail=1;s.pots[0]=planted(8)
@@ -178,4 +179,28 @@ test('carried rewards persist across saving and settle once; reset clears all lo
   s=tick(s,.5);s=parseSave(JSON.stringify(s));assert.ok(s)
   s=tick(s,10);assert.equal(s.coins,100);s=tick(s,10);assert.equal(s.coins,100)
   const reset=reducer(s,{type:'reset'});assert.equal(reset.coins,0);assert.equal(reset.player.stock,4);assert.equal(reset.workers.harvest.cargo,0);assert.equal(reset.pots.length,6);assert.equal(reset.elapsed,0);assert.equal(reset.started,true)
+})
+
+test('watering tool starts at target without walking and never harvests mature plants',()=>{
+  let s=start();s.pots[4]=planted(8);const before=s.player
+  s=water(s,4);assert.equal(s.player.phase,'act');assert.equal(s.player.target,4);assert.deepEqual(s.player.path,[])
+  assert.equal(s.player.x,before.x);assert.equal(s.player.y,before.y)
+  s=tick(s,.9);assert.equal(s.player.stock,3);assert.equal(s.clicks,1)
+  s.pots[4]=planted(8,110);s=water(s,4);assert.equal(s.pots[4].plant,8);assert.equal(s.harvests,0)
+})
+test('cart moves or swaps complete plants and cancels stale jobs without losing cargo',()=>{
+  let s=start();s.pots[0]=planted(9,300);s.pots[1]=planted(4,30);s.player={...s.player,phase:'act',target:0,clock:.5}
+  s.workers.harvest={...s.workers.harvest,phase:'walk',target:1,cargo:50,count:1}
+  const original=s;s=reducer(s,{type:'move',from:0,to:1})
+  assert.deepEqual(s.pots[1],original.pots[0]);assert.deepEqual(s.pots[0],original.pots[1]);assert.equal(s.player.phase,'idle')
+  assert.equal(s.workers.harvest.phase,'idle');assert.equal(s.workers.harvest.cargo,50);assert.equal(s.player.stock,4)
+  s=reducer(s,{type:'move',from:1,to:5});assert.equal(s.pots[1].plant,null);assert.equal(s.pots[5].growth,300)
+  const before=s;s=reducer(s,{type:'move',from:1,to:0});assert.deepEqual(s,before)
+  assert.deepEqual(reducer(s,{type:'move',from:5,to:14}),s)
+  assert.deepEqual(parseSave(JSON.stringify(s)),s)
+})
+test('old travelling player can migrates to a stationary tool action',()=>{
+  const s=start();s.pots[0]=planted(8);s.player={...s.player,phase:'walk',target:0,path:[{x:12,y:33}]}
+  const loaded=parseSave(JSON.stringify(s));assert.equal(loaded.player.phase,'act');assert.deepEqual(loaded.player.path,[])
+  s.player={...s.player,phase:'return',target:null};assert.equal(parseSave(JSON.stringify(s)).player.phase,'service')
 })

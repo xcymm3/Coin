@@ -20,7 +20,7 @@ export const UPGRADES: Upgrade[] = [
   { id: 'click', name: '园艺手套', cost: 40, scale: 2, max: 5, category: 0, icon: 'hand', detail: '每级手动浇水 +2 秒成长' },
   { id: 'soil', name: '肥沃土壤', cost: 90, scale: 2, max: 4, category: 0, icon: 'leaf', detail: '每级普通植物自然生长 +15%' },
   { id: 'profit', name: '丰收祝福', cost: 120, scale: 2.2, max: 4, category: 0, icon: 'coin', detail: '每级所有植物收获金币 +20%' },
-  { id: 'splash', name: '园丁蓄水壶', cost: 280, scale: 2, max: 3, category: 0, icon: 'water', detail: '每级水壶增加 2 格容量；空壶到水池装填' },
+  { id: 'splash', name: '园丁蓄水壶', cost: 280, scale: 2, max: 3, category: 0, icon: 'water', detail: '每级水壶增加 2 格容量；空壶在工具栏装填' },
   { id: 'pots', name: '花园扩建', cost: 70, scale: 1.65, max: 9, category: 1, icon: 'pot', detail: '每级增加 1 个花盆，最多 15 个' },
   { id: 'compost', name: '种子堆肥', cost: 450, scale: 2, max: 3, category: 1, icon: 'seed', detail: '每级普通种子价格降低 10%' },
   { id: 'lantern', name: '萤火灯笼', cost: 500, scale: 2, max: 3, category: 1, icon: 'star', detail: '每级播种时获得 10% 初始成长，终极除外' },
@@ -189,7 +189,7 @@ function advance(s: GameState, dt: number) {
   if (s.upgrades.harvest && s.autoHarvest) advanceWorker(s, 'harvest', s.workers.harvest, dt)
   if (s.upgrades.sow && s.autoSow && s.selected !== 9) advanceWorker(s, 'sow', s.workers.sow, dt)
 }
-export type Action = { type: 'refill' } | { type: 'tick'; dt: number } | { type: 'pot'; index: number } | { type: 'select'; id: number }
+export type Action = { type: 'water'; index: number } | { type: 'move'; from: number; to: number } | { type: 'refill' } | { type: 'tick'; dt: number } | { type: 'pot'; index: number } | { type: 'select'; id: number }
   | { type: 'buy'; id: UpgradeId } | { type: 'toggle'; key: 'autoHarvest' | 'autoSow' } | { type: 'start' } | { type: 'reset' }
 export function reducer(state: GameState, action: Action): GameState {
   if (action.type === 'reset') return { ...newGame(), started: true }
@@ -207,9 +207,23 @@ export function reducer(state: GameState, action: Action): GameState {
     const p = s.pots[action.index]
     if (p.plant === null) plantIn(s, action.index, s.selected)
     else if (p.growth >= PLANTS[p.plant].seconds) harvest(s, action.index)
-    else if (s.player.phase === 'idle' && s.player.stock > 0) sendToPot(s.player, action.index)
+
   }
-  if (action.type === 'refill' && s.player.phase === 'idle' && s.player.stock < capacity(s, 'player')) returnHome(s.player, 'player')
+  if (action.type === 'water' && validTarget(s, 'player', action.index) && s.player.phase === 'idle' && s.player.stock > 0) {
+    s.player.phase = 'act'; s.player.target = action.index; s.player.clock = 0; s.player.path = []
+  }
+  if (action.type === 'refill' && s.player.phase === 'idle' && s.player.stock < capacity(s, 'player')) {
+    s.player.phase = 'service'; s.player.target = null; s.player.clock = 0; s.player.path = []
+  }
+  if (action.type === 'move' && action.from !== action.to && s.pots[action.from]?.plant != null && s.pots[action.to]) {
+    // Move the whole pot state, preserving growth, discovery and watering history.
+    ;[s.pots[action.from], s.pots[action.to]] = [s.pots[action.to], s.pots[action.from]]
+    for (const w of [s.player, ...s.snails, ...Object.values(s.workers)]) {
+      if (w.target === action.from || w.target === action.to) {
+        w.phase = 'idle'; w.target = null; w.clock = 0; w.path = []
+      }
+    }
+  }
   if (action.type === 'buy') {
     const u = UPGRADES.find(u => u.id === action.id)!
     const cost = upgradePrice(s, u)
@@ -252,6 +266,9 @@ export function parseSave(raw: string | null): GameState | null {
         || (['walk', 'act'].includes(w.phase) && w.target === null) || !Array.isArray(w.path) || w.path.length > 3
         || w.path.some(p => !p || !finite(p.x) || p.x > 100 || !finite(p.y) || p.y > 100)) return null
     }
+    // Earlier saves treated the player can as a travelling actor; resume its tool action in place.
+    if (s.player.phase === 'walk') { s.player.phase = 'act'; s.player.clock = 0; s.player.path = [] }
+    if (s.player.phase === 'return') { s.player.phase = 'service'; s.player.clock = 0; s.player.path = [] }
     return s
   } catch { return null }
 }
