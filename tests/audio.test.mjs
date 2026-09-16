@@ -47,6 +47,9 @@ test('audio unlock, independent buses, click throttling and background suspensio
     assert.equal(gains[0].gain.value, .25); assert.equal(gains[1].gain.value, 0)
     configureAudio(true, .4, false, .25); assert.equal(gains[0].gain.value, 0)
     sound('coin'); assert.equal(oscillators.length, before + 9)
+    ctx.currentTime = 2; sound('reveal'); assert.equal(oscillators.length, before + 13)
+    configureAudio(false, .4, false, .25)
+    ctx.currentTime = 3; sound('reveal'); assert.equal(oscillators.length, before + 13)
     for (const osc of oscillators) { assert.ok(osc.stopAt); osc.onended(); assert.ok(osc.disconnected) }
     document.hidden = true; listeners.visibilitychange(); assert.equal(ctx.state, 'suspended'); assert.equal(intervals.size, 0)
     document.hidden = false; listeners.visibilitychange(); await Promise.resolve()

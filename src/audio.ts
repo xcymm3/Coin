@@ -73,7 +73,7 @@ function startScheduler() {
   nextBeat = context.currentTime + .08
   schedule(); timer = setInterval(schedule, 100)
 }
-export function sound(kind: 'water' | 'plant' | 'coin' | 'buy' | 'win' | 'tap') {
+export function sound(kind: 'water' | 'plant' | 'coin' | 'buy' | 'win' | 'tap' | 'reveal') {
   if (!enabled || !context || !effectsBus || volume === 0 || document.hidden) return
   const now = context.currentTime
   if (now - lastSound < .055) return
@@ -82,7 +82,7 @@ export function sound(kind: 'water' | 'plant' | 'coin' | 'buy' | 'win' | 'tap') 
     ;[0, .06, .13].forEach((offset, i) => voice(effectsBus!, 1050 - i * 190, now + offset, .15, .12, 'sine', .008, 380 + i * 70))
     return
   }
-  const notes = { plant: [48, 55, 60], coin: [83, 88, 91], buy: [60, 64, 67, 72], win: [60, 64, 67, 72, 76, 79, 84], tap: [72] }[kind]
+  const notes = { reveal: [76, 83, 88, 95], plant: [48, 55, 60], coin: [83, 88, 91], buy: [60, 64, 67, 72], win: [60, 64, 67, 72, 76, 79, 84], tap: [72] }[kind]
   notes.forEach((n, i) => {
     const at = now + i * (kind === 'win' ? .18 : .065)
     voice(effectsBus!, frequency(n), at, kind === 'win' ? 1.6 : .3, .13, kind === 'plant' ? 'triangle' : 'sine')

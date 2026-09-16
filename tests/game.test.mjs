@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { PLANTS, UPGRADES, newGame, reducer, unlocked, price, reward, upgradePrice, growthRate, clickPower, parseSave, upgradeLock, WATER_DURATION } from '../src/game.ts'
+import { PLANTS, UPGRADES, newGame, reducer, unlocked, price, reward, upgradePrice, growthRate, clickPower, parseSave, upgradeLock, WATER_DURATION, randomPlant, plantChance, isGerminating } from '../src/game.ts'
 
 const start = () => reducer(newGame(), { type: 'start' })
 const tick = (s, dt) => reducer(s, { type: 'tick', dt })
@@ -12,7 +12,7 @@ test('free seeds prevent a zero-coin soft lock; grow, discover and harvest', () 
   let s = tap(start(), 0)
   assert.equal(s.coins, 0)
   const id = s.pots[0].plant
-  assert.equal(PLANTS[id].tier, 0)
+  assert.ok(id >= 0 && id < 9)
   s = tick(s, PLANTS[id].seconds)
   assert.deepEqual(s.discovered, [id])
   s = tap(s, 0)
@@ -89,8 +89,8 @@ test('automatic harvesting and reseeding fall back to a free seed', () => {
   s=tick(s,7)
   assert.equal(s.harvests,1)
   assert.ok(s.pots.some(p=>p.plant===null), 'animals cannot fill the whole garden at once')
-  assert.ok(s.pots.some(p=>p.plant!==null && PLANTS[p.plant].tier===0))
-  assert.ok(s.pots.every(p=>p.plant===null || PLANTS[p.plant].tier===0))
+  assert.ok(s.pots.some(p=>p.plant!==null && p.plant<9))
+  assert.ok(s.pots.every(p=>p.plant===null || p.plant<9))
 })
 test('automation toggles pause harvesting and planting independently', () => {
   let s=start();s.upgrades.harvest=1;s.upgrades.sow=1;s.autoHarvest=false;s.autoSow=false;s.pots[0]=planted(0,PLANTS[0].seconds)
@@ -117,16 +117,16 @@ test('invalid saves are rejected instead of crashing; valid saves round trip', (
 })
 
 
-test('each tier rolls three species at a fixed price; rejected planting does not consume RNG', () => {
+test('seed price depends on purchased tier, not the random result; rejected planting preserves RNG', () => {
   let s=start();s.randomState=123;s.coins=1e6;s.earned=1e6;s.selected=6
   const seen = new Set()
   for(let i=0;i<120;i++) {
     const before=s.coins;s=tap(s,0);seen.add(s.pots[0].plant)
     assert.equal(before-s.coins,300)
-    assert.equal(PLANTS[s.pots[0].plant].tier,2)
+    assert.ok(s.pots[0].plant<9)
     s.pots[0]=planted(s.pots[0].plant,PLANTS[s.pots[0].plant].seconds);s=tap(s,0)
   }
-  assert.deepEqual([...seen].sort(),[6,7,8])
+  assert.ok([6,7,8].every(id=>seen.has(id)));assert.ok([...seen].some(id=>id<6))
   s.coins=0;const rng=s.randomState;s=tap(s,0);assert.equal(s.randomState,rng);assert.equal(s.pots[0].plant,null)
   s=reducer(s,{type:'select',id:8});assert.equal(s.selected,6)
 })
@@ -220,7 +220,7 @@ test('dig cancels jobs on the removed plant, preserves cargo and allows free rep
   s.workers.harvest={...s.workers.harvest,phase:'act',target:0,clock:.8,cargo:20,count:1}
   s.player={...s.player,phase:'act',target:0,clock:.8}
   s=reducer(s,{type:'dig',index:0});assert.equal(s.workers.harvest.phase,'idle');assert.equal(s.player.phase,'idle');assert.equal(s.player.stock,4)
-  assert.equal(s.workers.harvest.cargo,20);assert.equal(s.coins,0);s=tap(s,0);assert.equal(PLANTS[s.pots[0].plant].tier,0)
+  assert.equal(s.workers.harvest.cargo,20);assert.equal(s.coins,0);s=tap(s,0);assert.ok(s.pots[0].plant<9)
   s=tick(s,10);assert.equal(s.coins,20);assert.equal(s.harvests,0)
   assert.deepEqual(reducer(s,{type:'dig',index:14}),s)
 })
@@ -265,4 +265,40 @@ test('ultimate receives lantern starting growth, soil speed and profit upgrades'
   s=tick(s,10);assert.ok(Math.abs(s.pots[0].growth-160)<.001)
   s=tick(s,201);assert.ok(s.wonAt!==null);assert.equal(s.pots[0].plant,9)
   s=tap(s,0);assert.equal(s.coins,18000)
+})
+
+
+test('all seed distributions match the two-stage design and never include ultimate', () => {
+  for (const tier of [0,1,2]) {
+    const s=start();s.randomState=2026
+    const counts=Array(9).fill(0), n=200000
+    for(let i=0;i<n;i++) counts[randomPlant(s,tier)]++
+    assert.equal(counts.length,9)
+    assert.ok(Math.abs(PLANTS.reduce((sum,p)=>sum+plantChance(tier,p.id),0)-1)<1e-12)
+    counts.forEach((count,id)=>{
+      const expected=plantChance(tier,id)
+      assert.ok(count>0)
+      assert.ok(Math.abs(count/n-expected)<Math.max(.0003,6*Math.sqrt(expected*(1-expected)/n)), `${tier}/${id}: ${count/n}`)
+    })
+  }
+  const s=start(), rng=s.randomState
+  assert.equal(randomPlant(s,3),9);assert.equal(s.randomState,rng)
+})
+test('germination hides a new seed for five effective seconds, even with lanterns', () => {
+  let s=start();s.upgrades.lantern=3;s=tap(s,0)
+  assert.equal(s.pots[0].germination,0);assert.ok(isGerminating(s.pots[0]))
+  s=tick(s,4.9);assert.ok(isGerminating(s.pots[0]))
+  s=tick(s,.1);assert.equal(isGerminating(s.pots[0]),false)
+  let w=start();w=tap(w,0);w=water(w,0);w=tick(w,3)
+  assert.equal(isGerminating(w.pots[0]),false)
+})
+test('advanced reveal fires once, survives moving and save/load; digging never refunds', () => {
+  let s=start();s.pots[0]={...planted(6),germination:0};s=tick(s,5)
+  assert.equal(s.pots[0].revealedAt,5)
+  s=reducer(s,{type:'move',from:0,to:1});s=tick(s,1)
+  assert.equal(s.pots[1].revealedAt,5)
+  s=parseSave(JSON.stringify(s));assert.equal(s.pots[1].germination,5)
+  const coins=s.coins;s=reducer(s,{type:'dig',index:1});assert.equal(s.coins,coins)
+  s.earned=1000;s.coins=100;s.selected=3;s=tap(s,0)
+  assert.equal(s.coins,50);s=reducer(s,{type:'dig',index:0});assert.equal(s.coins,50)
 })

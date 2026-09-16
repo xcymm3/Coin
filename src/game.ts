@@ -38,7 +38,12 @@ const newWorker = (x: number, stock = 0): Worker => ({ x, y: 91, facing: 1, phas
 export const capacity = (s: GameState, kind: ActorKind) => kind === 'player' ? 4 + s.upgrades.splash * 2 : kind === 'water' ? 3 + s.upgrades.water : kind === 'sow' ? 1 + s.upgrades.sow * 2 : Math.max(1, s.upgrades.harvest)
 export const WATER_DURATION = 1.2
 export const SEED_UNLOCK = [0, 360, 2800] as const
-export type Pot = { watering?: number; plant: number | null; growth: number; wateredAt: number }
+export const GERMINATION_SECONDS = 5
+export const SEED_ODDS = [[.94, .055, .005], [.15, .8, .05], [.02, .18, .8]] as const
+export const SPECIES_ODDS = [.2, .7, .1] as const
+export const isGerminating = (p: Pot) => p.plant !== null && (p.germination ?? p.growth) < GERMINATION_SECONDS
+export const plantChance = (tier: Tier, id: number) => tier === 3 ? (id === 9 ? 1 : 0) : id === 9 ? 0 : SEED_ODDS[tier][Math.floor(id / 3)] * SPECIES_ODDS[id % 3]
+export type Pot = { germination?: number; revealedAt?: number; watering?: number; plant: number | null; growth: number; wateredAt: number }
 export type GameState = {
   logistics: 1; player: Worker; snails: Worker[]; randomState: number; workers: Record<WorkerKind, Worker>;
   version: 1; coins: number; earned: number; elapsed: number; pots: Pot[];
@@ -88,6 +93,10 @@ function grow(s: GameState, i: number, amount: number) {
   const pot = s.pots[i]
   if (pot?.plant === null || !pot) return
   const plant = PLANTS[pot.plant]
+  if (isGerminating(pot)) {
+    pot.germination = Math.min(GERMINATION_SECONDS, (pot.germination ?? pot.growth) + amount)
+    if (!isGerminating(pot) && plant.tier === 2) pot.revealedAt = s.elapsed
+  }
   pot.growth = Math.min(plant.seconds, pot.growth + amount)
   if (pot.growth >= plant.seconds) {
     if (!s.discovered.includes(plant.id)) s.discovered.push(plant.id)
@@ -95,15 +104,23 @@ function grow(s: GameState, i: number, amount: number) {
   }
 }
 function addCoins(s: GameState, n: number) { s.coins += n; s.earned += n }
-function randomPlant(s: GameState, tier: Tier) {
-  if (tier === 3) return 9
+function randomValue(s: GameState) {
   // Persisted PRNG keeps reducer replay, offline simulation and save/resume consistent.
   s.randomState = (s.randomState + 0x6D2B79F5) >>> 0
   let n = s.randomState
   n = Math.imul(n ^ n >>> 15, n | 1)
   n ^= n + Math.imul(n ^ n >>> 7, n | 61)
   const value = ((n ^ n >>> 14) >>> 0) / 4294967296
-  return tier * 3 + Math.floor(value * 3)
+  return value
+}
+function weightedIndex(value: number, odds: readonly number[]) {
+  let cumulative = 0
+  return odds.findIndex((chance, i) => { cumulative += chance; return value < cumulative || i === odds.length - 1 })
+}
+export function randomPlant(s: GameState, tier: Tier) {
+  if (tier === 3) return 9
+  const level = weightedIndex(randomValue(s), SEED_ODDS[tier])
+  return level * 3 + weightedIndex(randomValue(s), SPECIES_ODDS)
 }
 function plantIn(s: GameState, i: number, id: number) {
   if (s.pots[i].plant !== null) return
@@ -113,7 +130,7 @@ function plantIn(s: GameState, i: number, id: number) {
   id = randomPlant(s, tier)
   const plant = PLANTS[id]
   s.coins -= cost
-  s.pots[i] = { plant: id, growth: plant.seconds * s.upgrades.lantern * .1, wateredAt: -10 }
+  s.pots[i] = { plant: id, germination: 0, growth: plant.seconds * s.upgrades.lantern * .1, wateredAt: -10 }
 }
 function harvest(s: GameState, i: number, carrier?: Worker) {
   const p = s.pots[i]
@@ -280,7 +297,7 @@ export function parseSave(raw: string | null): GameState | null {
       || !Array.isArray(s.discovered) || s.discovered.some(id => !Number.isInteger(id) || !PLANTS[id])
       || !s.upgrades || UPGRADES.some(u => !Number.isInteger(s.upgrades[u.id]) || s.upgrades[u.id] < 0 || s.upgrades[u.id] > u.max)
       || s.pots.length !== 6 + s.upgrades.pots
-      || s.pots.some(p => !p || (p.plant !== null && (!Number.isInteger(p.plant) || !PLANTS[p.plant])) || !finite(p.growth) || !Number.isFinite(p.wateredAt) || (p.watering !== undefined && (!finite(p.watering) || p.watering > WATER_DURATION || (p.plant === null && p.watering > 0))))) return null
+      || s.pots.some(p => !p || (p.plant !== null && (!Number.isInteger(p.plant) || !PLANTS[p.plant])) || (p.germination !== undefined && (!finite(p.germination) || p.germination > GERMINATION_SECONDS)) || (p.revealedAt !== undefined && !finite(p.revealedAt)) || !finite(p.growth) || !Number.isFinite(p.wateredAt) || (p.watering !== undefined && (!finite(p.watering) || p.watering > WATER_DURATION || (p.plant === null && p.watering > 0))))) return null
     s.selected = PLANTS[s.selected].tier * 3
     if (s.randomState === undefined) s.randomState = s.lastSaved >>> 0
     if (!Number.isInteger(s.randomState) || s.randomState < 0 || s.randomState > 4294967295) return null
