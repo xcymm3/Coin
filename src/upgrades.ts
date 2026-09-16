@@ -1,7 +1,16 @@
-export type EffectId = 'click' | 'soil' | 'profit' | 'snail' | 'speed' | 'water' | 'harvest' | 'sow' | 'splash' | 'pots' | 'lantern' | 'compost' | 'garden'
-export const EFFECT_IDS: EffectId[] = ['click','soil','profit','snail','speed','water','harvest','sow','splash','pots','lantern','compost','garden']
+export type EffectId = 'click' | 'soil' | 'profit' | 'splash' | 'lantern'
+export const EFFECT_IDS: EffectId[] = ['click','soil','profit','splash','lantern']
 export type UpgradeId = string
-export type Upgrade = { id: string; effect: EffectId; name: string; cost: number; chapter: number; category: number; icon: string; detail: string; max: number }
+export type Upgrade = {id:string;page:number;name:string;cost:number;icon:string;detail:string;effects:Partial<Record<EffectId,number>>}
+export type CrewKind = 'water' | 'harvest' | 'sow'
+export const CREW_NAMES: Record<CrewKind,string> = {water:'浇水蜗牛',harvest:'收获甲虫',sow:'播种松鼠'}
+export const MATERIALS = [
+ {name:'木制',color:'#a67541',light:'#dfb576'},
+ {name:'铜制',color:'#b96443',light:'#f6b276'},
+ {name:'铁制',color:'#8a9bac',light:'#dce7eb'},
+ {name:'金质',color:'#d6a42d',light:'#fff2a1'},
+ {name:'钻石制',color:'#60cbd9',light:'#e2fcff'},
+]
 export const GARDENS = [
  { name:'苔庭温室', subtitle:'雨后的泥土与嫩芽', reward:1, growth:1, theme:'moss', ornament:'fern' },
  { name:'萤火溪谷', subtitle:'溪水绕过发光的蘑菇', reward:2, growth:1.2, theme:'brook', ornament:'stream' },
@@ -9,29 +18,27 @@ export const GARDENS = [
  { name:'极光雪苑', subtitle:'冰晶映着缓缓流动的极光', reward:8, growth:2, theme:'aurora', ornament:'crystal' },
  { name:'星海天台', subtitle:'在星轨下种出最后一朵花', reward:16, growth:2.5, theme:'astral', ornament:'orrery' },
 ]
-const chapters: EffectId[][] = [
- ['click','splash','profit'], ['soil','water','snail'], ['harvest','sow','speed'], ['click','profit','pots'],
- ['lantern','water','speed'], ['garden','profit','soil'], ['click','splash','water'], ['profit','harvest','sow'],
- ['garden','soil','speed'], ['click','profit','water'], ['lantern','harvest','sow'], ['garden','profit','water'],
- ['soil','speed','splash'], ['click','profit','water'], ['garden','harvest','sow'], ['soil','profit','speed'],
- ['click','water','lantern'], ['profit','harvest','sow'], ['soil','speed','water'], ['profit','click','splash'],
-]
-// Tuned against scripts/campaign-check.mjs; one fixed price for each independent option.
-export const CHAPTER_COSTS = [80,210,650,3386,22870,137759,617326,3653090,9370185,26248414,197595254,441320992,1117093761,1686004304,4308037365,8267151049,15825862152,26110161122,36395499250,90988748125]
-const labels: Record<EffectId, [string,number,string,string]> = {
- click:['灌注',0,'hand','手动浇水成长 ×2'], soil:['沃土',0,'leaf','全园自然生长速度 ×2'], profit:['丰收',0,'coin','所有植物收获价值 ×2'],
- splash:['蓄水',0,'water','玩家水壶容量 ×2'], lantern:['晨光',1,'star','播种后的剩余成长时间减半'], compost:['堆肥',1,'seed','非终极种子价格减半'],
- pots:['苔庭扩建',1,'pot','第一页扩建至 15 个花盆'], garden:['新园',1,'pot','开放下一页花园：15 个花盆、独立助手、更高产出'],
- snail:['蜗牛小队',2,'snail','每页雇用 3 只浇水蜗牛，独立取水和照料'], water:['甘露',2,'water','蜗牛每次浇水成长 ×2'],
- speed:['疾行',2,'boot','所有助手移动速度 ×2，动作更利落'], harvest:['满筐',2,'beetle','收获甲虫容量 ×2，自动采摘并送回金币'], sow:['播种',2,'squirrel','播种松鼠容量 ×2，自动选择已解锁的最高非终极品阶'],
+
+// Three discoveries per garden; their effects are shared by all gardens.
+export const UPGRADE_BASES = [430, 1900000, 112000000, 1790000000, 32500000000]
+const names=[['苔庭丰收术','腐叶沃土','晨露灌注'],['溪谷授粉术','潮汐沃土','流泉灌注'],['琥珀育种术','暖砂沃土','日光灌注'],['极光丰收术','冰晶沃土','霜羽灌注'],['星海丰收术','星尘沃土','银河灌注']]
+export const UPGRADES: Upgrade[] = GARDENS.flatMap((_,page)=>[
+ {id:`g${page}-profit`,page,name:names[page][0],cost:UPGRADE_BASES[page],icon:'coin',detail:'全园收获价值 ×4',effects:{profit:2}},
+ {id:`g${page}-soil`,page,name:names[page][1],cost:Math.round(UPGRADE_BASES[page]*1.4),icon:'leaf',detail:'全园自然生长速度 ×2',effects:{soil:1}},
+ {id:`g${page}-click`,page,name:names[page][2],cost:Math.round(UPGRADE_BASES[page]*1.9),icon:'hand',detail:'手动浇水成长 ×2，水壶容量 ×2',effects:{click:1,splash:1}},
+])
+export const ULTIMATE_PURCHASES=15
+export const EXPANSION_PRICE=1800
+export const GARDEN_PRICES=[0,32000,19000000,840000000,7940000000]
+export const HIRE_BASES=[130,213000,8400000,99000000,1080000000]
+export type HireOption={id:string;kind:CrewKind;type:'recruit'|'equipment';level:number;cost:number;name:string;detail:string}
+export function hireCatalog(page:number):HireOption[]{
+ return (['water','harvest','sow'] as CrewKind[]).flatMap(kind=>{
+  const base=HIRE_BASES[page]*({water:1,harvest:1.5,sow:2}[kind])
+  return [
+   ...Array.from({length:5},(_,i)=>({id:`recruit-${kind}-${i+1}`,kind,type:'recruit' as const,level:i+1,cost:Math.round(base*4**i),name:`雇佣第 ${i+1} 只${CREW_NAMES[kind]}`,detail:'仅本园增加一只独立作业的助手'})),
+   ...Array.from({length:4},(_,i)=>({id:`equipment-${kind}-${i+1}`,kind,type:'equipment' as const,level:i+1,cost:Math.round(base*3*4**i),name:`${MATERIALS[i+1].name}${kind==='water'?'水箱':kind==='harvest'?'背筐':'种子袋'}`,detail:`本园${CREW_NAMES[kind]}${kind==='water'?'浇水效果 ×4、':''}容量 ×2，移速与作业效率提升`}))
+  ]
+ })
 }
-const themes=['露珠','铜叶','青苔','蜜糖','月白','萤火','流泉','繁枝','琥珀','日光','暖砂','晶簇','霜羽','极光','天幕','彗尾','星河','银河','星冕','永恒']
-const occurrences: Partial<Record<EffectId,number>> = {}
-export const UPGRADES: Upgrade[] = chapters.flatMap((effects, chapter)=>effects.map((effect,j)=>{
- const n=(occurrences[effect]??0)+1;occurrences[effect]=n
- const [label,category,icon,detail]=labels[effect]
- return {id:`c${chapter}-${effect}`,effect,chapter,name:effect==='garden'?`开辟·${GARDENS[n].name}`:`${themes[chapter]}${label}`,category,icon,
- cost:Math.round(CHAPTER_COSTS[chapter]*[1,1.45,2.1][j]),max:1,
- detail:effect==='harvest'&&n===1?'每页雇用收获甲虫，采摘、装篮、交付金币':effect==='sow'&&n===1?'每页雇用播种松鼠，补货后自动播种':detail}
-}))
-export const ULTIMATE_PURCHASES = 57
+export const decorationPrice=(base:number,page:number)=>Math.round(base*[1,8,64,512,4096][page])

@@ -1,12 +1,10 @@
-import {UPGRADES} from '../src/game.ts';
+import {UPGRADES,UPGRADE_BASES,HIRE_BASES,GARDEN_PRICES} from '../src/game.ts';
 import {campaign} from './campaign-check.mjs';
-const values=[];
-for(let c=0;c<19;c++){
- const group=UPGRADES.filter(u=>u.chapter===c), target=(c+1)*195;
- const set=v=>group.forEach((u,j)=>u.cost=Math.round(v*[1,1.45,2.1][j]));
- let lo=c?values[c-1]:1,hi=Math.max(lo*8,1000);
- for(;;){set(hi);if(campaign(42,2,false,target).purchases<(c+1)*3)break;hi*=8;}
- for(let k=0;k<14;k++){const mid=(lo+hi)/2;set(mid);if(campaign(42,2,false,target).purchases>=(c+1)*3)lo=mid;else hi=mid;}
- values.push(Math.round(lo));set(values[c]);console.log(c,values[c]);
+const targets=[10,22,34,46,64], originalU=[...UPGRADE_BASES],originalH=[...HIRE_BASES],originalG=[...GARDEN_PRICES];
+for(let page=0;page<5;page++){
+ const set=f=>{UPGRADES.filter(u=>u.page===page).forEach((u,j)=>u.cost=Math.round(originalU[page]*[1,1.4,1.9][j]*f));HIRE_BASES[page]=Math.round(originalH[page]*f);if(page<4)GARDEN_PRICES[page+1]=Math.round(originalG[page+1]*f)};
+ let lo=.1,hi=20;
+ for(let i=0;i<10;i++){const mid=(lo+hi)/2;set(mid);const r=campaign(42,2,false,Math.ceil(targets[page]*60)+1);const done=page<4?r.pages[page]:r.win;if(done!=null&&done<=targets[page])lo=mid;else hi=mid}
+ set(lo);console.log(JSON.stringify({page,factor:lo,upgrade:UPGRADES.filter(u=>u.page===page).map(u=>u.cost),hire:HIRE_BASES[page],garden:GARDEN_PRICES[page+1]}));
 }
-values.push(Math.round(values.at(-1)*2.5));console.log(JSON.stringify(values));
+console.log(JSON.stringify(campaign(42,2)));

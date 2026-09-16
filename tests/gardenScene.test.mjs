@@ -1,11 +1,12 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { newGame, reducer, PLANTS } from '../src/game.ts'
+import { newGame, reducer, PLANTS,teamFor } from '../src/game.ts'
+import {employ} from './helpers.mjs'
 
 test('working animals stay inside the garden and never teleport between jobs or stations', () => {
-  let s=newGame();s.started=true;s.upgrades.snail=3;s.upgrades.harvest=3;s.upgrades.sow=3;s.upgrades.pots=9
+  let s=newGame();s.started=true;s.coins=1e16;for(const kind of ['water','harvest','sow'])s=employ(s,kind,3)
   s.pots=Array.from({length:15},(_,i)=>({plant:i%3,growth:PLANTS[i%3].seconds,wateredAt:-10}))
-  const actors=s=>[...s.snails,s.workers.harvest,s.workers.sow]
+  const actors=s=>[...teamFor(s).snails,...teamFor(s).workers.harvest,...teamFor(s).workers.sow]
   const phases=new Set()
   for(let frame=0;frame<1200;frame++) {
     const before=actors(s);s=reducer(s,{type:'tick',dt:.25})
@@ -15,5 +16,5 @@ test('working animals stay inside the garden and never teleport between jobs or 
     })
   }
   for(const phase of ['walk','act','return','service']) assert.ok(phases.has(phase))
-  assert.ok(s.earned>0);assert.ok(s.pots.slice(0,5).some(p=>p.wateredAt>0))
+  assert.ok(s.earned>0);assert.ok(s.stats.autoGrowth>0)
 })

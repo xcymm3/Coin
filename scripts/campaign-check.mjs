@@ -1,5 +1,5 @@
 import {pathToFileURL} from 'node:url';
-import {newGame,reducer,PLANTS,UPGRADES,unlocked,price,upgradeLock,seedPlantId,highestSeed} from '../src/game.ts';
+import {newGame,reducer,PLANTS,UPGRADES,unlocked,price,upgradeLock,seedPlantId,highestSeed,teamFor,hireCatalog,hireAvailable,expansionLock,GARDEN_PRICES,EXPANSION_PRICE} from '../src/game.ts';
 export function campaign(seed=42, interval=2, idle=false, limit=7200, step=1) {
  let s=reducer(newGame(),{type:'start'});s.randomState=seed;
  const buys=[],pages=[],milestones=[],windows=[];let last=0,gap=0,cursor=0,previous={...s.stats};
@@ -7,16 +7,21 @@ export function campaign(seed=42, interval=2, idle=false, limit=7200, step=1) {
   if(t%interval===0){
    const tier=highestSeed(s), ultimate=unlocked(s,5), selected=ultimate?9:seedPlantId(tier);
    s=reducer(s,{type:'select',id:selected});
-   const choices=UPGRADES.filter(u=>!s.purchases.includes(u.id)&&!upgradeLock(s,u.id)).sort((a,b)=>a.cost-b.cost);
+   const team=teamFor(s);
+   const choices=UPGRADES.filter(u=>u.page===s.activeGarden&&!s.purchases.includes(u.id)&&!upgradeLock(s,u.id)).map(u=>({...u,action:{type:'buy',id:u.id}}));
+   for(const u of hireCatalog(s.activeGarden).filter(u=>hireAvailable(team,u)))choices.push({...u,action:{type:'hire',id:u.id}});
+   if(s.pots.length===10)choices.push({id:'expand',cost:EXPANSION_PRICE,action:{type:'expand'}});
+   else if(s.gardens.length<5&&!expansionLock(s))choices.push({id:'garden',cost:GARDEN_PRICES[s.gardens.length],action:{type:'open-garden'}});
+   choices.sort((a,b)=>a.cost-b.cost);
    const reserve=ultimate?PLANTS[9].cost:price(s,PLANTS[seedPlantId(tier)])*3;
    const buy=choices.find(u=>s.coins>=u.cost+reserve);
-   if(buy && !ultimate){s=reducer(s,{type:'buy',id:buy.id});buys.push({id:buy.id,t:t/60});gap=Math.max(gap,t-last);last=t;if(buy.effect==='garden')pages.push(t/60);}
+   if(buy && !ultimate){s=reducer(s,buy.action);buys.push({id:buy.id,page:s.activeGarden,t:t/60});gap=Math.max(gap,t-last);last=t;if(buy.id==='garden')pages.push(t/60);}
    else {
     const start=s.activeGarden*15, indices=Array.from({length:Math.min(15,s.pots.length-start)},(_,i)=>start+i);
     const star=indices.find(i=>s.pots[i].plant===9);
     let i=indices.find(i=>s.pots[i].plant===null);
     if(ultimate&&star===undefined&&i!==undefined&&s.coins>=PLANTS[9].cost)s=reducer(s,{type:'pot',index:i});
-    else if(!idle||!s.upgrades.sow||ultimate){
+    else if(!idle||!team.workers.sow.length||ultimate){
      i=indices.find(i=>s.pots[i].plant!==null&&s.pots[i].plant!==9&&s.pots[i].growth>=PLANTS[s.pots[i].plant].seconds);
      if(i!==undefined)s=reducer(s,{type:'pot',index:i});
      else {
