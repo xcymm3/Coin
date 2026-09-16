@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { PLANTS, UPGRADES, newGame, reducer, unlocked, price, reward, upgradePrice, growthRate, clickPower, parseSave, upgradeLock, WATER_DURATION, randomPlant, plantChance, isGerminating } from '../src/game.ts'
+import { PLANTS, UPGRADES, newGame, reducer, unlocked, price, reward, upgradePrice, growthRate, clickPower, parseSave, upgradeLock, WATER_DURATION, randomPlant, plantChance, isGerminating, SEED_UNLOCK, SEED_PRICES, TIER_PLANTS, ULTIMATE_TIER, INITIAL_POTS } from '../src/game.ts'
 
 const start = () => reducer(newGame(), { type: 'start' })
 const tick = (s, dt) => reducer(s, { type: 'tick', dt })
@@ -12,7 +12,7 @@ test('free seeds prevent a zero-coin soft lock; grow, discover and harvest', () 
   let s = tap(start(), 0)
   assert.equal(s.coins, 0)
   const id = s.pots[0].plant
-  assert.ok(id >= 0 && id < 9)
+  assert.ok(id >= 0 && id < PLANTS.length && id !== 9)
   s = tick(s, PLANTS[id].seconds)
   assert.deepEqual(s.discovered, [id])
   s = tap(s, 0)
@@ -30,14 +30,14 @@ test('click adds growth; insufficient funds never charge or plant', () => {
   assert.equal(s.pots[1].plant, null)
   assert.equal(s.coins, 0)
 })
-test('unlock gates use lifetime income and all three advanced discoveries', () => {
-  const s = start()
-  assert.equal(unlocked(s, 1), false)
-  s.earned = 360; assert.equal(unlocked(s, 1), true)
-  s.earned = 2800; assert.equal(unlocked(s, 2), true)
-  s.discovered = [6,7]; assert.equal(unlocked(s, 3), false)
-  s.discovered.push(8); assert.equal(unlocked(s, 3), true)
+test('all six seed gates use cumulative income; discovery never bypasses a gate', () => {
+  const s=start();s.discovered=PLANTS.map(p=>p.id)
+  for(let tier=1;tier<6;tier++) {
+    s.earned=SEED_UNLOCK[tier]-1;assert.equal(unlocked(s,tier),false)
+    s.earned++;assert.equal(unlocked(s,tier),true)
+  }
 })
+
 test('watering affects one plant only, including the water flower and upgraded can', () => {
   const s=start();s.upgrades.splash=3;s.pots[4]=planted(3);s.pots[3]=planted(2);s.pots[5]=planted(2)
   const n=tick(water(s,4),4)
@@ -57,7 +57,7 @@ test('sunflower produces no passive income', () => {
   s = tick(s, 10); assert.equal(s.coins,0); assert.equal(s.earned,0)
 })
 test('carnivorous harvest does not grow any other plants', () => {
-  const s = start(); s.pots[0] = planted(6,70); s.pots[1] = planted(1); s.pots[2] = planted(9)
+  const s = start(); s.pots[0] = planted(6,PLANTS[6].seconds); s.pots[1] = planted(1); s.pots[2] = planted(9)
   const n = tap(s,0)
   assert.equal(n.pots[1].growth,0); assert.equal(n.pots[2].growth,0)
 })
@@ -79,7 +79,7 @@ test('all 12 upgrades charge once per level and respect caps', () => {
 test('soil, click, profit, compost and lantern change the relevant results', () => {
   let s = start(); s.earned=3000;s.coins=1000;s.selected=3
   s.upgrades.soil=2;s.upgrades.click=2;s.upgrades.profit=2;s.upgrades.compost=2;s.upgrades.lantern=2
-  assert.equal(price(s,PLANTS[3]),40); assert.equal(reward(s,PLANTS[3]),147)
+  assert.equal(price(s,PLANTS[3]),40); assert.equal(reward(s,PLANTS[3]),56)
   s=tap(s,0);const initial=PLANTS[s.pots[0].plant].seconds*.2;assert.equal(s.pots[0].growth,initial)
   s=water(s,0);assert.equal(s.pots[0].growth,initial)
   s=tick(s,3);assert.ok(Math.abs(s.pots[0].growth-(initial+9.9))<.001)
@@ -89,8 +89,8 @@ test('automatic harvesting and reseeding fall back to a free seed', () => {
   s=tick(s,7)
   assert.equal(s.harvests,1)
   assert.ok(s.pots.some(p=>p.plant===null), 'animals cannot fill the whole garden at once')
-  assert.ok(s.pots.some(p=>p.plant!==null && p.plant<9))
-  assert.ok(s.pots.every(p=>p.plant===null || p.plant<9))
+  assert.ok(s.pots.some(p=>p.plant!==null && p.plant!==9))
+  assert.ok(s.pots.every(p=>p.plant===null || p.plant!==9))
 })
 test('automation toggles pause harvesting and planting independently', () => {
   let s=start();s.upgrades.harvest=1;s.upgrades.sow=1;s.autoHarvest=false;s.autoSow=false;s.pots[0]=planted(0,PLANTS[0].seconds)
@@ -101,8 +101,8 @@ test('ultimate wins on maturity and continues afterward', () => {
   s=water(s,0);assert.equal(s.pots[0].growth,478)
   s=tick(s,2);assert.equal(s.wonAt,1.5)
   assert.equal(s.pots[0].plant,9);assert.equal(s.harvests,0)
-  s=tap(s,0);assert.equal(s.coins,10000)
-  s.selected=0;s=tap(s,0);s=tick(s,40);assert.equal(s.wonAt,1.5);assert.ok(s.harvests>1)
+  s=tap(s,0);assert.equal(s.coins,PLANTS[9].reward)
+  s.selected=0;s.randomState=1;s=tap(s,0);s=tick(s,60);assert.equal(s.wonAt,1.5);assert.ok(s.harvests>1)
 })
 test('offline simulation matches live ticks including automation', () => {
   let s=start();s.upgrades.snail=2;s.upgrades.water=1;s.upgrades.sow=1;s.upgrades.harvest=1
@@ -123,7 +123,7 @@ test('seed price depends on purchased tier, not the random result; rejected plan
   for(let i=0;i<120;i++) {
     const before=s.coins;s=tap(s,0);seen.add(s.pots[0].plant)
     assert.equal(before-s.coins,300)
-    assert.ok(s.pots[0].plant<9)
+    assert.ok(s.pots[0].plant!==9)
     s.pots[0]=planted(s.pots[0].plant,PLANTS[s.pots[0].plant].seconds);s=tap(s,0)
   }
   assert.ok([6,7,8].every(id=>seen.has(id)));assert.ok([...seen].some(id=>id<6))
@@ -139,8 +139,8 @@ test('harvest only settles after travel and the entire picking action', () => {
   assert.equal(s.workers.harvest.phase,'act');assert.equal(s.harvests,0)
   assert.equal(s.workers.harvest.x,12);assert.equal(s.workers.harvest.y,33)
   s=tick(s,.6);assert.equal(s.harvests,0)
-  s=tick(s,.3);assert.equal(s.harvests,1);assert.equal(s.coins,0);assert.equal(s.workers.harvest.cargo,20)
-  s=tick(s,10);assert.equal(s.coins,20);assert.equal(s.workers.harvest.cargo,0)
+  s=tick(s,.3);assert.equal(s.harvests,1);assert.equal(s.coins,0);assert.equal(s.workers.harvest.cargo,PLANTS[1].reward)
+  s=tick(s,10);assert.equal(s.coins,PLANTS[1].reward);assert.equal(s.workers.harvest.cargo,0)
   assert.equal(original.workers.harvest.y,91);assert.equal(original.workers.harvest.phase,'idle')
 })
 test('manual intervention cancels stale jobs and disabled workers cannot finish actions', () => {
@@ -179,7 +179,7 @@ test('carried rewards persist across saving and settle once; reset clears all lo
   let s=start();s.upgrades.harvest=1;s.workers.harvest.cargo=100;s.workers.harvest.count=1
   s=tick(s,.5);s=parseSave(JSON.stringify(s));assert.ok(s)
   s=tick(s,10);assert.equal(s.coins,100);s=tick(s,10);assert.equal(s.coins,100)
-  const reset=reducer(s,{type:'reset'});assert.equal(reset.coins,0);assert.equal(reset.player.stock,4);assert.equal(reset.workers.harvest.cargo,0);assert.equal(reset.pots.length,6);assert.equal(reset.elapsed,0);assert.equal(reset.started,true)
+  const reset=reducer(s,{type:'reset'});assert.equal(reset.coins,0);assert.equal(reset.player.stock,4);assert.equal(reset.workers.harvest.cargo,0);assert.equal(reset.pots.length,INITIAL_POTS);assert.equal(reset.elapsed,0);assert.equal(reset.started,true)
 })
 
 test('watering tool starts at target without walking and never harvests mature plants',()=>{
@@ -187,7 +187,7 @@ test('watering tool starts at target without walking and never harvests mature p
   s=water(s,4);assert.equal(s.player.phase,'idle');assert.equal(s.pots[4].watering,WATER_DURATION);assert.deepEqual(s.player.path,[])
   assert.equal(s.player.x,before.x);assert.equal(s.player.y,before.y)
   s=tick(s,WATER_DURATION);assert.equal(s.player.stock,3);assert.equal(s.clicks,1)
-  s.pots[4]=planted(8,110);s=water(s,4);assert.equal(s.pots[4].plant,8);assert.equal(s.harvests,0)
+  s.pots[4]=planted(8,PLANTS[8].seconds);s=water(s,4);assert.equal(s.pots[4].plant,8);assert.equal(s.harvests,0)
 })
 test('cart moves or swaps complete plants and cancels stale jobs without losing cargo',()=>{
   let s=start();s.pots[0]=planted(9,300);s.pots[1]=planted(4,30);s.player={...s.player,phase:'act',target:0,clock:.5}
@@ -216,11 +216,11 @@ test('shovel removes every plant at every growth stage with no reward or harvest
   }
 })
 test('dig cancels jobs on the removed plant, preserves cargo and allows free replanting',()=>{
-  let s=start();s.pots[0]=planted(6,70);s.upgrades.harvest=1
+  let s=start();s.pots[0]=planted(6,PLANTS[6].seconds);s.upgrades.harvest=1
   s.workers.harvest={...s.workers.harvest,phase:'act',target:0,clock:.8,cargo:20,count:1}
   s.player={...s.player,phase:'act',target:0,clock:.8}
   s=reducer(s,{type:'dig',index:0});assert.equal(s.workers.harvest.phase,'idle');assert.equal(s.player.phase,'idle');assert.equal(s.player.stock,4)
-  assert.equal(s.workers.harvest.cargo,20);assert.equal(s.coins,0);s=tap(s,0);assert.ok(s.pots[0].plant<9)
+  assert.equal(s.workers.harvest.cargo,20);assert.equal(s.coins,0);s=tap(s,0);assert.ok(s.pots[0].plant!==9)
   s=tick(s,10);assert.equal(s.coins,20);assert.equal(s.harvests,0)
   assert.deepEqual(reducer(s,{type:'dig',index:14}),s)
 })
@@ -260,29 +260,29 @@ test('all species including ultimate receive identical upgraded manual and snail
   }
 })
 test('ultimate receives lantern starting growth, soil speed and profit upgrades',()=>{
-  let s=start();s.discovered=[6,7,8];s.coins=6500;s.selected=9;s.upgrades.lantern=3;s.upgrades.soil=4;s.upgrades.profit=4
+  let s=start();s.earned=SEED_UNLOCK[5];s.coins=SEED_PRICES[5];s.selected=9;s.upgrades.lantern=3;s.upgrades.soil=4;s.upgrades.profit=4
   s=tap(s,0);assert.equal(s.pots[0].growth,144)
   s=tick(s,10);assert.ok(Math.abs(s.pots[0].growth-160)<.001)
   s=tick(s,201);assert.ok(s.wonAt!==null);assert.equal(s.pots[0].plant,9)
-  s=tap(s,0);assert.equal(s.coins,18000)
+  s=tap(s,0);assert.equal(s.coins,PLANTS[9].reward*1.8)
 })
 
 
 test('all seed distributions match the two-stage design and never include ultimate', () => {
-  for (const tier of [0,1,2]) {
+  for (const tier of [0,1,2,3,4]) {
     const s=start();s.randomState=2026
-    const counts=Array(9).fill(0), n=200000
+    const counts=Array(PLANTS.length).fill(0), n=200000
     for(let i=0;i<n;i++) counts[randomPlant(s,tier)]++
-    assert.equal(counts.length,9)
+    assert.equal(counts[9],0)
     assert.ok(Math.abs(PLANTS.reduce((sum,p)=>sum+plantChance(tier,p.id),0)-1)<1e-12)
     counts.forEach((count,id)=>{
       const expected=plantChance(tier,id)
-      assert.ok(count>0)
+      assert.equal(expected>0,id!==9)
       assert.ok(Math.abs(count/n-expected)<Math.max(.0003,6*Math.sqrt(expected*(1-expected)/n)), `${tier}/${id}: ${count/n}`)
     })
   }
   const s=start(), rng=s.randomState
-  assert.equal(randomPlant(s,3),9);assert.equal(s.randomState,rng)
+  assert.equal(randomPlant(s,ULTIMATE_TIER),9);assert.equal(s.randomState,rng)
 })
 test('germination hides a new seed for five effective seconds, even with lanterns', () => {
   let s=start();s.upgrades.lantern=3;s=tap(s,0)
@@ -299,6 +299,26 @@ test('advanced reveal fires once, survives moving and save/load; digging never r
   assert.equal(s.pots[1].revealedAt,5)
   s=parseSave(JSON.stringify(s));assert.equal(s.pots[1].germination,5)
   const coins=s.coins;s=reducer(s,{type:'dig',index:1});assert.equal(s.coins,coins)
-  s.earned=1000;s.coins=100;s.selected=3;s=tap(s,0)
+  s.earned=SEED_UNLOCK[1];s.coins=100;s.selected=3;s=tap(s,0)
   assert.equal(s.coins,50);s=reducer(s,{type:'dig',index:0});assert.equal(s.coins,50)
+})
+
+
+test('catalog contains four species per regular tier and one ultimate',()=>{
+  assert.equal(PLANTS.length,21);assert.equal(TIER_PLANTS.flat().length,21)
+  assert.equal(new Set(TIER_PLANTS.flat()).size,21)
+  for(let tier=0;tier<6;tier++) {
+    assert.equal(TIER_PLANTS[tier].length,tier===5?1:4)
+    for(const id of TIER_PLANTS[tier]) { assert.equal(PLANTS[id].tier,tier);assert.equal(PLANTS[id].cost,SEED_PRICES[tier]) }
+  }
+})
+test('legacy gardens preserve species, maturity ratios, money and completed victory',()=>{
+  const s=start();delete s.economyVersion;s.pots=s.pots.slice(0,6)
+  s.pots[0]=planted(1,15);s.pots[1]=planted(8,110);s.coins=123;s.earned=456;s.wonAt=100
+  const migrated=parseSave(JSON.stringify(s))
+  assert.equal(migrated.pots.length,10);assert.equal(migrated.economyVersion,2)
+  assert.equal(migrated.pots[0].growth,PLANTS[1].seconds*.5)
+  assert.equal(migrated.pots[1].growth,PLANTS[8].seconds)
+  assert.equal(migrated.coins,123);assert.equal(migrated.earned,456);assert.equal(migrated.wonAt,100)
+  assert.ok(unlocked(migrated,5));assert.deepEqual(parseSave(JSON.stringify(migrated)),migrated)
 })

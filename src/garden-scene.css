@@ -140,3 +140,8 @@
 .seed-outcomes .species-button { width:100%; }
 .seed-outcomes .species-button span:last-child { white-space:normal; overflow-wrap:anywhere; line-height:1.4; letter-spacing:0; }
 .seed-outcomes .species-button small { display:block; }
+
+.extra-plant { position:relative; }.extra-plant svg { position:absolute; display:block; width:76%; height:82%; left:12%; top:-5%; }.plant-art-slot { display:contents; }
+.tier-list { max-height:340px; overflow-y:auto; scrollbar-color:#bb915b #493324; }
+.tier-4 .seed-bag { filter:hue-rotate(280deg); }.tier-5 .seed-bag { filter:sepia(1) saturate(2); }
+.aura-3 { color:#e891e8; }.aura-4 { color:#ffb54e; }.aura-5 { color:#fff2b0; }

@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react'
+import { EXTRA_PLANTS } from './plantArt'
 
 // Hand-drawn pixel silhouettes: species stay recognisable before their adult sprite appears.
 const buds = [
@@ -14,7 +15,8 @@ const buds = [
   { color: '#ffe197', shape: 'M14 4h4v6h7v4h-4v5h-3v7h-4v-7h-3v-5H7v-4h7Z', light: 'M14 10h4v7h-4Z' },
 ]
 export function Sprout({ id, tiny }: { id: number; tiny: boolean }) {
-  const bud = buds[id]
+  const extra = EXTRA_PLANTS[id - 10]
+  const bud = id < 10 ? buds[id] : { color: extra.color, shape: extra.bud, light: 'M14 12h3v3h-3Z' }
   return <svg data-testid={`sprout-${id}`} data-species={id} className={`species-sprout ${tiny ? 'tiny-sprout' : ''}`} style={{ '--bud-color': bud.color } as CSSProperties} viewBox="0 0 32 32" shapeRendering="crispEdges" aria-hidden="true">
     <path d="M14 18h4v10h-4ZM8 20h6v4H8Zm10 2h7v3h-7Z" fill="#48863d" stroke="#233e2b" strokeWidth="2" />
     <path d={bud.shape} fill={bud.color} stroke="#293c30" strokeWidth="2" strokeLinejoin="miter" />
