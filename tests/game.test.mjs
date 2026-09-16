@@ -41,25 +41,25 @@ test('unlock gates use lifetime income and all three advanced discoveries', () =
 test('watering affects one plant only, including the water flower and upgraded can', () => {
   const s=start();s.upgrades.splash=3;s.pots[4]=planted(3);s.pots[3]=planted(2);s.pots[5]=planted(2)
   const n=tick(water(s,4),4)
-  assert.equal(n.pots[4].growth,8);assert.equal(n.pots[3].growth,4);assert.equal(n.pots[5].growth,4)
+  assert.equal(n.pots[4].growth,6);assert.equal(n.pots[3].growth,4);assert.equal(n.pots[5].growth,4)
   assert.equal(s.pots[4].growth,0);assert.equal(n.player.stock,3)
 })
-test('moon, crystal and bell effects require the adult growth stage', () => {
+test('adult moon, crystal and bell plants do not change growth or watering', () => {
   let s = start(); s.pots[0] = planted(4, 22.5); s.pots[1] = planted(7,45); s.pots[2] = planted(8,55)
-  assert.equal(growthRate(s),1.15)
-  assert.equal(clickPower(s),2.6)
+  assert.equal(growthRate(s),1)
+  assert.equal(clickPower(s),2)
   s.upgrades.snail = 1; s.snails[0]={...s.snails[0],x:69,y:33,phase:'act',target:3,stock:3}; s.pots[3] = planted(1)
   s = tick(s,1)
-  assert.ok(Math.abs(s.pots[3].growth - (1.15 + 3 * 1.4)) < .01)
+  assert.ok(Math.abs(s.pots[3].growth - (1 + 3)) < .01)
 })
-test('sunflower produces passive income, including when ready', () => {
+test('sunflower produces no passive income', () => {
   let s = start(); s.pots[0] = planted(5,55)
-  s = tick(s, 10); assert.equal(s.coins,20); assert.equal(s.earned,20)
+  s = tick(s, 10); assert.equal(s.coins,0); assert.equal(s.earned,0)
 })
-test('carnivorous harvest grows all normal plants but not the ultimate', () => {
+test('carnivorous harvest does not grow any other plants', () => {
   const s = start(); s.pots[0] = planted(6,70); s.pots[1] = planted(1); s.pots[2] = planted(9)
   const n = tap(s,0)
-  assert.equal(n.pots[1].growth,8); assert.equal(n.pots[2].growth,0)
+  assert.equal(n.pots[1].growth,0); assert.equal(n.pots[2].growth,0)
 })
 test('all 12 upgrades charge once per level and respect caps', () => {
   assert.equal(UPGRADES.length,12)
@@ -82,7 +82,7 @@ test('soil, click, profit, compost and lantern change the relevant results', () 
   assert.equal(price(s,PLANTS[3]),40); assert.equal(reward(s,PLANTS[3]),147)
   s=tap(s,0);const initial=PLANTS[s.pots[0].plant].seconds*.2;assert.equal(s.pots[0].growth,initial)
   s=water(s,0);assert.equal(s.pots[0].growth,initial)
-  s=tick(s,3);assert.ok(Math.abs(s.pots[0].growth-(initial+9.9+(s.pots[0].plant===3?2:0)))<.001)
+  s=tick(s,3);assert.ok(Math.abs(s.pots[0].growth-(initial+9.9))<.001)
 })
 test('automatic harvesting and reseeding fall back to a free seed', () => {
   let s = start();s.earned=3000;s.selected=8;s.upgrades.harvest=1;s.upgrades.sow=1;s.pots[0]=planted(0,PLANTS[0].seconds)
@@ -96,7 +96,7 @@ test('automation toggles pause harvesting and planting independently', () => {
   let s=start();s.upgrades.harvest=1;s.upgrades.sow=1;s.autoHarvest=false;s.autoSow=false;s.pots[0]=planted(0,PLANTS[0].seconds)
   s=tick(s,8);assert.equal(s.harvests,0);assert.equal(s.pots[1].plant,null)
 })
-test('ultimate has independent growth, wins on maturity, and continues afterward', () => {
+test('ultimate wins on maturity and continues afterward', () => {
   let s=start();s.pots[0]=planted(9,478);s.upgrades.soil=4;s.upgrades.click=5;s.upgrades.harvest=1;s.upgrades.sow=1;s.selected=9
   s=water(s,0);assert.equal(s.pots[0].growth,478)
   s=tick(s,2);assert.equal(s.wonAt,1.5)
@@ -247,4 +247,22 @@ test('automation cannot bypass time, income, harvest or prerequisite gates',()=>
   s.elapsed=1000;s.earned=1e9;s.harvests=1000;assert.ok(upgradeLock(s,'harvest'))
   for(const id of ['water','speed','harvest','sow']){assert.equal(upgradeLock(s,id),null);s=reducer(s,{type:'buy',id});assert.equal(s.upgrades[id],1)}
   const owned=parseSave(JSON.stringify({...s,earned:0,harvests:0,elapsed:0}));assert.equal(owned.upgrades.sow,1)
+})
+
+test('all species including ultimate receive identical upgraded manual and snail watering',()=>{
+  for(const plant of PLANTS) {
+    let s=start();s.pots[0]=planted(plant.id);s.upgrades.click=2;s.upgrades.soil=2
+    s=tick(water(s,0),WATER_DURATION)
+    assert.ok(Math.abs(s.pots[0].growth-(WATER_DURATION*1.3+6))<.001)
+    let auto=start();auto.pots[0]=planted(plant.id);auto.upgrades.water=2;auto.upgrades.snail=1
+    auto.snails[0]={...auto.snails[0],phase:'act',target:0,clock:0,stock:3,x:12,y:33}
+    auto=tick(auto,.9);assert.ok(Math.abs(auto.pots[0].growth-9.9)<.001)
+  }
+})
+test('ultimate receives lantern starting growth, soil speed and profit upgrades',()=>{
+  let s=start();s.discovered=[6,7,8];s.coins=6500;s.selected=9;s.upgrades.lantern=3;s.upgrades.soil=4;s.upgrades.profit=4
+  s=tap(s,0);assert.equal(s.pots[0].growth,144)
+  s=tick(s,10);assert.ok(Math.abs(s.pots[0].growth-160)<.001)
+  s=tick(s,201);assert.ok(s.wonAt!==null);assert.equal(s.pots[0].plant,9)
+  s=tap(s,0);assert.equal(s.coins,18000)
 })
