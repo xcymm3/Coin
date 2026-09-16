@@ -2,9 +2,9 @@ import { plantPosition } from './gardenScene.ts'
 export type Tier = 0 | 1 | 2 | 3
 export type Plant = { id: number; name: string; tier: Tier; seconds: number; cost: number; reward: number; effect: string; lore: string }
 export const PLANTS: Plant[] = [
-  { id: 0, name: '嫩芽豆', tier: 0, seconds: 12, cost: 0, reward: 12, effect: '朴实的小豆芽，没有特殊效果。', lore: '每一座奇妙花园，都从一片小叶子开始。' },
-  { id: 1, name: '红伞菇', tier: 0, seconds: 18, cost: 0, reward: 20, effect: '没有特殊效果，等待换来更多金币。', lore: '雨停以后，它还戴着红色的小帽子。' },
-  { id: 2, name: '蜜桃郁金香', tier: 0, seconds: 25, cost: 0, reward: 32, effect: '没有特殊效果，初级种子中收益最高。', lore: '把黄昏的最后一点粉色，藏进花瓣里。' },
+  { id: 0, name: '嫩芽豆', tier: 0, seconds: 20, cost: 0, reward: 12, effect: '朴实的小豆芽，没有特殊效果。', lore: '每一座奇妙花园，都从一片小叶子开始。' },
+  { id: 1, name: '红伞菇', tier: 0, seconds: 30, cost: 0, reward: 20, effect: '没有特殊效果，等待换来更多金币。', lore: '雨停以后，它还戴着红色的小帽子。' },
+  { id: 2, name: '蜜桃郁金香', tier: 0, seconds: 42, cost: 0, reward: 32, effect: '没有特殊效果，初级种子中收益最高。', lore: '把黄昏的最后一点粉色，藏进花瓣里。' },
   { id: 3, name: '水滴花', tier: 1, seconds: 35, cost: 50, reward: 105, effect: '每次接受浇水，自身额外增加 2 秒成长。', lore: '它把每一滴水，都珍藏在蓝色花瓣里。' },
   { id: 4, name: '月光兰', tier: 1, seconds: 45, cost: 50, reward: 175, effect: '成株后全园自然生长 +15%，最多叠加 3 株。', lore: '月光落在它身上，也落在它身旁。' },
   { id: 5, name: '太阳金币花', tier: 1, seconds: 55, cost: 50, reward: 255, effect: '成株后每秒产出 2 金币，成熟后保留也有效。', lore: '每一次微笑，都是一笔小小的收入。' },
@@ -17,18 +17,18 @@ export const TIERS = ['低级种子', '中级种子', '高级种子', '终极种
 export type UpgradeId = 'pots' | 'click' | 'soil' | 'profit' | 'snail' | 'speed' | 'water' | 'harvest' | 'sow' | 'splash' | 'compost' | 'lantern'
 export type Upgrade = { id: UpgradeId; name: string; cost: number; scale: number; max: number; category: number; icon: string; detail: string }
 export const UPGRADES: Upgrade[] = [
-  { id: 'click', name: '园艺手套', cost: 40, scale: 2, max: 5, category: 0, icon: 'hand', detail: '每级手动浇水 +2 秒成长' },
+  { id: 'click', name: '园艺手套', cost: 75, scale: 2.3, max: 5, category: 0, icon: 'hand', detail: '每级手动浇水 +2 秒成长' },
   { id: 'soil', name: '肥沃土壤', cost: 90, scale: 2, max: 4, category: 0, icon: 'leaf', detail: '每级普通植物自然生长 +15%' },
   { id: 'profit', name: '丰收祝福', cost: 120, scale: 2.2, max: 4, category: 0, icon: 'coin', detail: '每级所有植物收获金币 +20%' },
   { id: 'splash', name: '园丁蓄水壶', cost: 280, scale: 2, max: 3, category: 0, icon: 'water', detail: '每级水壶增加 2 格容量；空壶在工具栏装填' },
-  { id: 'pots', name: '花园扩建', cost: 70, scale: 1.65, max: 9, category: 1, icon: 'pot', detail: '每级增加 1 个花盆，最多 15 个' },
+  { id: 'pots', name: '花园扩建', cost: 120, scale: 1.8, max: 9, category: 1, icon: 'pot', detail: '每级增加 1 个花盆，最多 15 个' },
   { id: 'compost', name: '种子堆肥', cost: 450, scale: 2, max: 3, category: 1, icon: 'seed', detail: '每级普通种子价格降低 10%' },
   { id: 'lantern', name: '萤火灯笼', cost: 500, scale: 2, max: 3, category: 1, icon: 'star', detail: '每级播种时获得 10% 初始成长，终极除外' },
-  { id: 'snail', name: '浇水蜗牛', cost: 100, scale: 3, max: 3, category: 2, icon: 'snail', detail: '每级雇用 1 只蜗牛，轮流为植物浇水' },
-  { id: 'speed', name: '蜗牛跑鞋', cost: 160, scale: 2, max: 3, category: 2, icon: 'boot', detail: '每级提高蜗牛移动速度，穿上红色小跑鞋' },
-  { id: 'water', name: '大号水壶', cost: 150, scale: 2, max: 4, category: 2, icon: 'water', detail: '每级蜗牛水壶增加 1 格容量、浇水 +3 秒' },
-  { id: 'harvest', name: '收获甲虫', cost: 260, scale: 2.5, max: 3, category: 2, icon: 'beetle', detail: '采摘装篮、运回交付金币；每级背篓多装 1 株' },
-  { id: 'sow', name: '播种松鼠', cost: 350, scale: 2.5, max: 3, category: 2, icon: 'squirrel', detail: '回种子箱补货后逐盆播种；每级口袋多装 2 包' },
+  { id: 'snail', name: '浇水蜗牛', cost: 400, scale: 3, max: 3, category: 2, icon: 'snail', detail: '每级雇用 1 只蜗牛，轮流为植物浇水' },
+  { id: 'water', name: '大号水壶', cost: 350, scale: 2.3, max: 4, category: 2, icon: 'water', detail: '每级蜗牛水壶增加 1 格容量、浇水 +3 秒' },
+  { id: 'speed', name: '蜗牛跑鞋', cost: 450, scale: 2.4, max: 3, category: 2, icon: 'boot', detail: '每级提高蜗牛移动速度，穿上红色小跑鞋' },
+  { id: 'harvest', name: '收获甲虫', cost: 1200, scale: 2.8, max: 3, category: 2, icon: 'beetle', detail: '采摘装篮、运回交付金币；每级背篓多装 1 株' },
+  { id: 'sow', name: '播种松鼠', cost: 2200, scale: 2.8, max: 3, category: 2, icon: 'squirrel', detail: '回种子箱补货后逐盆播种；每级口袋多装 2 包' },
 ]
 export type WorkerKind = 'harvest' | 'sow'
 export type ActorKind = WorkerKind | 'water' | 'player'
@@ -36,7 +36,9 @@ export type Worker = { x: number; y: number; facing: number; phase: 'idle' | 'wa
 export const STATIONS = { water: { x: 8, y: 96 }, sow: { x: 48, y: 96 }, harvest: { x: 88, y: 96 } }
 const newWorker = (x: number, stock = 0): Worker => ({ x, y: 91, facing: 1, phase: 'idle', target: null, clock: 0, path: [], stock, cargo: 0, count: 0 })
 export const capacity = (s: GameState, kind: ActorKind) => kind === 'player' ? 4 + s.upgrades.splash * 2 : kind === 'water' ? 3 + s.upgrades.water : kind === 'sow' ? 1 + s.upgrades.sow * 2 : Math.max(1, s.upgrades.harvest)
-export type Pot = { plant: number | null; growth: number; wateredAt: number }
+export const WATER_DURATION = 1.2
+export const SEED_UNLOCK = [0, 360, 2800] as const
+export type Pot = { watering?: number; plant: number | null; growth: number; wateredAt: number }
 export type GameState = {
   logistics: 1; player: Worker; snails: Worker[]; randomState: number; workers: Record<WorkerKind, Worker>;
   version: 1; coins: number; earned: number; elapsed: number; pots: Pot[];
@@ -52,8 +54,28 @@ export function newGame(): GameState {
     autoHarvest: true, autoSow: true, lastSaved: Date.now(), started: false }
 }
 export function unlocked(s: GameState, tier: Tier) {
-  return tier === 0 || (tier === 1 && s.earned >= 120) || (tier === 2 && s.earned >= 1800)
+  return tier === 0 || (tier === 1 && s.earned >= SEED_UNLOCK[1]) || (tier === 2 && s.earned >= SEED_UNLOCK[2])
     || (tier === 3 && [6, 7, 8].every(id => s.discovered.includes(id)))
+}
+/** Requirements apply to the next level; existing purchases keep working after migration. */
+export function upgradeLock(s: GameState, id: UpgradeId): string | null {
+  const rules: Partial<Record<UpgradeId, { time: number; earned: number; harvests: number; needs?: UpgradeId }>> = {
+    snail: { time: 120, earned: 650, harvests: 18 },
+    water: { time: 150, earned: 1000, harvests: 22, needs: 'snail' },
+    speed: { time: 180, earned: 1600, harvests: 26, needs: 'water' },
+    harvest: { time: 240, earned: 3200, harvests: 32, needs: 'speed' },
+    sow: { time: 330, earned: 6000, harvests: 40, needs: 'harvest' },
+  }
+  const rule = rules[id]
+  if (!rule) return null
+  const level = s.upgrades[id]
+  const conditions: string[] = []
+  if (rule.needs && s.upgrades[rule.needs] === 0) conditions.push(`先购买${UPGRADES.find(u => u.id === rule.needs)!.name}`)
+  const time = rule.time + level * 60, earned = rule.earned * (level + 1), harvests = rule.harvests + level * 10
+  if (s.elapsed < time) conditions.push(`花园时光 ${formatTime(time)}`)
+  if (s.earned < earned) conditions.push(`累计收益 ${earned}`)
+  if (s.harvests < harvests) conditions.push(`收获 ${harvests} 株`)
+  return conditions.length ? conditions.join(' · ') : null
 }
 export const price = (s: GameState, plant: Plant) => Math.ceil(plant.cost * (plant.tier === 3 ? 1 : 1 - s.upgrades.compost * .1))
 export const upgradePrice = (s: GameState, u: Upgrade) => Math.round(u.cost * u.scale ** s.upgrades[u.id])
@@ -184,7 +206,13 @@ function advance(s: GameState, dt: number) {
   const income = s.pots.filter(p => p.plant === 5 && p.growth >= PLANTS[5].seconds * .5).length * 2
   if (income) addCoins(s, income * dt)
   s.pots.forEach((p, i) => grow(s, i, dt * (p.plant === 9 ? 1 : rate)))
-  advanceWorker(s, 'player', s.player, dt)
+  s.pots.forEach((p, i) => {
+    if ((p.watering ?? 0) > 0) {
+      p.watering = Math.max(0, p.watering! - dt)
+      if (p.watering <= .000001) { p.watering = 0; water(s, i) }
+    }
+  })
+  if (s.player.phase === 'service') advanceWorker(s, 'player', s.player, dt)
   s.snails.slice(0, s.upgrades.snail).forEach(w => advanceWorker(s, 'water', w, dt))
   if (s.upgrades.harvest && s.autoHarvest) advanceWorker(s, 'harvest', s.workers.harvest, dt)
   if (s.upgrades.sow && s.autoSow && s.selected !== 9) advanceWorker(s, 'sow', s.workers.sow, dt)
@@ -209,8 +237,8 @@ export function reducer(state: GameState, action: Action): GameState {
     else if (p.growth >= PLANTS[p.plant].seconds) harvest(s, action.index)
 
   }
-  if (action.type === 'water' && validTarget(s, 'player', action.index) && s.player.phase === 'idle' && s.player.stock > 0) {
-    s.player.phase = 'act'; s.player.target = action.index; s.player.clock = 0; s.player.path = []
+  if (action.type === 'water' && validTarget(s, 'player', action.index) && s.player.phase === 'idle' && s.player.stock > 0 && !(s.pots[action.index].watering! > 0)) {
+    s.pots[action.index].watering = WATER_DURATION; s.player.stock--
   }
   if (action.type === 'refill' && s.player.phase === 'idle' && s.player.stock < capacity(s, 'player')) {
     s.player.phase = 'service'; s.player.target = null; s.player.clock = 0; s.player.path = []
@@ -234,7 +262,7 @@ export function reducer(state: GameState, action: Action): GameState {
   if (action.type === 'buy') {
     const u = UPGRADES.find(u => u.id === action.id)!
     const cost = upgradePrice(s, u)
-    if (s.upgrades[u.id] < u.max && s.coins >= cost) {
+    if (s.upgrades[u.id] < u.max && s.coins >= cost && !upgradeLock(s, u.id)) {
       s.coins -= cost; s.upgrades[u.id]++
       if (u.id === 'pots') s.pots.push(emptyPot())
     }
@@ -256,7 +284,7 @@ export function parseSave(raw: string | null): GameState | null {
       || !Array.isArray(s.discovered) || s.discovered.some(id => !Number.isInteger(id) || !PLANTS[id])
       || !s.upgrades || UPGRADES.some(u => !Number.isInteger(s.upgrades[u.id]) || s.upgrades[u.id] < 0 || s.upgrades[u.id] > u.max)
       || s.pots.length !== 6 + s.upgrades.pots
-      || s.pots.some(p => !p || (p.plant !== null && (!Number.isInteger(p.plant) || !PLANTS[p.plant])) || !finite(p.growth) || !Number.isFinite(p.wateredAt))) return null
+      || s.pots.some(p => !p || (p.plant !== null && (!Number.isInteger(p.plant) || !PLANTS[p.plant])) || !finite(p.growth) || !Number.isFinite(p.wateredAt) || (p.watering !== undefined && (!finite(p.watering) || p.watering > WATER_DURATION || (p.plant === null && p.watering > 0))))) return null
     s.selected = PLANTS[s.selected].tier * 3
     if (s.randomState === undefined) s.randomState = s.lastSaved >>> 0
     if (!Number.isInteger(s.randomState) || s.randomState < 0 || s.randomState > 4294967295) return null
@@ -273,8 +301,14 @@ export function parseSave(raw: string | null): GameState | null {
         || (['walk', 'act'].includes(w.phase) && w.target === null) || !Array.isArray(w.path) || w.path.length > 3
         || w.path.some(p => !p || !finite(p.x) || p.x > 100 || !finite(p.y) || p.y > 100)) return null
     }
-    // Earlier saves treated the player can as a travelling actor; resume its tool action in place.
-    if (s.player.phase === 'walk') { s.player.phase = 'act'; s.player.clock = 0; s.player.path = [] }
+    // Reserve the charge for an older save's single in-flight action exactly once.
+    if (s.player.phase === 'walk' || s.player.phase === 'act') {
+      const target = s.player.target
+      if (target !== null && validTarget(s, 'player', target) && s.player.stock > 0) {
+        s.pots[target].watering = WATER_DURATION; s.player.stock--
+      }
+      s.player.phase = 'idle'; s.player.target = null; s.player.clock = 0; s.player.path = []
+    }
     if (s.player.phase === 'return') { s.player.phase = 'service'; s.player.clock = 0; s.player.path = [] }
     return s
   } catch { return null }

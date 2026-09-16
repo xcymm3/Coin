@@ -1,6 +1,7 @@
 import { useEffect, useReducer, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { PLANTS, TIERS, UPGRADES, SAVE_KEY, newGame, parseSave, reducer, unlocked, price, reward, upgradePrice, clickPower, growthRate, formatTime, capacity, STATIONS, type Tier } from './game'
+import { PLANTS, TIERS, UPGRADES, SAVE_KEY, newGame, parseSave, reducer, unlocked, price, reward, upgradePrice, clickPower, growthRate, formatTime, capacity, STATIONS, WATER_DURATION, SEED_UNLOCK, upgradeLock, type Tier } from './game'
 import { configureAudio, sound, unlockAudio } from './audio'
+import { Sprout } from './Sprout'
 import { plantPosition } from './gardenScene'
 import './App.css'
 import './garden-scene.css'
@@ -137,7 +138,8 @@ export default function Garden() {
       setFloats(f => [...f.slice(-7), ...[moveFrom, index].map(pot => ({ id: floatId.current++, pot, text: '搬运完成', kind: 'move' }))]); return
     }
     if (tool === 'water' && p.plant !== null && p.growth < PLANTS[p.plant].seconds) {
-      if (s.player.phase !== 'idle') { setToast('水壶正在浇水或装填，请稍等。'); return }
+      if ((p.watering ?? 0) > 0) return
+      if (s.player.phase !== 'idle') { setToast('水壶正在装填，请稍等。'); return }
       if (s.player.stock === 0) { setToast('水壶没有充能了，点击顶部「装满」补水。'); return }
       dispatch({ type: 'water', index }); return
     }
@@ -152,8 +154,8 @@ export default function Garden() {
   }
   function choose(id: number) { setTool(null); setMoveFrom(null); dispatch({ type: 'select', id }); sound('tap') }
   function reset() { setTool(null); setMoveFrom(null); setObserving(false); setInspectedPot(null); setFloats([]); setMobilePanel('garden'); dispatch({ type: 'reset' }); offlineApplied.current = true; setVictoryDismissed(false); setPanel(null); setScreen('game'); setCategory(0); setToast('新的花园，从一包免费种子开始。') }
-  const nextGoal = s.earned < 120 ? '累计赚取 120 金币，解锁中级种子' : s.earned < 1800 ? '累计赚取 1,800 金币，解锁高级种子' : !unlocked(s, 3) ? `培育三种高级植物（${[6, 7, 8].filter(id => s.discovered.includes(id)).length}/3），解锁终极种子` : s.wonAt !== null ? '星之花已经绽放。继续创造你的奇妙花园吧。' : s.pots.some(p => p.plant === 9) ? '照料永恒星之花，让第一颗星星在花园绽放' : '积攒 6,500 金币，种下永恒星之花'
-  const goalProgress = s.earned < 120 ? s.earned / 120 : s.earned < 1800 ? s.earned / 1800 : !unlocked(s, 3) ? [6, 7, 8].filter(id => s.discovered.includes(id)).length / 3 : s.pots.some(p => p.plant === 9) ? s.pots.find(p => p.plant === 9)!.growth / 480 : s.wonAt !== null ? 1 : s.coins / 6500
+  const nextGoal = s.earned < SEED_UNLOCK[1] ? '累计赚取 360 金币，解锁中级种子' : s.earned < SEED_UNLOCK[2] ? '累计赚取 2,800 金币，解锁高级种子' : !unlocked(s, 3) ? `培育三种高级植物（${[6, 7, 8].filter(id => s.discovered.includes(id)).length}/3），解锁终极种子` : s.wonAt !== null ? '星之花已经绽放。继续创造你的奇妙花园吧。' : s.pots.some(p => p.plant === 9) ? '照料永恒星之花，让第一颗星星在花园绽放' : '积攒 6,500 金币，种下永恒星之花'
+  const goalProgress = s.earned < SEED_UNLOCK[1] ? s.earned / SEED_UNLOCK[1] : s.earned < SEED_UNLOCK[2] ? s.earned / SEED_UNLOCK[2] : !unlocked(s, 3) ? [6, 7, 8].filter(id => s.discovered.includes(id)).length / 3 : s.pots.some(p => p.plant === 9) ? s.pots.find(p => p.plant === 9)!.growth / 480 : s.wonAt !== null ? 1 : s.coins / 6500
 
   return <div className={`game-shell ${!settings.motion ? 'reduce-motion' : ''} ${screen === 'menu' ? 'on-menu' : ''} ${paused ? 'is-paused' : ''} ${observing ? 'observation-mode' : ''}`}>
     <Fireflies />
@@ -174,7 +176,7 @@ export default function Garden() {
           const open = unlocked(s, i as Tier), active = selected.tier === i
           return <button key={name} className={`tier-card blue-button tier-${i} ${active ? 'selected' : ''}`} aria-pressed={active} disabled={!open} onClick={() => choose(i * 3)}>
             <span className="seed-bag"><Sprite id={13} />{!open && <span className="lock">◆</span>}</span>
-            <span className="tier-copy"><strong>{name}</strong><b>{i === 0 ? '免费 · 无限' : `${number(price(s, PLANTS[i * 3]))} 金币`}</b><small>{open ? i === 3 ? '种出星星 · 完成旅程' : `${[0, 1, 2].filter(j => s.discovered.includes(i * 3 + j)).length} / 3 已培育` : i === 3 ? '培育全部 3 种高级植物' : `累计收益 ${i === 1 ? '120' : '1,800'} 解锁`}</small></span>
+            <span className="tier-copy"><strong>{name}</strong><b>{i === 0 ? '免费 · 无限' : `${number(price(s, PLANTS[i * 3]))} 金币`}</b><small>{open ? i === 3 ? '种出星星 · 完成旅程' : `${[0, 1, 2].filter(j => s.discovered.includes(i * 3 + j)).length} / 3 已培育` : i === 3 ? '培育全部 3 种高级植物' : `累计收益 ${number(SEED_UNLOCK[i as 1 | 2])} 解锁`}</small></span>
           </button>
         })}</div>
         <div className="seed-selection"><div className="eyebrow">{selected.tier === 3 ? '唯一奇植' : '可能长出的植物'} <span>{selected.tier === 3 ? '100%' : '各 1/3 概率'}</span></div>
@@ -191,7 +193,7 @@ export default function Garden() {
           <button className="tool-button" disabled title="肥料功能即将开放"><Icon name="leaf" /><span>肥料<small>未开放</small></span></button>
           <button className={`tool-button ${tool === 'cart' ? 'selected' : ''}`} aria-label="小推车工具" aria-pressed={tool === 'cart'} onClick={() => { setTool(tool === 'cart' ? null : 'cart'); setMoveFrom(null) }}><Icon name="cart" /><span>小推车</span></button>
           <button className={`tool-button ${tool === 'shovel' ? 'selected' : ''}`} aria-label="铲子工具" aria-pressed={tool === 'shovel'} onClick={() => { setTool(tool === 'shovel' ? null : 'shovel'); setMoveFrom(null) }}><Icon name="shovel" /><span>铲子</span></button>
-          <p className="tool-hint">{tool === 'shovel' ? '点击挖除任何植物 · 无收益 · 再点铲子取消' : tool === 'cart' ? moveFrom === null ? '选择植物 → 点击空盆移动，或点击另一株交换位置' : `已选择花盆 ${moveFrom + 1} · 点击目的地，再点原盆取消` : tool === 'water' ? '幼株浇水 · 空盆播种 · 成熟收获 · 再点水壶取消' : '点击空盆播种，点击成熟植物收获'}</p>
+          <p className="tool-hint">{tool === 'shovel' ? '点击挖除任何植物 · 无收益 · 再点铲子取消' : tool === 'cart' ? moveFrom === null ? '选择植物 → 点击空盆移动，或点击另一株交换位置' : `已选择花盆 ${moveFrom + 1} · 点击目的地，再点原盆取消` : tool === 'water' ? '每株冷却 1.2 秒 · 可连续浇不同植物 · 每次 1 格充能' : '点击空盆播种，点击成熟植物收获'}</p>
         </div>
         <div className="garden-board wood zen-garden">
           <div className="greenhouse-rail" aria-hidden="true"><span /> <span /> <span /></div>
@@ -207,13 +209,15 @@ export default function Garden() {
             const ready = p !== null && pot.growth >= p.seconds
             const seed = p !== null && pot.growth < p.seconds * .15
             const young = p !== null && pot.growth < p.seconds * .5
-            const sprite = p === null ? 10 : seed ? 11 : young ? 0 : p.id
-            return <button key={i} data-testid={`pot-${i}`} aria-label={`花盆${i + 1} ${p?.name ?? '空闲'} ${tool === 'shovel' ? '挖除' : tool === 'cart' ? moveFrom === null ? '选择移动' : '移动到此处' : !p ? '播种' : ready ? '收获' : tool === 'water' ? '使用水壶' : '生长中'}`} className={`pot ${moveFrom === i ? 'move-source' : ''} ${tool === 'cart' && moveFrom !== null ? 'move-destination' : ''} ${ready ? 'ready' : ''} ${p === null ? 'empty-pot' : ''} ${p?.tier === 3 ? 'ultimate' : ''} ${p && !seed ? 'alive' : ''} plant-${p?.id ?? 'empty'}`} style={placement} onClick={() => potClick(i)}>
+            const sprite = p === null || young ? 10 : p.id
+            return <button key={i} data-testid={`pot-${i}`} aria-label={`花盆${i + 1} ${p?.name ?? '空闲'} ${tool === 'shovel' ? '挖除' : tool === 'cart' ? moveFrom === null ? '选择移动' : '移动到此处' : !p ? '播种' : ready ? '收获' : tool === 'water' ? '使用水壶' : '生长中'}`} className={`pot ${moveFrom === i ? 'move-source' : ''} ${tool === 'cart' && moveFrom !== null ? 'move-destination' : ''} ${(pot.watering ?? 0) > 0 ? 'watering-cooldown' : ''} ${ready ? 'ready' : ''} ${p === null ? 'empty-pot' : ''} ${p?.tier === 3 ? 'ultimate' : ''} ${p && !seed ? 'alive' : ''} plant-${p?.id ?? 'empty'}`} style={placement} onClick={() => potClick(i)}>
 
               {p && <span className="plant-name">{p.name}</span>}
               {p && !young && p.tier > 0 && <span className={`plant-aura aura-${p.tier}`} aria-hidden="true"><i /><i /><i /></span>}
               <Sprite key={`${sprite}-${ready}`} id={sprite} className="pot-art" />
-              {s.player.phase === 'act' && s.player.target === i && <span className="tool-pour" aria-hidden="true"><Sprite id={14} /><span className="tool-water-stream">▪<i>▪</i><b>▪</b></span></span>}
+              {p && young && <Sprout id={p.id} tiny={seed} />}
+              {(pot.watering ?? 0) > 0 && <span className="tool-pour" style={{ animationDuration: `${WATER_DURATION}s` }} aria-hidden="true"><Sprite id={14} /><span className="tool-water-stream">▪<i>▪</i><b>▪</b></span></span>}
+              {(pot.watering ?? 0) > 0 && <span className="watering-timer" data-testid={`watering-${i}`} aria-label="本株浇水冷却中"><Progress value={(pot.watering ?? 0) / WATER_DURATION} /></span>}
               {floats.some(f => f.pot === i && f.kind === 'move') && <span className="tool-cart-animation" aria-hidden="true"><Icon name="cart" /></span>}
               {floats.some(f => f.pot === i && f.kind === 'dig') && <span className="tool-dig-animation" aria-hidden="true"><Icon name="shovel" /><i /><i /><i /></span>}
               {ready && <span className="ripe-sparkles" aria-hidden="true">✦<i>✧</i><b>✦</b></span>}
@@ -245,9 +249,9 @@ export default function Garden() {
         <h2 className="panel-title"><Icon name="leaf" />升 级<Icon name="leaf" /></h2>
         <div className="upgrade-tabs" role="tablist" aria-label="升级分类">{['照料', '花园', '助手'].map((name, i) => <button role="tab" aria-selected={category === i} key={name} onClick={() => { setCategory(i); sound('tap') }} className={category === i ? 'selected' : ''}><Icon name={['hand', 'pot', 'snail'][i]} /><span>{name}</span></button>)}</div>
         <div className="upgrade-list">{UPGRADES.filter(u => u.category === category).map(u => {
-          const level = s.upgrades[u.id], max = level === u.max, cost = upgradePrice(s, u)
-          return <button key={u.id} data-testid={`upgrade-${u.id}`} className="upgrade-card" disabled={max || s.coins < cost} onClick={() => { dispatch({ type: 'buy', id: u.id }); sound('buy'); setToast(`${u.name}升至 Lv ${level + 1}`) }}>
-            <span className="upgrade-art"><Icon name={u.icon} /></span><span className="upgrade-copy"><strong>{u.name}</strong><span className="upgrade-price"><small>Lv {level} / {u.max}</small><b>{max ? '已满级' : `◈ ${number(cost)}`}</b></span><Progress value={level / u.max} /><span className="upgrade-description">{u.detail}</span></span>
+          const level = s.upgrades[u.id], max = level === u.max, cost = upgradePrice(s, u), lock = max ? null : upgradeLock(s, u.id)
+          return <button key={u.id} data-testid={`upgrade-${u.id}`} className={`upgrade-card ${lock ? 'upgrade-locked' : ''}`} disabled={max || !!lock || s.coins < cost} onClick={() => { dispatch({ type: 'buy', id: u.id }); sound('buy'); setToast(`${u.name}升至 Lv ${level + 1}`) }}>
+            <span className="upgrade-art"><Icon name={u.icon} /></span><span className="upgrade-copy"><strong>{u.name}</strong><span className="upgrade-price"><small>Lv {level} / {u.max}</small><b>{max ? '已满级' : `◈ ${number(cost)}`}</b></span><Progress value={level / u.max} /><span className="upgrade-description">{u.detail}</span>{lock && <span className="upgrade-requirement">解锁：{lock}</span>}</span>
           </button>
         })}</div>
         <div className="garden-bonuses"><div className="eyebrow">花园加成</div><p><span>手动浇水</span><b>+{clickPower(s).toFixed(0)} 秒</b></p><p><span>自然生长</span><b>×{growthRate(s).toFixed(2)}</b></p><p><span>收获收益</span><b>+{s.upgrades.profit * 20}%</b></p><p><span>蜗牛助手</span><b>{s.upgrades.snail} 只</b></p></div>
@@ -277,7 +281,7 @@ export default function Garden() {
       <button className="text-button reset-link" onClick={() => setPanel('reset')}>重置花园 · 重新开始</button><p className="settings-note">切到其他标签页时音乐会暂停。每 3 秒自动保存，最多结算 30 分钟离线成长；菜单和设置暂停当前游戏。</p>
       <div className="modal-actions"><button className="primary-button" onClick={() => setPanel(null)}>返回{screen === 'game' ? '花园' : '菜单'}</button>{screen === 'game' && <button className="blue-button" onClick={() => { setPanel(null); setScreen('menu') }}>开始菜单</button>}</div>
     </Modal>}
-    {panel === 'help' && <Modal title="玩法指南" close={() => setPanel(null)}><h2>园丁的小手册</h2><ol className="help-list"><li><b>选种、播种</b><p>左侧选择种子等级，点击空花盆随机种出本级一种植物，三种等概率。每级统一价格，低级种子永远免费；终极种子固定种出星之花。</p></li><li><b>浇水、收获</b><p>植物会自然生长。顶部选择水壶，再点击单株植物播放浇水动画，每次消耗一格充能；点击水壶右侧「装满」补水。默认点击空盆播种、点击成熟植物收获，无需选择专门工具；水壶选中时也可直接播种和收获。铲子选中后可挖除任何阶段的植物，且不获得金币、收获次数或特殊效果。再次点击已选工具可取消选择。选择小推车后先点植物，再点空盆移动或另一株植物交换位置，成长进度会保留。肥料暂未开放。长出完整外观后特殊效果生效；进度满后再次点击收获金币。</p></li><li><b>扩建、雇用助手</b><p>右侧三个分类共有 12 种升级。建议先买园艺手套，再雇用浇水蜗牛。收获甲虫和播种松鼠会寻找目标、走到盆边并完成动作，甲虫装满背篓后回收获站交付金币；松鼠回种子箱补货，蜗牛回水池装水。松鼠使用当前等级随机播种，金币不足时使用免费随机种子。</p></li><li><b>种出第一颗星星</b><p>培育出三种高级植物即可购买终极种子。星之花自然生长需 8 分钟，点击和蜗牛可小幅加速，其他加成无效。成熟即通关，之后可以继续种植。</p></li></ol><p className="settings-note">星之花不会被自动收获或自动播种。可关闭自动收获，保留植物光环。所有浇水只作用于单株植物。水壶空了请在顶部工具栏装填。观赏模式保留音乐和自动照料，隐藏数值提示与通关弹窗。</p><button className="primary-button" onClick={() => setPanel(null)}>知道了</button></Modal>}
+    {panel === 'help' && <Modal title="玩法指南" close={() => setPanel(null)}><h2>园丁的小手册</h2><ol className="help-list"><li><b>选种、播种</b><p>左侧选择种子等级，点击空花盆随机种出本级一种植物，三种等概率。每级统一价格，低级种子永远免费；终极种子固定种出星之花。</p></li><li><b>浇水、收获</b><p>植物会自然生长。不同品种会长出不同幼芽。顶部选择水壶，再点击单株植物播放 1.2 秒浇水动画，期间该株无法重复浇水，但可以同时浇其他植物，每次立即消耗一格充能；点击水壶右侧「装满」补水。默认点击空盆播种、点击成熟植物收获，无需选择专门工具；水壶选中时也可直接播种和收获。铲子选中后可挖除任何阶段的植物，且不获得金币、收获次数或特殊效果。再次点击已选工具可取消选择。选择小推车后先点植物，再点空盆移动或另一株植物交换位置，成长进度会保留。肥料暂未开放。长出完整外观后特殊效果生效；进度满后再次点击收获金币。</p></li><li><b>扩建、雇用助手</b><p>右侧三个分类共有 12 种升级。前期需要手动积累收获与收益。自动化依次解锁：浇水蜗牛 → 大号水壶 → 蜗牛跑鞋 → 收获甲虫 → 播种松鼠；每项升级会显示所需花园时光、累计收益和收获数量，后续等级也需达到新的门槛。收获甲虫和播种松鼠会寻找目标、走到盆边并完成动作，甲虫装满背篓后回收获站交付金币；松鼠回种子箱补货，蜗牛回水池装水。松鼠使用当前等级随机播种，金币不足时使用免费随机种子。</p></li><li><b>种出第一颗星星</b><p>培育出三种高级植物即可购买终极种子。星之花自然生长需 8 分钟，点击和蜗牛可小幅加速，其他加成无效。成熟即通关，之后可以继续种植。</p></li></ol><p className="settings-note">星之花不会被自动收获或自动播种。可关闭自动收获，保留植物光环。所有浇水只作用于单株植物。水壶空了请在顶部工具栏装填。观赏模式保留音乐和自动照料，隐藏数值提示与通关弹窗。</p><button className="primary-button" onClick={() => setPanel(null)}>知道了</button></Modal>}
     {panel === 'book' && <Modal title="植物图鉴" className="book-modal" close={() => setPanel(null)}><h2>奇植图鉴 <small>{s.discovered.length} / 10</small></h2><p className="modal-intro">培育至成熟，便能点亮它的名字。成株阶段为 50% 进度。</p><div className="book-grid">{PLANTS.map(p => <article key={p.id} className={s.discovered.includes(p.id) ? 'discovered' : ''}><Sprite id={p.id} /><div><h3>{p.name}<small>{TIERS[p.tier].replace('种子', '')} · {s.discovered.includes(p.id) ? '已培育' : '未培育'}</small></h3><p>{p.effect}</p><span>{p.lore}</span></div></article>)}</div></Modal>}
     {panel === 'reset' && <Modal title="开始新的花园" close={() => setPanel(null)}><h2>重新种下第一颗种子？</h2><p className="modal-intro">这会替换本机的花园存档，金币、植物和升级会重新开始。音效设置会保留。</p><div className="modal-actions"><button className="blue-button" onClick={() => setPanel(null)}>保留我的花园</button><button className="primary-button" onClick={reset}>开始新的花园</button></div></Modal>}
     {won && !panel && <Modal title="星之花绽放，通关成功" className="victory-modal"><div className="victory-stars" aria-hidden="true"><PixelBurst kind="star" /><PixelBurst kind="coin" /></div><span className="menu-eyebrow">一颗星星，为你而开</span><Sprite id={9} /><h2>星之花，绽放了。</h2><p>从第一颗小小的种子，到一整个星光花园。<br />谢谢你的每一次照料。</p><div className="victory-stats"><div><small>通关用时</small><strong data-testid="win-time">{formatTime(s.wonAt ?? 0)}</strong></div><div><small>收获植物</small><strong>{s.harvests}</strong></div><div><small>发现奇植</small><strong>{s.discovered.length}/10</strong></div></div><button className="primary-button" onClick={() => setVictoryDismissed(true)}>继续照料花园</button><small className="menu-footnote">旅程完成了，花园的故事还在继续。</small></Modal>}
