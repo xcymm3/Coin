@@ -322,3 +322,26 @@ test('legacy gardens preserve species, maturity ratios, money and completed vict
   assert.equal(migrated.coins,123);assert.equal(migrated.earned,456);assert.equal(migrated.wonAt,100)
   assert.ok(unlocked(migrated,5));assert.deepEqual(parseSave(JSON.stringify(migrated)),migrated)
 })
+
+
+test('species collection counts only actual manual harvests, never maturity or digging',()=>{
+  let s=start();s.pots[0]=planted(10)
+  s=tick(s,PLANTS[10].seconds);assert.equal(s.harvestCounts[10],0)
+  const before=s;s=tap(s,0);assert.equal(s.harvestCounts[10],1);assert.equal(before.harvestCounts[10],0)
+  s.pots[0]=planted(10,PLANTS[10].seconds);s=tap(s,0);assert.equal(s.harvestCounts[10],2)
+  s.pots[0]=planted(11,PLANTS[11].seconds);s=reducer(s,{type:'dig',index:0});assert.equal(s.harvestCounts[11],0)
+  assert.deepEqual(parseSave(JSON.stringify(s)).harvestCounts,s.harvestCounts)
+  s=reducer(s,{type:'reset'});assert.ok(s.harvestCounts.every(n=>n===0));assert.equal(s.untrackedHarvests,0)
+})
+test('animal picking counts once before delivery and survives mid-cargo saves',()=>{
+  let s=start();s.upgrades.harvest=1;s.pots[0]=planted(20,PLANTS[20].seconds)
+  s.workers.harvest={...s.workers.harvest,phase:'act',target:0,x:12,y:33,clock:0}
+  s=tick(s,.9);assert.equal(s.harvestCounts[20],1);assert.equal(s.coins,0)
+  s=tick(parseSave(JSON.stringify(s)),30);assert.equal(s.harvestCounts[20],1);assert.equal(s.coins,PLANTS[20].reward)
+})
+test('legacy total harvests are retained without fabricating species records',()=>{
+  const s=start();s.harvests=42;s.discovered=[0,1,9];delete s.harvestCounts;delete s.untrackedHarvests
+  const loaded=parseSave(JSON.stringify(s));assert.equal(loaded.harvests,42);assert.equal(loaded.untrackedHarvests,42)
+  assert.ok(loaded.harvestCounts.every(n=>n===0));assert.deepEqual(parseSave(JSON.stringify(loaded)),loaded)
+  for(const counts of [null,[],Array(21).fill(-1),Array(21).fill(.5)]) assert.equal(parseSave(JSON.stringify({...loaded,harvestCounts:counts})),null)
+})

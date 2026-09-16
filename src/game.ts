@@ -31,6 +31,7 @@ export type GameState = {
   logistics: 1; player: Worker; snails: Worker[]; randomState: number; workers: Record<WorkerKind, Worker>;
   economyVersion: 2; version: 1; coins: number; earned: number; elapsed: number; pots: Pot[];
   upgrades: Record<UpgradeId, number>; selected: number; discovered: number[];
+  harvestCounts: number[]; untrackedHarvests: number;
   harvests: number; clicks: number; wonAt: number | null; autoClock: number; cursor: number;
   autoHarvest: boolean; autoSow: boolean; lastSaved: number; started: boolean;
 }
@@ -38,7 +39,7 @@ const emptyPot = (): Pot => ({ plant: null, growth: 0, wateredAt: -10 })
 export function newGame(): GameState {
   return { economyVersion: 2, logistics: 1, player: newWorker(8, 4), snails: Array.from({ length: 3 }, (_, i) => newWorker(8 + i * 7)), randomState: Math.floor(Math.random() * 4294967296), workers: { harvest: newWorker(6), sow: newWorker(16) }, version: 1, coins: 0, earned: 0, elapsed: 0, pots: Array.from({ length: INITIAL_POTS }, emptyPot),
     upgrades: Object.fromEntries(UPGRADES.map(u => [u.id, 0])) as GameState['upgrades'], selected: 0,
-    discovered: [], harvests: 0, clicks: 0, wonAt: null, autoClock: 0, cursor: 0,
+    discovered: [], harvestCounts: PLANTS.map(() => 0), untrackedHarvests: 0, harvests: 0, clicks: 0, wonAt: null, autoClock: 0, cursor: 0,
     autoHarvest: true, autoSow: true, lastSaved: Date.now(), started: false }
 }
 export function unlocked(s: GameState, tier: Tier) {
@@ -121,6 +122,7 @@ function harvest(s: GameState, i: number, carrier?: Worker) {
   const coins = reward(s, PLANTS[id])
   if (carrier) { carrier.cargo += coins; carrier.count++ } else addCoins(s, coins)
   s.harvests++
+  s.harvestCounts[id]++
   s.pots[i] = emptyPot()
 }
 function water(s: GameState, i: number, auto = false) {
@@ -220,7 +222,7 @@ export function reducer(state: GameState, action: Action): GameState {
   if (action.type === 'start') return { ...state, started: true }
   if (action.type === 'toggle') return { ...state, [action.key]: !state[action.key] }
   const clone = (w: Worker): Worker => ({ ...w, path: w.path.map(p => ({ ...p })) })
-  const s = { ...state, player: clone(state.player), snails: state.snails.map(clone), workers: Object.fromEntries(Object.entries(state.workers).map(([key, w]) => [key, { ...w, path: w.path.map(p => ({ ...p })) }])) as GameState['workers'], pots: state.pots.map(p => ({ ...p })), upgrades: { ...state.upgrades }, discovered: [...state.discovered] }
+  const s = { ...state, player: clone(state.player), snails: state.snails.map(clone), workers: Object.fromEntries(Object.entries(state.workers).map(([key, w]) => [key, { ...w, path: w.path.map(p => ({ ...p })) }])) as GameState['workers'], pots: state.pots.map(p => ({ ...p })), upgrades: { ...state.upgrades }, discovered: [...state.discovered], harvestCounts: [...state.harvestCounts] }
   if (action.type === 'tick' && s.started) {
     let remaining = Math.min(1800, Math.max(0, action.dt))
     // Fixed upper step preserves effect and automation ordering during offline catch-up.
@@ -289,6 +291,12 @@ export function parseSave(raw: string | null): GameState | null {
       || !s.upgrades || UPGRADES.some(u => !Number.isInteger(s.upgrades[u.id]) || s.upgrades[u.id] < 0 || s.upgrades[u.id] > u.max)
       || s.pots.length !== INITIAL_POTS + s.upgrades.pots
       || s.pots.some(p => !p || (p.plant !== null && (!Number.isInteger(p.plant) || !PLANTS[p.plant])) || (p.germination !== undefined && (!finite(p.germination) || p.germination > GERMINATION_SECONDS)) || (p.revealedAt !== undefined && !finite(p.revealedAt)) || !finite(p.growth) || !Number.isFinite(p.wateredAt) || (p.watering !== undefined && (!finite(p.watering) || p.watering > WATER_DURATION || (p.plant === null && p.watering > 0))))) return null
+    // Older saves recorded total harvests and maturity discoveries, not species counts.
+    // Do not invent per-species history from a plant merely reaching maturity.
+    if (s.harvestCounts === undefined) { s.harvestCounts = PLANTS.map(() => 0); s.untrackedHarvests = s.harvests }
+    if (!Array.isArray(s.harvestCounts) || s.harvestCounts.length !== PLANTS.length
+      || s.harvestCounts.some(n => !Number.isSafeInteger(n) || n < 0)
+      || !Number.isSafeInteger(s.untrackedHarvests) || s.untrackedHarvests < 0) return null
     s.selected = seedPlantId(PLANTS[s.selected].tier)
     if (s.randomState === undefined) s.randomState = s.lastSaved >>> 0
     if (!Number.isInteger(s.randomState) || s.randomState < 0 || s.randomState > 4294967295) return null
