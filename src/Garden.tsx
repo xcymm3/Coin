@@ -1,7 +1,9 @@
 import { useEffect, useReducer, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { PLANTS, TIERS, UPGRADES, SAVE_KEY, newGame, parseSave, reducer, unlocked, price, reward, upgradePrice, clickPower, growthRate, formatTime, type Tier } from './game'
 import { configureAudio, sound, unlockAudio } from './audio'
+import { plantPosition, residentPose } from './gardenScene'
 import './App.css'
+import './garden-scene.css'
 
 const number = (n: number) => Math.floor(n).toLocaleString('en-US')
 const asset = `${import.meta.env.BASE_URL}assets/garden-atlas.png`
@@ -50,6 +52,7 @@ export default function Garden() {
   const [screen, setScreen] = useState<'menu' | 'game'>('menu')
   const [panel, setPanel] = useState<'settings' | 'book' | 'help' | 'reset' | null>(null)
   const [category, setCategory] = useState(0)
+  const [inspectedPot, setInspectedPot] = useState<number | null>(null)
   const [mobilePanel, setMobilePanel] = useState<'garden' | 'seeds' | 'upgrades'>('garden')
   const [settings, setSettings] = useState(loadSettings)
   const [toast, setToast] = useState('')
@@ -101,6 +104,7 @@ export default function Garden() {
   }
   function potClick(index: number) {
     if (paused) return
+    setInspectedPot(index)
     const p = s.pots[index]
     let text = ''
     if (p.plant === null) {
@@ -146,18 +150,23 @@ export default function Garden() {
 
       <section className={`garden-section ${mobilePanel === 'garden' ? 'mobile-active' : ''}`} aria-label="花园">
         <div className="garden-heading"><div><span className="live-dot" /><h2>我的小花园</h2><span className="garden-count">{s.pots.length} / 15 花盆</span></div><button className="text-button" onClick={() => setPanel('help')}>玩法指南 <span>?</span></button></div>
-        <div className="garden-board wood">
+        <div className="garden-board wood zen-garden">
+          <div className="greenhouse-rail" aria-hidden="true"><span /> <span /> <span /></div>
           <div className="board-corner tl" /><div className="board-corner tr" /><div className="board-corner bl" /><div className="board-corner br" />
-          <div className="pot-grid">{Array.from({ length: 15 }, (_, i) => {
+          <div className="garden-floor">
+            <div className="floor-details" aria-hidden="true"><i className="moss moss-a" /><i className="moss moss-b" /><i className="moss moss-c" /><span className="garden-stones">▪ ▰ ▪</span></div>
+            {Array.from({ length: 15 }, (_, i) => {
             const pot = s.pots[i]
-            if (!pot) return <button key={i} className="locked-pot" aria-label={`扩建第${i + 1}个花盆`} onClick={() => { setCategory(1); setMobilePanel('upgrades'); setToast('在右侧「花园」升级中购买花园扩建。') }}><span>＋</span><small>待扩建</small></button>
+            const pos = plantPosition(i)
+            const placement = { left: `${pos.x}%`, top: `${pos.y}%`, zIndex: Math.round(pos.y), '--sway-delay': `${-i * .37}s` } as CSSProperties
+            if (!pot) return <button key={i} className="locked-pot ground-marker" style={placement} aria-label={`扩建第${i + 1}个花盆`} onClick={() => { setCategory(1); setMobilePanel('upgrades'); setToast('在右侧「花园」升级中购买花园扩建。') }}><span>＋</span><small>扩建</small></button>
             const p = pot.plant === null ? null : PLANTS[pot.plant]
             const ready = p !== null && pot.growth >= p.seconds
             const seed = p !== null && pot.growth < p.seconds * .15
             const young = p !== null && pot.growth < p.seconds * .5
             const sprite = p === null ? 10 : seed ? 11 : young ? 0 : p.id
-            return <button key={i} data-testid={`pot-${i}`} aria-label={`花盆${i + 1} ${p?.name ?? '空闲'} ${p ? ready ? '收获' : '浇水' : '播种'}`} className={`pot ${ready ? 'ready' : ''} ${p?.tier === 3 ? 'ultimate' : ''} ${p && !seed ? 'alive' : ''} plant-${p?.id ?? 'empty'}`} style={{ '--sway-delay': `${-i * .37}s` } as CSSProperties} onClick={() => potClick(i)}>
-              <span className="pot-number">{(i + 1).toString().padStart(2, '0')}</span>
+            return <button key={i} data-testid={`pot-${i}`} aria-label={`花盆${i + 1} ${p?.name ?? '空闲'} ${p ? ready ? '收获' : '浇水' : '播种'}`} className={`pot ${ready ? 'ready' : ''} ${p === null ? 'empty-pot' : ''} ${p?.tier === 3 ? 'ultimate' : ''} ${p && !seed ? 'alive' : ''} plant-${p?.id ?? 'empty'}`} style={placement} onClick={() => potClick(i)}>
+
               {p && <span className="plant-name">{p.name}</span>}
               {p && !young && p.tier > 0 && <span className={`plant-aura aura-${p.tier}`} aria-hidden="true"><i /><i /><i /></span>}
               <Sprite key={`${sprite}-${ready}`} id={sprite} className="pot-art" />
@@ -166,8 +175,15 @@ export default function Garden() {
               <span className="pot-sign"><strong>{p ? ready ? '可收获' : seed ? '萌芽中' : young ? '生长中' : p.tier === 3 ? '凝聚星光' : '成株生长' : '空 闲'}</strong><Progress value={p ? pot.growth / p.seconds : 0} gold={p?.tier === 3} /><small>{p ? ready ? `+${reward(s, p)} 金币` : `${formatTime((p.seconds - pot.growth) / (p.tier === 3 ? 1 : growthRate(s)))}` : '点击播种'}</small></span>
               {floats.filter(f => f.pot === i).map(f => <span className={`pot-feedback feedback-${f.kind}`} key={f.id}><span className="float-label">{f.text}</span>{f.kind !== 'water' && <PixelBurst kind={f.kind} />}</span>)}
             </button>
-          })}</div>
-          <div className="garden-path"><span className="path-grass">✦</span>{s.upgrades.snail ? <div className="snail-parade" style={{ '--snail-position': `${(s.cursor % s.pots.length) / s.pots.length * 70}%`, '--snail-count': s.upgrades.snail } as CSSProperties}>{Array.from({ length: s.upgrades.snail }, (_, i) => <Sprite id={12} key={i} />)}<span className="snail-drops">▪ · ▪ ·</span></div> : <div className="sleepy-snail"><Sprite id={12} /><span>小蜗牛在等你雇用它…</span></div>}<span className="path-grass">✦</span></div>
+          })}
+            {Array.from({ length: Math.max(1, s.upgrades.snail) }, (_, i) => {
+              const pose = s.upgrades.snail ? residentPose(settings.motion ? s.elapsed : 0, i) : { x: 7, y: 95, facing: 1, resting: true, pot: undefined }
+              const target = pose.pot === undefined ? null : s.pots[pose.pot]
+              const watering = s.upgrades.snail > 0 && pose.resting && target?.plant != null && target.growth < PLANTS[target.plant].seconds
+              return <div key={i} aria-hidden="true" className={`garden-resident ${pose.resting ? 'resident-resting' : 'resident-walking'} ${watering ? 'resident-watering' : ''}`} style={{ left: `${pose.x}%`, top: `${pose.y}%`, zIndex: Math.round(pose.y), '--facing': pose.facing, '--rest-x': `${8 + i * 9}%` } as CSSProperties}><span className="resident-shadow" /><Sprite id={12} /><span className="resident-water">▪<i>▪</i><b>▪</b></span>{!s.upgrades.snail && <small>z z</small>}</div>
+            })}
+          </div>
+          <div className="garden-scene-caption"><span>{inspectedPot !== null && s.pots[inspectedPot] ? (() => { const pot = s.pots[inspectedPot]; const p = pot.plant === null ? null : PLANTS[pot.plant]; return p ? `${p.name} · ${pot.growth >= p.seconds ? '已成熟，点击收获' : `成长 ${Math.floor(pot.growth / p.seconds * 100)}%`} · 收获 ${reward(s, p)} 金币` : '空花盆 · 点击种下当前选择的种子' })() : '点击盆栽照料 · 成熟时会亮起星光'}</span><small>{s.upgrades.snail ? `${s.upgrades.snail} 只蜗牛在园中漫游` : '小蜗牛在花园门口打盹'}</small></div>
         </div>
         <div className="quest-panel"><Sprite id={9} /><div><div className="quest-caption"><span>{s.wonAt !== null ? '旅程完成' : '星之花的约定'}</span><b>{Math.min(100, Math.floor(goalProgress * 100))}%</b></div><p>{nextGoal}</p><Progress value={goalProgress} gold /></div></div>
       </section>
