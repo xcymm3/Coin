@@ -6,7 +6,6 @@ export const INITIAL_POTS = 10
 export const TIERS = ['普通种子', '稀有种子', '珍贵种子', '超凡种子', '神话种子', '终极种子']
 export const TIER_PLANTS = [[0, 1, 2, 10], [3, 4, 5, 11], [6, 7, 8, 12], [13, 14, 15, 16], [17, 18, 19, 20], [9]]
 export const SEED_PRICES = [0, 50, 300, 1800, 10800, 64800]
-export const STAGE_MINUTES = [5, 20, 80, 320, 1280]
 export const SEED_ODDS = [
   [.94, .055, .0045, .00045, .00005],
   [.1, .84, .055, .0045, .0005],
@@ -45,9 +44,5 @@ export const seedEconomy = (tier: Tier) => {
   const seconds = PLANTS.reduce((sum, p) => sum + plantChance(tier, p.id) * p.seconds, 0)
   return { gross, net: gross - SEED_PRICES[tier], seconds, grossPerMinute: gross / seconds * 60 * INITIAL_POTS, netPerMinute: (gross - SEED_PRICES[tier]) / seconds * 60 * INITIAL_POTS }
 }
-// Lifetime gross proceeds unlock each seed tier. Costs still leave enough working capital
-// for ten next-tier seeds; the economy simulation verifies cash flow and random variance.
-// Startup and rare long-growing jackpots bias short stages above their steady-state mean.
-const STAGE_CALIBRATION = [.8, .92, .99, .99, .998]
-export const SEED_UNLOCK = [0]
-for (let tier = 0; tier < ULTIMATE_TIER; tier++) SEED_UNLOCK.push(SEED_UNLOCK[tier] + Math.round(seedEconomy(tier as Tier).grossPerMinute * STAGE_MINUTES[tier] * STAGE_CALIBRATION[tier]))
+// Five-garden campaign milestones; see docs/CAMPAIGN.md for measured pacing.
+export const SEED_UNLOCK = [0, 2000, 60000, 3000000, 150000000, 150000000]

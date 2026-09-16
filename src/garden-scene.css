@@ -149,3 +149,20 @@
 .book-grid article.undiscovered > .sprite { filter:brightness(0); opacity:.7; }
 .book-grid article.undiscovered h3 { color:var(--color-muted); }
 .book-grid .harvest-count b { color:var(--color-gold-light); font-size:15px; }
+.garden-pages { display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;margin:3px 0 9px; }
+.garden-pages button { background:#25433d;color:#ead9a5;border:2px solid #54745b;padding:7px 2px;cursor:pointer;box-shadow:inset 0 -3px #162e2b; }
+.garden-pages button[aria-pressed="true"] { background:#6f6338;border-color:#e6c06c;color:#fff3c7; }
+.garden-pages button:disabled { opacity:.45;cursor:default; }
+.garden-pages b,.garden-pages small { display:block;font-size:11px;white-space:nowrap; }
+.garden-pages small { font-size:9px;margin-top:4px; }
+.garden-landmark { position:absolute;top:8%;left:-3%;width:13%;height:25%;pointer-events:none;opacity:.85; }
+.garden-brook { --color-floor:#64948c;--color-floor-light:#a6c5af;--color-floor-seam:#50827b;--color-floor-edge:#36636b;--color-glass:#205366;--color-glass-light:#64969e; }
+.garden-brook .garden-landmark { left:0;top:31%;width:100%;height:7%; }
+.garden-amber { --color-floor:#bc9a63;--color-floor-light:#dfbd7e;--color-floor-seam:#a58452;--color-floor-edge:#7c613e;--color-moss:#99793a;--color-moss-light:#bcac62;--color-glass:#6e5841;--color-glass-light:#be935a; }
+.garden-aurora { --color-floor:#9badbb;--color-floor-light:#d9e4dd;--color-floor-seam:#8098aa;--color-floor-edge:#546d87;--color-moss:#759aaa;--color-moss-light:#b6d7d6;--color-glass:#344c75;--color-glass-light:#7eaeaa; }
+.garden-astral { --color-floor:#77788e;--color-floor-light:#adb0be;--color-floor-seam:#65657e;--color-floor-edge:#414760;--color-moss:#585e88;--color-moss-light:#aaa3c2;--color-glass:#272c53;--color-glass-light:#8b7fa4; }
+.garden-astral .greenhouse-rail span { background:radial-gradient(circle at 30% 30%,#ebd898 0 2px,transparent 3px),radial-gradient(circle at 75% 65%,#b4bad3 0 2px,transparent 3px),#272c53; }
+.garden-aurora .greenhouse-rail span { background:repeating-linear-gradient(120deg,#344c75 0 12px,#69a3a0 13px 20px,#635988 22px 37px); }
+.observation-mode .garden-pages { opacity:.5; }.observation-mode .garden-pages:hover {opacity:1}
+.garden-scene-caption { flex-wrap:wrap; }.garden-scene-caption>span { overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%; }
+@media(max-width:620px){.garden-pages b{font-size:8px}.garden-pages small{font-size:8px}.garden-pages button{padding:7px 0}.garden-count{font-size:9px}}
