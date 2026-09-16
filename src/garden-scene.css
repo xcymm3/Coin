@@ -124,3 +124,7 @@
 .observation-mode .garden-tools { display: none; }.water-station .pixel-pool { margin: 10px auto 5px; }
 @media (min-width:981px) and (max-height:850px) { .garden-tools { padding: 5px 8px; gap: 5px; }.tool-button { padding: 3px 5px; }.tool-button .sprite,.tool-button .pixel-icon { width: 25px; height: 25px; } }
 @media(max-width:620px) { .garden-tools { gap: 5px; padding: 7px; }.tool-button { font-size: 9px; padding: 4px; }.tool-button .sprite,.tool-button .pixel-icon { width: 24px; height: 24px; }.tool-charge { width: 55px; font-size: 8px; }.watering-tool { gap: 4px; }.tool-hint { font-size: 9px; }.tool-cart-animation .pixel-icon { width: 30px; height: 30px; } }
+.tool-dig-animation { position: absolute; left: 40%; top: 8%; z-index: 9; pointer-events: none; animation: digging .65s ease-in-out both; }.tool-dig-animation .pixel-icon { width: 45px; height: 45px; fill: #e4c488; filter: drop-shadow(2px 2px #38291c); }.tool-dig-animation i { position: absolute; top: 35px; left: -9px; width: 5px; height: 5px; background: #67452b; box-shadow: 25px 8px #785433; animation: dirt-scatter .8s ease-out both; }.tool-dig-animation i:nth-of-type(2) { left: 15px; animation-delay: .08s; }.tool-dig-animation i:nth-of-type(3) { left: 30px; animation-delay: .12s; }
+@keyframes digging { 0% { rotate: -35deg; translate: 0 -12px; } 45% { rotate: 15deg; translate: 0 12px; } 100% { rotate: -30deg; translate: 5px -10px; opacity: 0; } }
+@keyframes dirt-scatter { to { translate: -12px 15px; opacity: 0; } }
+.burst-dig i { background: #956b43; box-shadow: 1px 1px #493624; }

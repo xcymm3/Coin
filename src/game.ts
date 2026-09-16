@@ -189,7 +189,7 @@ function advance(s: GameState, dt: number) {
   if (s.upgrades.harvest && s.autoHarvest) advanceWorker(s, 'harvest', s.workers.harvest, dt)
   if (s.upgrades.sow && s.autoSow && s.selected !== 9) advanceWorker(s, 'sow', s.workers.sow, dt)
 }
-export type Action = { type: 'water'; index: number } | { type: 'move'; from: number; to: number } | { type: 'refill' } | { type: 'tick'; dt: number } | { type: 'pot'; index: number } | { type: 'select'; id: number }
+export type Action = { type: 'dig'; index: number } | { type: 'water'; index: number } | { type: 'move'; from: number; to: number } | { type: 'refill' } | { type: 'tick'; dt: number } | { type: 'pot'; index: number } | { type: 'select'; id: number }
   | { type: 'buy'; id: UpgradeId } | { type: 'toggle'; key: 'autoHarvest' | 'autoSow' } | { type: 'start' } | { type: 'reset' }
 export function reducer(state: GameState, action: Action): GameState {
   if (action.type === 'reset') return { ...newGame(), started: true }
@@ -214,6 +214,13 @@ export function reducer(state: GameState, action: Action): GameState {
   }
   if (action.type === 'refill' && s.player.phase === 'idle' && s.player.stock < capacity(s, 'player')) {
     s.player.phase = 'service'; s.player.target = null; s.player.clock = 0; s.player.path = []
+  }
+  if (action.type === 'dig' && s.pots[action.index]?.plant != null) {
+    // Discarding is not harvesting: no coins, count, discoveries or plant effects.
+    s.pots[action.index] = emptyPot()
+    for (const w of [s.player, ...s.snails, ...Object.values(s.workers)]) {
+      if (w.target === action.index) { w.phase = 'idle'; w.target = null; w.clock = 0; w.path = [] }
+    }
   }
   if (action.type === 'move' && action.from !== action.to && s.pots[action.from]?.plant != null && s.pots[action.to]) {
     // Move the whole pot state, preserving growth, discovery and watering history.

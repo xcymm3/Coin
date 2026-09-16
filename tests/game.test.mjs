@@ -204,3 +204,22 @@ test('old travelling player can migrates to a stationary tool action',()=>{
   const loaded=parseSave(JSON.stringify(s));assert.equal(loaded.player.phase,'act');assert.deepEqual(loaded.player.path,[])
   s.player={...s.player,phase:'return',target:null};assert.equal(parseSave(JSON.stringify(s)).player.phase,'service')
 })
+
+test('shovel removes every plant at every growth stage with no reward or harvest effects',()=>{
+  for(const plant of PLANTS) for(const growth of [0,plant.seconds/2,plant.seconds]) {
+    let s=start();s.coins=123;s.earned=456;s.harvests=7;s.pots[0]=planted(plant.id,growth);s.pots[1]=planted(1,1)
+    const before=s;s=reducer(s,{type:'dig',index:0})
+    assert.equal(s.pots[0].plant,null);assert.equal(s.pots[0].growth,0);assert.equal(s.coins,123);assert.equal(s.earned,456)
+    assert.equal(s.harvests,7);assert.equal(s.pots[1].growth,1);assert.deepEqual(s.discovered,before.discovered);assert.equal(s.wonAt,null)
+    assert.equal(before.pots[0].plant,plant.id)
+  }
+})
+test('dig cancels jobs on the removed plant, preserves cargo and allows free replanting',()=>{
+  let s=start();s.pots[0]=planted(6,70);s.upgrades.harvest=1
+  s.workers.harvest={...s.workers.harvest,phase:'act',target:0,clock:.8,cargo:20,count:1}
+  s.player={...s.player,phase:'act',target:0,clock:.8}
+  s=reducer(s,{type:'dig',index:0});assert.equal(s.workers.harvest.phase,'idle');assert.equal(s.player.phase,'idle');assert.equal(s.player.stock,4)
+  assert.equal(s.workers.harvest.cargo,20);assert.equal(s.coins,0);s=tap(s,0);assert.equal(PLANTS[s.pots[0].plant].tier,0)
+  s=tick(s,10);assert.equal(s.coins,20);assert.equal(s.harvests,0)
+  assert.deepEqual(reducer(s,{type:'dig',index:14}),s)
+})
