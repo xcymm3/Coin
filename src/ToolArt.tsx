@@ -29,12 +29,16 @@ export function ToolArt({kind,waterLevel=3}:{kind:GardenTool;waterLevel?:number}
    <path fill="#d0b378" d="M3 13h5v5H3zM38 30h3v9h-3zM20 30h4v9h-4z"/>
    <path fill="#252c2d" d="M11 32h10v11H11z"/><path fill="#88969b" d="M14 35h4v5h-4z"/>
   </>}
-  {kind==='shovel'&&<>
-   <path fill="#35291d" d="M27 2h15v13h-5L25 32h5v9l-11 5-9-8v-9h9l11-15h-3z"/>
-   <path fill="#a86937" d="M30 5h9v7h-4L22 33l-4-3 15-19h-3z"/>
-   <path fill="#edbb76" d="M30 5h9v3h-9zM31 15l3 2-12 16-3-2z"/>
-   <path fill="#a5bfc4" d="M12 31h13v8l-6 4-7-6z"/>
-   <path fill="#e1efdf" d="M12 31h5v8l-5-3z"/><path fill="#68868c" d="M22 32h4v7l-7 4v-4h3z"/>
-  </>}
+  {kind==='shovel'&&<g transform="rotate(45 24 24)">
+   {/* Draw upright on one centerline, then rotate the whole shovel. */}
+   <path fill="#35291d" fillRule="evenodd" d="M16 3h16v9l-5 5v13h-6V17l-5-5Zm4 4v4l4 4 4-4V7Z"/>
+   <path fill="#a86937" d="M18 5h12v2H18Zm0 2h2v5l4 4 4-4V7h2v6l-5 5v12h-2V18l-5-5Z"/>
+   <path fill="#edbb76" d="M18 5h12v2H18Zm5 13h1v12h-1Z"/>
+   <path fill="#35291d" d="M14 28h20v9l-2 4-8 5-8-5-2-4Z"/>
+   <path fill="#a5bfc4" d="M16 30h16v7l-2 3-6 4-6-4-2-3Z"/>
+   <path fill="#e1efdf" d="M16 30h7v3h-5v4l2 3-2-1-2-3Z"/>
+   <path fill="#68868c" d="M25 30h7v7l-2 3-6 4v-3l5-3 1-3v-3h-5Z"/>
+   <path fill="#d2ded3" d="M23 28h2v12h-2Z"/>
+  </g>}
  </svg>
 }
