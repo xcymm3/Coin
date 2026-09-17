@@ -1,1 +1,38 @@
-{"date":"2026-09-15","framework":"React 19 + TypeScript + Vite","startingPoint":"Vite starter, no existing product design system","reference":"User-provided pixel garden image","preserved":["React entry point","GitHub Pages base path","existing dependencies"],"introduced":["local pixel font","reference-matched raster sprites","night forest","pixel wood texture","three-column game UI"]}
+{
+  "date": "2026-09-15",
+  "framework": "React 19 + TypeScript + Vite",
+  "startingPoint": "Vite starter, no existing product design system",
+  "reference": "User-provided pixel garden image",
+  "preserved": [
+    "React entry point",
+    "GitHub Pages base path",
+    "existing dependencies"
+  ],
+  "introduced": [
+    "local pixel font",
+    "reference-matched raster sprites",
+    "night forest",
+    "pixel wood texture",
+    "three-column game UI"
+  ],
+  "mobileReview": {
+    "scope": "Mobile garden controls and layout",
+    "framework": "React 19 + Vite",
+    "font": "Garden Pixel; existing tokens.css font variables",
+    "palette": "Existing reference-locked pixel palette in tokens.css",
+    "motion": "Existing CSS animations and reduced-motion support",
+    "preserve": [
+      "game logic",
+      "desktop layout",
+      "pixel art",
+      "palette",
+      "font"
+    ],
+    "sources": [
+      "src/garden.css:5",
+      "tokens.css:1",
+      "src/garden-scene.css:1",
+      "package.json:1"
+    ]
+  }
+}
