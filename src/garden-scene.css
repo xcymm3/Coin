@@ -140,12 +140,6 @@
 .book-grid article.undiscovered > .sprite { filter:brightness(0); opacity:.7; }
 .book-grid article.undiscovered h3 { color:var(--color-muted); }
 .book-grid .harvest-count b { color:var(--color-gold-light); font-size:15px; }
-.garden-pages { display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;margin:3px 0 9px; }
-.garden-pages button { background:#25433d;color:#ead9a5;border:2px solid #54745b;padding:7px 2px;cursor:pointer;box-shadow:inset 0 -3px #162e2b; }
-.garden-pages button[aria-pressed="true"] { background:#6f6338;border-color:#e6c06c;color:#fff3c7; }
-.garden-pages button:disabled { opacity:.45;cursor:default; }
-.garden-pages b,.garden-pages small { display:block;font-size:11px;white-space:nowrap; }
-.garden-pages small { font-size:9px;margin-top:4px; }
 .garden-landmark { position:absolute;top:8%;left:-3%;width:13%;height:25%;pointer-events:none;opacity:.85; }
 .garden-brook { --color-floor:#64948c;--color-floor-light:#a6c5af;--color-floor-seam:#50827b;--color-floor-edge:#36636b;--color-glass:#205366;--color-glass-light:#64969e; }
 .garden-brook .garden-landmark { left:0;top:31%;width:100%;height:7%; }
@@ -154,9 +148,7 @@
 .garden-astral { --color-floor:#77788e;--color-floor-light:#adb0be;--color-floor-seam:#65657e;--color-floor-edge:#414760;--color-moss:#585e88;--color-moss-light:#aaa3c2;--color-glass:#272c53;--color-glass-light:#8b7fa4; }
 .garden-astral .greenhouse-rail span { background:radial-gradient(circle at 30% 30%,#ebd898 0 2px,transparent 3px),radial-gradient(circle at 75% 65%,#b4bad3 0 2px,transparent 3px),#272c53; }
 .garden-aurora .greenhouse-rail span { background:repeating-linear-gradient(120deg,#344c75 0 12px,#69a3a0 13px 20px,#635988 22px 37px); }
-.observation-mode .garden-pages { opacity:.5; }.observation-mode .garden-pages:hover {opacity:1}
 .garden-scene-caption { flex-wrap:wrap; }.garden-scene-caption>span { overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%; }
-@media(max-width:620px){.garden-pages b{font-size:8px}.garden-pages small{font-size:8px}.garden-pages button{padding:7px 0}.garden-count{font-size:9px}}
 .variant-mint { filter:hue-rotate(75deg) saturate(.8) brightness(1.13); }
 .variant-sunset { filter:hue-rotate(285deg) saturate(1.45); }
 .variant-stardust { filter:brightness(1.25) saturate(.55) drop-shadow(0 0 4px #d9c8ff); }
@@ -193,3 +185,16 @@
 @media(max-width:620px){.tool-button{flex-basis:64px;padding:2px 2px 5px;border-width:2px}.tool-refill-slot{flex-basis:49px;padding:2px;border-width:2px}.tool-button>span:last-child,.refill-caption{font-size:9px}.tool-charge{font-size:9px}.tool-quantity{font-size:10px;bottom:17px;right:2px}.water-reservoir{height:23px;width:18px;border-width:2px}.tool-hint{font-size:9px}.tool-slots{padding:3px}.tool-cart-animation .pixel-icon{width:30px;height:30px}}
 @media(prefers-reduced-motion:reduce){.water-reservoir i{transition:none}}.reduce-motion .water-reservoir i{transition:none}
 .tool-button .garden-tool-art{position:absolute;left:6%;top:0;width:88%;height:78%;max-height:none;flex:none}.tool-button>span:last-child{position:absolute;bottom:5px;left:0;right:0;text-align:center}
+/* Give the garden the space previously occupied by page tabs and expansion text. */
+.garden-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:6px;flex-shrink:0}
+.garden-switcher{display:flex;align-items:center;gap:14px;min-width:0}
+.garden-switcher h2{margin:0;min-width:112px;text-align:center;font-size:19px;color:#f4e4b6;letter-spacing:2px}
+.garden-arrow{width:32px;height:32px;border:2px solid #a87842;background:#664528;box-shadow:inset 0 2px #c18e52,0 2px #241e17;color:#ffe6a2;font:inherit;cursor:pointer;font-size:14px;padding:0}
+.garden-arrow:hover:not(:disabled){background:#896536;border-color:#f0d06c}.garden-arrow:disabled{opacity:.3;cursor:default}.garden-arrow:focus-visible{outline:2px solid #fff0a8;outline-offset:2px}
+.garden-heading-actions{display:flex;gap:10px;align-items:center}.garden-heading-actions .text-button{font-size:10px;white-space:nowrap}
+.garden-expansion{margin:12px 0 0;justify-content:stretch}.garden-expansion:empty{display:none}.garden-expansion button{width:100%;line-height:1.5;white-space:normal}
+.garden-tools .tool-button{flex-basis:70px}.garden-tools .tool-refill-slot{flex-basis:55px}.tool-slots{padding:3px}
+.garden-section .quest-panel{margin-top:15px;padding:6px 10px;gap:8px}.garden-section .quest-panel>.sprite{width:28px}.garden-section .quest-panel p{margin:3px 0;font-size:10px}.garden-section .quest-caption{font-size:10px}.garden-section .quest-panel .progress{height:5px}
+@media(min-width:981px){.game-layout{grid-template-columns:210px minmax(0,1fr) 240px;gap:14px}.zen-garden .garden-floor{inset:30px 8px 48px}.zen-garden .greenhouse-rail{height:26px;padding-bottom:5px}.zen-garden:before{top:28px;bottom:24px}.garden-scene-caption{bottom:3px}.game-layout .tier-copy strong{font-size:18px}.game-layout .seed-bag,.game-layout .seed-bag .sprite{width:52px;height:62px}.game-layout .tier-card{min-height:87px}.game-layout .upgrade-copy strong{font-size:16px}.game-layout .upgrade-art{width:36px}}
+@media(min-width:1500px){.game-layout{grid-template-columns:235px minmax(0,1fr) 265px}.garden-switcher h2{font-size:22px}}
+@media(max-width:620px){.garden-switcher{gap:7px}.garden-switcher h2{font-size:16px;min-width:104px;letter-spacing:1px}.garden-arrow{width:28px;height:30px}.garden-heading-actions{gap:6px}.garden-heading-actions .text-button{font-size:9px}.garden-tools .tool-button{flex-basis:64px}.garden-tools .tool-refill-slot{flex-basis:49px}}
