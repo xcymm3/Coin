@@ -20,7 +20,7 @@ export const GARDENS = [
 ]
 
 // Three discoveries per garden; their effects are shared by all gardens.
-export const UPGRADE_BASES = [430, 1900000, 112000000, 1790000000, 32500000000]
+export const UPGRADE_BASES = [270,500000,9600000,1500000000,150000000000]
 const names=[['苔庭丰收术','腐叶沃土','晨露灌注'],['溪谷授粉术','潮汐沃土','流泉灌注'],['琥珀育种术','暖砂沃土','日光灌注'],['极光丰收术','冰晶沃土','霜羽灌注'],['星海丰收术','星尘沃土','银河灌注']]
 export const UPGRADES: Upgrade[] = GARDENS.flatMap((_,page)=>[
  {id:`g${page}-profit`,page,name:names[page][0],cost:UPGRADE_BASES[page],icon:'coin',detail:'全园收获价值 ×4',effects:{profit:2}},
@@ -29,15 +29,15 @@ export const UPGRADES: Upgrade[] = GARDENS.flatMap((_,page)=>[
 ])
 export const ULTIMATE_PURCHASES=15
 export const EXPANSION_PRICE=1800
-export const GARDEN_PRICES=[0,32000,19000000,840000000,7940000000]
-export const HIRE_BASES=[130,213000,8400000,99000000,1080000000]
+export const GARDEN_PRICES=[0,16000,20000000,1400000000,90000000000]
+export const HIRE_BASES=[60,6000,400000,30000000,4000000000]
 export type HireOption={id:string;kind:CrewKind;type:'recruit'|'equipment';level:number;cost:number;name:string;detail:string}
 export function hireCatalog(page:number):HireOption[]{
  return (['water','harvest','sow'] as CrewKind[]).flatMap(kind=>{
   const base=HIRE_BASES[page]*({water:1,harvest:1.5,sow:2}[kind])
   return [
    ...Array.from({length:5},(_,i)=>({id:`recruit-${kind}-${i+1}`,kind,type:'recruit' as const,level:i+1,cost:Math.round(base*4**i),name:`雇佣第 ${i+1} 只${CREW_NAMES[kind]}`,detail:'仅本园增加一只独立作业的助手'})),
-   ...Array.from({length:4},(_,i)=>({id:`equipment-${kind}-${i+1}`,kind,type:'equipment' as const,level:i+1,cost:Math.round(base*3*4**i),name:`${MATERIALS[i+1].name}${kind==='water'?'水箱':kind==='harvest'?'背筐':'种子袋'}`,detail:`本园${CREW_NAMES[kind]}${kind==='water'?'浇水效果 ×4、':''}容量 ×2，移速与作业效率提升`}))
+   ...Array.from({length:4},(_,i)=>({id:`equipment-${kind}-${i+1}`,kind,type:'equipment' as const,level:i+1,cost:Math.round(base*3*4**i),name:`${MATERIALS[i+1].name}${kind==='water'?'水箱':kind==='harvest'?'背筐':'种子袋'}`,detail:`本园${CREW_NAMES[kind]}${kind==='water'?'浇水效果 ×2、':''}容量 ×2，移速与作业效率提升`}))
   ]
  })
 }

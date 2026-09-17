@@ -1,9 +1,44 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {newGame,reducer,PLANTS,UPGRADES,hireCatalog,hireAvailable,teamFor,crewFor,capacity,workerSpeed,growthRate,reward,parseSave,DECORATIONS,decorationPrice,unlocked} from '../src/game.ts'
+import {newGame,reducer,PLANTS,UPGRADES,hireCatalog,hireAvailable,teamFor,crewFor,capacity,workerSpeed,growthRate,reward,parseSave,DECORATIONS,decorationPrice,unlocked,potPrice,ULTIMATE_TIER} from '../src/game.ts'
 import {newGame as legacyNewGame,reducer as legacyReducer,UPGRADES as LEGACY_UPGRADES} from '../src/legacyGame.ts'
 import {expanded,employ} from './helpers.mjs'
 const pot=(plant,growth=0)=>({plant,growth,wateredAt:-10})
+
+test('pots start at four, charge per slot, reject locked planting and stop at fifteen',()=>{
+ let s=newGame()
+ assert.equal(teamFor(s).potCount,4)
+ assert.equal(reducer(s,{type:'pot',index:4}).pots[4].plant,null)
+ assert.equal(reducer(s,{type:'expand'}).gardens[0].potCount,4)
+ s.coins=1e6
+ for(let count=4;count<15;count++){
+  const before=s.coins,cost=potPrice(s)
+  s=reducer(s,{type:'expand'})
+  assert.equal(teamFor(s).potCount,count+1)
+  assert.equal(s.coins,before-cost)
+ }
+ assert.deepEqual(reducer(s,{type:'expand'}),s)
+ for(const u of UPGRADES.filter(u=>u.page===0))s=reducer(s,{type:'buy',id:u.id})
+ s=reducer(s,{type:'open-garden'})
+ assert.equal(teamFor(s).potCount,4)
+ assert.equal(teamFor(s,0).potCount,15)
+ assert.deepEqual(parseSave(JSON.stringify(s)),s)
+})
+
+test('previous campaign saves retain purchased pots and proportional growth',()=>{
+ const s=newGame();delete s.balanceVersion
+ s.pots=s.pots.slice(0,10);delete s.gardens[0].potCount
+ s.pots[0]=pot(0,15);s.harvestCounts=s.harvestCounts.slice(0,21)
+ s.variants=['0:1','10:3'];s.pots[0].variant=1
+ const migrated=parseSave(JSON.stringify(s))
+ assert.ok(migrated)
+ assert.equal(teamFor(migrated).potCount,10)
+ assert.equal(migrated.pots.length,15)
+ assert.equal(migrated.pots[0].growth,PLANTS[0].seconds/2)
+ assert.equal(migrated.pots[0].variant,0)
+ assert.deepEqual(migrated.legacyVariants,s.variants)
+ assert.deepEqual(parseSave(JSON.stringify(migrated)),migrated)
+})
 test('each garden has exactly three one-time researches with global effects',()=>{
  assert.equal(UPGRADES.length,15)
  let s=expanded();const before=s
@@ -31,7 +66,7 @@ test('new garden starts empty and decorations cost more locally without gameplay
  let s=newGame();s.coins=1e16;s.earned=1e10;s=employ(s,'water',2,1);s=reducer(s,{type:'decorate',id:'bunting'});s=reducer(s,{type:'expand'})
  assert.equal(reducer(s,{type:'open-garden'}).gardens.length,1)
  for(const u of UPGRADES.filter(u=>u.page===0))s=reducer(s,{type:'buy',id:u.id})
- s=reducer(s,{type:'open-garden'});assert.equal(s.activeGarden,1);assert.equal(teamFor(s).snails.length,0);assert.deepEqual(teamFor(s).decorations,[]);assert.deepEqual(teamFor(s).equipment,{water:0,harvest:0,sow:0})
+ while(teamFor(s).potCount<15)s=reducer(s,{type:'expand'});s=reducer(s,{type:'open-garden'});assert.equal(s.activeGarden,1);assert.equal(teamFor(s).snails.length,0);assert.deepEqual(teamFor(s).decorations,[]);assert.deepEqual(teamFor(s).equipment,{water:0,harvest:0,sow:0})
  const before=s;s=reducer(s,{type:'decorate',id:'bunting'});assert.equal(before.coins-s.coins,decorationPrice(DECORATIONS[0].cost,1));assert.deepEqual(s.upgrades,before.upgrades)
  s=reducer(s,{type:'decoration-toggle',id:'bunting'});assert.deepEqual(teamFor(s,0).hiddenDecorations,[])
  s=reducer(s,{type:'toggle',key:'autoSow'});assert.equal(teamFor(s).autoSow,false);assert.equal(teamFor(s,0).autoSow,true)
@@ -59,8 +94,8 @@ test('every garden runs independently offscreen and offline matches live ticks',
  assert.ok(offline.stats.autoCoins>0);assert.deepEqual(parseSave(JSON.stringify(offline)),offline)
 })
 test('affordable ultimate matures, wins and leaves hiring available',()=>{
- let s=expanded();assert.equal(unlocked(s,5),true);for(const u of UPGRADES.filter(u=>u.page===4))s=reducer(s,{type:'buy',id:u.id});assert.equal(unlocked(s,5),true)
- s=reducer(s,{type:'select',id:9});s=reducer(s,{type:'pot',index:60});s=reducer(s,{type:'tick',dt:8});assert.ok(s.wonAt!==null);assert.equal(s.pots[60].plant,9)
+ let s=expanded();assert.equal(unlocked(s,ULTIMATE_TIER),true);for(const u of UPGRADES.filter(u=>u.page===4))s=reducer(s,{type:'buy',id:u.id});assert.equal(unlocked(s,ULTIMATE_TIER),true)
+ s=reducer(s,{type:'select',id:9});s=reducer(s,{type:'pot',index:60});s=reducer(s,{type:'tick',dt:340});assert.ok(s.wonAt!==null);assert.equal(s.pots[60].plant,9)
  s=employ(s,'sow');assert.equal(teamFor(s).workers.sow.length,1);assert.equal(reducer(s,{type:'open-garden'}).gardens.length,5)
  assert.equal(reducer(s,{type:'reset'}).gardens.length,1)
 })
@@ -69,7 +104,7 @@ test('v3 migration preserves money, plants, collection, cargo, opened gardens an
  for(const u of LEGACY_UPGRADES)old=legacyReducer(old,{type:'buy',id:u.id})
  old.decorations=['bunting'];old.hiddenDecorations=['bunting'];old.workers.harvest.cargo=123;old.workers.harvest.count=1
  old.pots[0]=pot(6,20);old.fertilizer=7;old.variants=['6:2'];old.harvests=old.harvestCounts[6]=9
- const s=parseSave(JSON.stringify(old));assert.ok(s);assert.equal(s.campaignVersion,4);assert.equal(s.coins,old.coins);assert.equal(s.gardens.length,5);assert.equal(s.pots[0].growth,20);assert.equal(s.fertilizer,7);assert.deepEqual(s.variants,['6:2']);assert.equal(s.harvestCounts[6],9)
+ const s=parseSave(JSON.stringify(old));assert.ok(s);assert.equal(s.campaignVersion,4);assert.equal(s.coins,old.coins);assert.equal(s.gardens.length,5);assert.equal(s.pots[0].growth,20/120*PLANTS[6].seconds);assert.equal(s.fertilizer,7);assert.deepEqual(s.legacyVariants,['6:2']);assert.equal(s.harvestCounts[6],9)
  assert.equal(teamFor(s,0).workers.harvest[0].cargo,123);assert.deepEqual(teamFor(s,4).hiddenDecorations,['bunting']);assert.ok(s.upgrades.profit>=old.upgrades.profit)
  assert.deepEqual(parseSave(JSON.stringify(s)),s)
 })
@@ -79,8 +114,8 @@ test('save rejects invalid local workers, equipment, purchases and duplicate dec
 
 test('cross-garden cart preserves the entire plant and clears reservations on both gardens',()=>{
  let s=expanded();s.activeGarden=0;s=employ(s,'water');s.activeGarden=1;s=employ(s,'harvest')
- const source={plant:8,growth:27,germination:5,variant:2,watering:0.8,wateredAt:12,revealedAt:9}
- const target={plant:6,growth:18,germination:5,variant:1,wateredAt:8}
+ const source={plant:12,growth:27,germination:5,variant:1,watering:0.8,wateredAt:12,revealedAt:9}
+ const target={plant:6,growth:18,germination:5,variant:0,wateredAt:8}
  s.pots[0]=source;s.pots[15]=target
  for(const [w,index] of [[teamFor(s,0).snails[0],0],[teamFor(s,1).workers.harvest[0],15]]){w.phase='walk';w.target=index;w.path=[{x:20,y:30}];w.clock=0.2}
  const before=structuredClone(s)
@@ -113,7 +148,7 @@ test('opening second garden with ultimate selected keeps old crew working and ne
  let s=reducer(newGame(),{type:'start'});s.coins=1e12
  s=reducer(s,{type:'expand'});for(const u of UPGRADES.filter(u=>u.page===0))s=reducer(s,{type:'buy',id:u.id})
  s=employ(s,'sow');s=employ(s,'harvest');s=reducer(s,{type:'select',id:9})
- s=reducer(s,{type:'open-garden'});assert.equal(s.activeGarden,1);assert.equal(teamFor(s).workers.sow.length,0)
+ while(teamFor(s).potCount<15)s=reducer(s,{type:'expand'});s=reducer(s,{type:'open-garden'});assert.equal(s.activeGarden,1);assert.equal(teamFor(s).workers.sow.length,0)
  s=employ(s,'sow');s=employ(s,'harvest');s.coins=0
  s=reducer(s,{type:'tick',dt:90})
  for(const page of [0,1])assert.ok(s.pots.slice(page*15,page*15+15).some(p=>p.plant!==null))
@@ -123,21 +158,21 @@ test('opening second garden with ultimate selected keeps old crew working and ne
 test('squirrel seed selection is local, requires a hire, rejects ultimate and migrates old saves',()=>{
  let s=expanded();assert.equal(reducer(s,{type:'sow-tier',tier:3}).gardens[4].sowTier,0)
  s=employ(s,'sow');s=reducer(s,{type:'sow-tier',tier:3});assert.equal(teamFor(s).sowTier,3);assert.equal(teamFor(s,0).sowTier,0)
- for(const tier of [-1,5,1.5])assert.equal(teamFor(reducer(s,{type:'sow-tier',tier})).sowTier,3)
+ for(const tier of [-1,7,1.5])assert.equal(teamFor(reducer(s,{type:'sow-tier',tier})).sowTier,3)
  s=reducer(s,{type:'select',id:9});assert.equal(teamFor(s).sowTier,3)
  assert.deepEqual(parseSave(JSON.stringify(s)),s)
  const old=structuredClone(s);for(const t of old.gardens)delete t.sowTier
  assert.ok(parseSave(JSON.stringify(old)).gardens.every(t=>t.sowTier===0))
- for(const tier of [null,5,-1,0.5,'2']){const invalid=structuredClone(s);invalid.gardens[0].sowTier=tier;assert.equal(parseSave(JSON.stringify(invalid)),null)}
+ for(const tier of [null,7,-1,0.5,'2']){const invalid=structuredClone(s);invalid.gardens[0].sowTier=tier;assert.equal(parseSave(JSON.stringify(invalid)),null)}
 })
 
 test('squirrels wait without spending stock or falling back, resume when funded and never overspend',()=>{
- let s=reducer(newGame(),{type:'start'});s.coins=1e6;s=employ(s,'sow',2);s=reducer(s,{type:'sow-tier',tier:2});s.coins=299
+ let s=reducer(newGame(),{type:'start'});s.coins=1e6;s=employ(s,'sow',2);s=reducer(s,{type:'sow-tier',tier:2});s.coins=499
  for(const [i,w] of teamFor(s).workers.sow.entries())Object.assign(w,{phase:'act',target:i,clock:0.5,stock:1})
  const before=structuredClone(teamFor(s).workers.sow)
- s=reducer(s,{type:'tick',dt:10});assert.deepEqual(teamFor(s).workers.sow,before);assert.equal(s.coins,299);assert.ok(s.pots.every(p=>p.plant===null))
- s.coins=300;s=reducer(s,{type:'tick',dt:1});assert.equal(s.coins,0);assert.equal(s.pots.filter(p=>p.plant!==null).length,1)
+ s=reducer(s,{type:'tick',dt:10});assert.deepEqual(teamFor(s).workers.sow,before);assert.equal(s.coins,499);assert.ok(s.pots.every(p=>p.plant===null))
+ s.coins=500;s=reducer(s,{type:'tick',dt:1});assert.equal(s.coins,0);assert.equal(s.pots.filter(p=>p.plant!==null).length,1)
  assert.equal(teamFor(s).workers.sow[1].stock,1);assert.equal(teamFor(s).workers.sow[1].clock,0.5)
- s.coins=300;s=reducer(s,{type:'tick',dt:1});assert.equal(s.coins,0);assert.equal(s.pots.filter(p=>p.plant!==null).length,2)
+ s.coins=500;s=reducer(s,{type:'tick',dt:1});assert.equal(s.coins,0);assert.equal(s.pots.filter(p=>p.plant!==null).length,2)
  s=reducer(s,{type:'sow-tier',tier:0});s=reducer(s,{type:'tick',dt:40});assert.ok(s.pots.filter(p=>p.plant!==null).length>2)
 })

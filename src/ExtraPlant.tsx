@@ -1,6 +1,8 @@
+import {variantFor} from './collectibles'
 import { EXTRA_PLANTS } from './plantArt'
-export function ExtraPlant({ id, className = '' }: { id: number; className?: string }) {
-  const art = EXTRA_PLANTS[id - 10]
+export function ExtraPlant({ id, className = '', variant=false }: { id: number; className?: string; variant?:boolean }) {
+  const base = EXTRA_PLANTS[id - 10], special=variant?variantFor(id):undefined
+  const art=special?{...base,shape:special.shape,color:special.color}:base
   return <span className={`sprite extra-plant ${className}`} style={{ backgroundImage: `url(${import.meta.env.BASE_URL}assets/garden-atlas.png)`, backgroundPosition: '66.6667% 66.6667%' }} aria-hidden="true"><svg viewBox="0 0 40 44" shapeRendering="crispEdges">
     <path d="M17 29V16h4v13Z" fill="#54a946" stroke="#243b2b" strokeWidth="2"/>
     <path d="M17 27h-7v-4H6v-4h8v4h4Zm4-2h5v-6h8v4h-4v5h-9Z" fill="#54b658" stroke="#243b2b" strokeWidth="2"/>

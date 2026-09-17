@@ -1,19 +1,18 @@
-export type Tier = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7
+export type Tier = 0 | 1 | 2 | 3 | 4 | 5
 export type Plant = { id: number; name: string; tier: Tier; seconds: number; cost: number; reward: number; lore: string }
 export const ULTIMATE_ID = 9
-export const ULTIMATE_TIER = 7
-export const INITIAL_POTS = 4
-export const TIERS = ['普通种子', '稀有种子', '珍贵种子', '超凡种子', '神话种子', '远古种子', '星界种子', '终极种子']
-export const TIER_PLANTS = [[0, 1, 2, 10], [3, 4, 5, 11], [6, 7, 8, 12], [13, 14, 15, 16], [17, 18, 19, 20], [21,22,23,24], [25,26,27,28], [9]]
-export const SEED_PRICES = [0, 50, 500, 10000, 500000, 50000000, 10000000000, 15000000000000]
-// Every regular seed can reveal every regular tier; distant jackpots have tiny odds.
-export const SEED_ODDS = Array.from({length:7},(_,tier)=>{
- const weights=Array.from({length:7},(_,j)=>j<tier?Math.pow(.15,tier-j-1):j>tier?Math.pow(Math.max(10,SEED_PRICES[tier])/SEED_PRICES[j],2):0)
- const below=weights.reduce((n,w,j)=>n+(j<tier?w:0),0),above=weights.reduce((n,w,j)=>n+(j>tier?w:0),0)
- return weights.map((w,j)=>j===tier?1-(below?.09:0)-(above?.01:0):j<tier?w/below*.09:above?w/above*.01:0)
-})
-export const SEED_SECONDS=[20,40,70,140,260,500,850,27000]
-export const REWARD_DIVISORS=[1,1,1,8,64,512,4096]
+export const ULTIMATE_TIER = 5
+export const INITIAL_POTS = 10
+export const TIERS = ['普通种子', '稀有种子', '珍贵种子', '超凡种子', '神话种子', '终极种子']
+export const TIER_PLANTS = [[0, 1, 2, 10], [3, 4, 5, 11], [6, 7, 8, 12], [13, 14, 15, 16], [17, 18, 19, 20], [9]]
+export const SEED_PRICES = [0, 50, 300, 1800, 10800, 64800]
+export const SEED_ODDS = [
+  [.94, .055, .0045, .00045, .00005],
+  [.1, .84, .055, .0045, .0005],
+  [.01, .09, .84, .055, .005],
+  [.001, .009, .09, .85, .05],
+  [.0001, .0009, .009, .09, .9],
+] as const
 export const SPECIES_ODDS = [.2, .5, .25, .05] as const
 export const PLANTS: Plant[] = [
   { id: 0, name: '嫩芽豆', tier: 0, seconds: 30, cost: 0, reward: 4, lore: '小叶片托起清晨的露珠。' },
@@ -37,21 +36,7 @@ export const PLANTS: Plant[] = [
   { id: 18, name: '时光沙漏兰', tier: 4, seconds: 480, cost: 10800, reward: 15120, lore: '花瓣里的沙粒缓缓流动。' },
   { id: 19, name: '银河螺旋树', tier: 4, seconds: 480, cost: 10800, reward: 21600, lore: '银河沿着枝干盘旋生长。' },
   { id: 20, name: '日冕圣莲', tier: 4, seconds: 480, cost: 10800, reward: 43200, lore: '花瓣托起一轮永不刺眼的太阳。' },
-  { id:21,name:'琥珀蕨',tier:5,seconds:1,cost:0,reward:0,lore:'琥珀包裹着一片古老森林。' },
-  { id:22,name:'龙骨藤',tier:5,seconds:1,cost:0,reward:0,lore:'藤蔓盘起像熟睡的小龙。' },
-  { id:23,name:'化石树',tier:5,seconds:1,cost:0,reward:0,lore:'年轮里藏着漫长的雨季。' },
-  { id:24,name:'始祖莲',tier:5,seconds:1,cost:0,reward:0,lore:'远古湖泊留下最后一朵莲。' },
-  { id:25,name:'彗尾草',tier:6,seconds:1,cost:0,reward:0,lore:'叶尖拖着一缕彗星尾光。' },
-  { id:26,name:'星环菇',tier:6,seconds:1,cost:0,reward:0,lore:'菌盖上绕着细小的星环。' },
-  { id:27,name:'月蚀铃',tier:6,seconds:1,cost:0,reward:0,lore:'月光藏在银色的花铃里。' },
-  { id:28,name:'宇宙之心',tier:6,seconds:1,cost:0,reward:0,lore:'小小花心映着整片星海。' },
 ]
-// Baseline values are tuned together with the five-garden multipliers.
-for(let tier=0;tier<7;tier++)for(let rank=0;rank<4;rank++){
- const p=PLANTS[TIER_PLANTS[tier][rank]];p.seconds=SEED_SECONDS[tier];p.cost=SEED_PRICES[tier]
- p.reward=Math.max(1,Math.round((tier===0?7:SEED_PRICES[tier]/REWARD_DIVISORS[tier])*[.8,1.2,1.8,4][rank]))
-}
-Object.assign(PLANTS[ULTIMATE_ID],{tier:ULTIMATE_TIER,seconds:SEED_SECONDS[7],cost:SEED_PRICES[7],reward:SEED_PRICES[7]*2})
 export const seedPlantId = (tier: Tier) => TIER_PLANTS[tier][0]
 export const plantChance = (tier: Tier, id: number) => tier === ULTIMATE_TIER ? (id === ULTIMATE_ID ? 1 : 0) : id === ULTIMATE_ID ? 0 : (SEED_ODDS[tier].at(PLANTS[id].tier) ?? 0) * SPECIES_ODDS[TIER_PLANTS[PLANTS[id].tier].indexOf(id)]
 export const seedEconomy = (tier: Tier) => {
