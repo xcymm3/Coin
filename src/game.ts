@@ -2,9 +2,9 @@ import { parseSave as parseLegacySave } from './legacyGame.ts'
 import { DECORATIONS } from './collectibles.ts'
 export * from './collectibles.ts'
 import { plantPosition } from './gardenScene.ts'
-import { PLANTS, ULTIMATE_ID, ULTIMATE_TIER, INITIAL_POTS, TIER_PLANTS, SEED_UNLOCK, SEED_ODDS, SPECIES_ODDS, seedPlantId, type Tier, type Plant } from './catalog.ts'
+import { PLANTS, ULTIMATE_ID, ULTIMATE_TIER, INITIAL_POTS, TIER_PLANTS, SEED_ODDS, SPECIES_ODDS, seedPlantId, type Tier, type Plant } from './catalog.ts'
 export * from './catalog.ts'
-import { UPGRADES, GARDENS, EFFECT_IDS, ULTIMATE_PURCHASES, hireCatalog, decorationPrice, GARDEN_PRICES, EXPANSION_PRICE, type CrewKind, type HireOption, type EffectId, type UpgradeId, type Upgrade } from './upgrades.ts'
+import { UPGRADES, GARDENS, EFFECT_IDS, hireCatalog, decorationPrice, GARDEN_PRICES, EXPANSION_PRICE, type CrewKind, type HireOption, type EffectId, type UpgradeId, type Upgrade } from './upgrades.ts'
 export * from './upgrades.ts'
 export type WorkerKind = 'harvest' | 'sow'
 export type ActorKind = WorkerKind | 'water' | 'player'
@@ -45,7 +45,7 @@ export function newGame():GameState {
   upgrades:zeroBonuses(),selected:0,discovered:[],harvestCounts:PLANTS.map(()=>0),untrackedHarvests:0,harvests:0,clicks:0,wonAt:null,lastSaved:Date.now(),started:false}
 }
 export function unlocked(s: GameState, tier: Tier) {
-  return s.wonAt !== null || (s.earned >= SEED_UNLOCK[tier] && (tier !== ULTIMATE_TIER || s.purchases.length >= ULTIMATE_PURCHASES && gardenCount(s) === 5))
+  return s.coins >= PLANTS[seedPlantId(tier)].cost
 }
 export function upgradeLock(s: GameState,id:UpgradeId):string|null {
  const u=UPGRADES.find(u=>u.id===id)

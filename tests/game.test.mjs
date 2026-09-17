@@ -58,8 +58,8 @@ test('every garden runs independently offscreen and offline matches live ticks',
  assert.deepEqual(offline,live);for(let page=0;page<5;page++)assert.ok(offline.pots.slice(page*15,page*15+15).some(p=>p.plant!==null))
  assert.ok(offline.stats.autoCoins>0);assert.deepEqual(parseSave(JSON.stringify(offline)),offline)
 })
-test('fifteen researches unlock the ultimate; maturity wins and hiring remains available',()=>{
- let s=expanded();assert.equal(unlocked(s,5),false);for(const u of UPGRADES.filter(u=>u.page===4))s=reducer(s,{type:'buy',id:u.id});assert.equal(unlocked(s,5),true)
+test('affordable ultimate matures, wins and leaves hiring available',()=>{
+ let s=expanded();assert.equal(unlocked(s,5),true);for(const u of UPGRADES.filter(u=>u.page===4))s=reducer(s,{type:'buy',id:u.id});assert.equal(unlocked(s,5),true)
  s=reducer(s,{type:'select',id:9});s=reducer(s,{type:'pot',index:60});s=reducer(s,{type:'tick',dt:8});assert.ok(s.wonAt!==null);assert.equal(s.pots[60].plant,9)
  s=employ(s,'sow');assert.equal(teamFor(s).workers.sow.length,1);assert.equal(reducer(s,{type:'open-garden'}).gardens.length,5)
  assert.equal(reducer(s,{type:'reset'}).gardens.length,1)
