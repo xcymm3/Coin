@@ -192,9 +192,9 @@ export default function Garden({ initialState, persist = true }: { initialState?
   function reset() { setTool(null); setMoveFrom(null); setObserving(false); setInspectedPot(null); setFloats([]); setMobilePanel('garden'); dispatch({ type: 'reset' }); offlineApplied.current = true; setVictoryDismissed(false); setPanel(null); setScreen('game'); setCategory(0); setToast('新的花园，从一包免费种子开始。') }
 
 
-  const squirrelPicker = team.workers.sow.length>0 && <button className="squirrel-picker-button blue-button" aria-label={`松鼠播种选种，当前${TIERS[team.sowTier]}`} aria-haspopup="dialog" title={`本园松鼠播种：${TIERS[team.sowTier]}`} onClick={()=>setPanel('squirrel')}>
+  const squirrelPicker = team.workers.sow.length>0 && <button className="squirrel-picker-button tool-button" aria-label={`松鼠播种选种，当前${TIERS[team.sowTier]}`} aria-haspopup="dialog" title={`本园松鼠播种：${TIERS[team.sowTier]}`} onClick={()=>setPanel('squirrel')}>
     <GardenAnimal kind="sow"/>
-    <span className={`squirrel-current-seed tier-${team.sowTier}`}><span className="seed-bag"><Sprite id={13}/></span></span>
+    <span className={`squirrel-current-seed tier-${team.sowTier}`}><span className="seed-bag"><Sprite id={13}/></span></span><span>松鼠</span>
   </button>
 
   return <div className={`game-shell ${landscapeShopOpen ? 'landscape-shop-open' : 'landscape-shop-closed'} ${!settings.motion ? 'reduce-motion' : ''} ${screen === 'menu' ? 'on-menu' : ''} ${paused ? 'is-paused' : ''} ${observing ? 'observation-mode' : ''}`}>
