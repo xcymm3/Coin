@@ -210,7 +210,7 @@ function advance(s: GameState, dt: number) {
     const team=teamFor(s,page)
     team.snails.forEach(w=>advanceWorker(s,'water',w,dt,page))
     if(team.autoHarvest) team.workers.harvest.forEach(w=>advanceWorker(s,'harvest',w,dt,page))
-    if(team.autoSow && !(page===s.activeGarden && s.selected===ULTIMATE_ID)) team.workers.sow.forEach(w=>advanceWorker(s,'sow',w,dt,page))
+    if(team.autoSow) team.workers.sow.forEach(w=>advanceWorker(s,'sow',w,dt,page))
   }
 }
 export type Action = {type:'hire';id:string} | {type:'expand'} | {type:'open-garden'} | {type:'fertilize';index:number} | {type:'decorate';id:string} | {type:'decoration-toggle';id:string} | { type: 'garden'; index: number } | { type: 'dig'; index: number } | { type: 'water'; index: number } | { type: 'move'; from: number; to: number } | { type: 'refill' } | { type: 'tick'; dt: number } | { type: 'pot'; index: number } | { type: 'select'; id: number }

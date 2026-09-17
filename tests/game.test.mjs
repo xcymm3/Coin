@@ -94,3 +94,28 @@ test('cross-garden cart preserves the entire plant and clears reservations on bo
  assert.deepEqual(reducer(s,{type:'move',from:74,to:-1}),s)
  assert.deepEqual(parseSave(JSON.stringify(s)),s)
 })
+
+test('ultimate selection does not stop sowing and harvesting after planting or switching gardens',()=>{
+ let s=expanded()
+ for(const page of [0,1]){s=reducer(s,{type:'garden',index:page});s=employ(s,'sow',2,2);s=employ(s,'harvest',2,2)}
+ s=reducer(s,{type:'garden',index:0});s=reducer(s,{type:'select',id:9});s=reducer(s,{type:'pot',index:0})
+ s.coins=0;s.randomState=42
+ s=reducer(s,{type:'tick',dt:20})
+ assert.ok(s.pots.slice(1,15).some(p=>p.plant!==null),'active garden should sow with ultimate selected')
+ s=reducer(s,{type:'garden',index:1});s=reducer(s,{type:'tick',dt:160})
+ assert.ok(s.pots.slice(15,30).some(p=>p.plant!==null),'newly viewed garden should keep sowing')
+ assert.ok(s.harvests>0);assert.ok(s.stats.autoCoins>0)
+ assert.equal(s.pots.filter(p=>p.plant===9).length,1);assert.equal(s.pots[0].plant,9)
+ assert.deepEqual(parseSave(JSON.stringify(s)),s)
+})
+
+test('opening second garden with ultimate selected keeps old crew working and new hires can sow',()=>{
+ let s=reducer(newGame(),{type:'start'});s.coins=1e12
+ s=reducer(s,{type:'expand'});for(const u of UPGRADES.filter(u=>u.page===0))s=reducer(s,{type:'buy',id:u.id})
+ s=employ(s,'sow');s=employ(s,'harvest');s=reducer(s,{type:'select',id:9})
+ s=reducer(s,{type:'open-garden'});assert.equal(s.activeGarden,1);assert.equal(teamFor(s).workers.sow.length,0)
+ s=employ(s,'sow');s=employ(s,'harvest');s.coins=0
+ s=reducer(s,{type:'tick',dt:90})
+ for(const page of [0,1])assert.ok(s.pots.slice(page*15,page*15+15).some(p=>p.plant!==null))
+ assert.ok(s.harvests>0);assert.equal(s.pots.some(p=>p.plant===9),false)
+})
