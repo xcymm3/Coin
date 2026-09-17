@@ -24,7 +24,10 @@ export const highestSeed = (s: GameState): Tier => { let tier: Tier = 6; while(t
 export const hireAvailable = (team: Team, option: HireOption) => option.type==='recruit' ? crewFor(team,option.kind).length===option.level-1 : crewFor(team,option.kind).length>0 && team.equipment[option.kind]===option.level-1
 export const expansionLock = (s: GameState) => teamFor(s,gardenCount(s)-1).potCount<15?'先将最新花园扩至15盆':UPGRADES.filter(u=>u.page===gardenCount(s)-1).some(u=>!s.purchases.includes(u.id)) ? '先完成最新花园的三项专属升级' : null
 export const potPrice=(s:GameState,page=s.activeGarden)=>Math.round(8*[1,50,3000,300000,30000000][page]*1.55**(teamFor(s,page).potCount-4))
-export const plantedReward=(s:GameState,index:number)=>{const p=s.pots[index];return p?.plant==null?0:reward(s,PLANTS[p.plant],Math.floor(index/15))*(p.variant&&variantFor(p.plant)?2:1)}
+export const plantedReward=(s:GameState,index:number,at=s.elapsed)=>{const p=s.pots[index];return p?.plant==null?0:reward(s,PLANTS[p.plant],Math.floor(index/15),at)*(p.variant&&variantFor(p.plant)?2:1)}
+export const WEATHER_DURATION = 15
+export const activeWeather = (s: GameState, at = s.elapsed) => at >= s.weather.started && at < s.weather.started + WEATHER_DURATION ? s.weather.kind : null
+export const infiniteWater = (s: GameState) => activeWeather(s) === 2
 export const WATER_DURATION = 1.2
 export const GERMINATION_SECONDS = 5
 export const isGerminating = (p: Pot) => p.plant !== null && (p.germination ?? p.growth) < GERMINATION_SECONDS
@@ -56,9 +59,10 @@ export function upgradeLock(s: GameState,id:UpgradeId):string|null {
 }
 export const price = (_s:GameState,plant:Plant)=>plant.cost
 export const upgradePrice = (_s: GameState, u: Upgrade) => u.cost
-export const reward = (s: GameState, p: Plant, page = s.activeGarden) => Math.round(p.reward * 2 ** s.upgrades.profit * gardenReward(page))
+export const reward = (s: GameState, p: Plant, page = s.activeGarden, at = s.elapsed) => Math.round(p.reward * 2 ** s.upgrades.profit * gardenReward(page)) * (activeWeather(s, at) === 1 ? 7 : 1)
 export const clickPower = (s: GameState) => 2 * 2 ** s.upgrades.click
-export const growthRate = (s: GameState, page = s.activeGarden) => 2 ** s.upgrades.soil * GARDENS[page].growth
+const baseGrowthRate = (s: GameState, page: number) => 2 ** s.upgrades.soil * GARDENS[page].growth
+export const growthRate = (s: GameState, page = s.activeGarden) => baseGrowthRate(s, page) * (activeWeather(s) === 0 ? 2 : 1)
 export const formatTime = (n: number) => `${Math.floor(n / 60).toString().padStart(2, '0')}:${Math.floor(n % 60).toString().padStart(2, '0')}`
 
 function grow(s: GameState, i: number, amount: number) {
@@ -111,11 +115,11 @@ function plantIn(s: GameState, i: number, id: number) {
   const roll=extraRandom(s), variant=variantFor(id)&&roll<.1?1:0
   s.pots[i] = { variant, plant: id, germination: 0, growth: plant.seconds * (1 - 2 ** -s.upgrades.lantern), wateredAt: -10 }
 }
-function harvest(s: GameState, i: number, carrier?: Worker) {
+function harvest(s: GameState, i: number, carrier?: Worker, at = s.elapsed) {
   const p = s.pots[i]
   if (p.plant === null || p.growth < PLANTS[p.plant].seconds) return
   const id = p.plant
-  const coins = plantedReward(s,i)
+  const coins = plantedReward(s,i,at)
   if (carrier) { carrier.cargo += coins; carrier.count++ } else { addCoins(s, coins); s.stats.manualCoins += coins }
   if (!carrier && extraRandom(s) < .05) s.fertilizer++
   s.harvests++
@@ -192,7 +196,7 @@ function advanceWorker(s: GameState, kind: ActorKind, w: Worker, dt: number, pag
         if (kind === 'harvest') { addCoins(s, w.cargo); s.stats.autoCoins += w.cargo; w.cargo = 0; w.count = 0 }
         else w.stock = capacity(s, kind, page)
       } else if (validTarget(s, kind, w.target)) {
-        if (kind === 'harvest') harvest(s, w.target!, w)
+        if (kind === 'harvest') harvest(s, w.target!, w, s.elapsed - remaining)
         else if (kind === 'sow') { const id=seedPlantId(team.sowTier); plantIn(s, w.target!, id); w.stock-- }
         else { water(s, w.target!, kind !== 'player'); w.stock-- }
       }
@@ -201,9 +205,13 @@ function advanceWorker(s: GameState, kind: ActorKind, w: Worker, dt: number, pag
   }
 }
 function advance(s: GameState, dt: number) {
+  const from = s.elapsed
+  // Integrate only the part of this step inside the rain window, including fractional boundaries.
+  const rainOverlap = () => s.weather.kind === 0 ? Math.max(0, Math.min(from + dt, s.weather.started + WEATHER_DURATION) - Math.max(from, s.weather.started)) : 0
+  let rainSeconds = rainOverlap()
   s.elapsed += dt
-  while (s.elapsed >= s.weather.next) { const started=s.weather.next; s.weather={kind:Math.floor(extraRandom(s)*3),started,next:started+300+extraRandom(s)*300} }
-  s.pots.forEach((_, i) => grow(s, i, dt * growthRate(s, Math.floor(i/15))))
+  while (s.elapsed >= s.weather.next) { const started=s.weather.next; s.weather={kind:Math.floor(extraRandom(s)*3),started,next:started+300+extraRandom(s)*300}; rainSeconds += rainOverlap() }
+  s.pots.forEach((_, i) => grow(s, i, (dt + rainSeconds) * baseGrowthRate(s, Math.floor(i/15))))
   s.pots.forEach((p, i) => {
     if ((p.watering ?? 0) > 0) {
       p.watering = Math.max(0, p.watering! - dt)
@@ -267,10 +275,10 @@ export function reducer(state: GameState, action: Action): GameState {
     else if (p.growth >= PLANTS[p.plant].seconds) harvest(s, action.index)
 
   }
-  if (action.type === 'water' && validTarget(s, 'player', action.index) && s.player.phase === 'idle' && s.player.stock > 0 && !(s.pots[action.index].watering! > 0)) {
-    s.pots[action.index].watering = WATER_DURATION; s.player.stock--
+  if (action.type === 'water' && validTarget(s, 'player', action.index) && (infiniteWater(s) || s.player.phase === 'idle' && s.player.stock > 0) && !(s.pots[action.index].watering! > 0)) {
+    s.pots[action.index].watering = WATER_DURATION; if (!infiniteWater(s)) s.player.stock--
   }
-  if (action.type === 'refill' && s.player.phase === 'idle' && s.player.stock < capacity(s, 'player')) {
+  if (action.type === 'refill' && !infiniteWater(s) && s.player.phase === 'idle' && s.player.stock < capacity(s, 'player')) {
     s.player.phase = 'service'; s.player.target = null; s.player.clock = 0; s.player.path = []
   }
   if (action.type === 'dig' && s.pots[action.index]?.plant != null) {

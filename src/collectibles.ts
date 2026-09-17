@@ -18,3 +18,5 @@ export const DECORATIONS = [
  {id:'moon',name:'星月风铃',cost:10000000000,detail:'悬挂星月风铃'},
 ]
 export const WEATHER = ['细雨','萤火虫之夜','彩虹']
+
+export const WEATHER_EFFECTS = ['自然成长 ×2', '收获收益 ×7', '水壶无限水量']

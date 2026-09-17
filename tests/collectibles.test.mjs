@@ -37,7 +37,7 @@ test('decorations only spend money, toggle appearance and never count toward pro
  for(const d of DECORATIONS){const before=s;s=reducer(s,{type:'decorate',id:d.id});assert.equal(s.coins,before.coins-d.cost);assert.deepEqual(s.upgrades,before.upgrades);assert.deepEqual(s.purchases,[]);assert.equal(s.earned,0);assert.deepEqual(reducer(s,{type:'decorate',id:d.id}),s)}
  s=reducer(s,{type:'decoration-toggle',id:'moon'});assert.deepEqual(teamFor(s).hiddenDecorations,['moon']);assert.deepEqual(parseSave(JSON.stringify(s)),s)
 })
-test('weather begins every five to ten minutes and lasts fifteen seconds visually',()=>{
+test('weather begins every five to ten minutes and lasts fifteen seconds',()=>{
  let s=start();s.weather={kind:0,started:-20,next:300};s.extraRandom=42
  s=reducer(s,{type:'tick',dt:299});assert.equal(s.weather.started,-20)
  s=reducer(s,{type:'tick',dt:1});assert.equal(s.weather.started,300);assert.ok(s.weather.next>=600&&s.weather.next<=900)
