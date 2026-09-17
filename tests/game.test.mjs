@@ -119,3 +119,25 @@ test('opening second garden with ultimate selected keeps old crew working and ne
  for(const page of [0,1])assert.ok(s.pots.slice(page*15,page*15+15).some(p=>p.plant!==null))
  assert.ok(s.harvests>0);assert.equal(s.pots.some(p=>p.plant===9),false)
 })
+
+test('squirrel seed selection is local, requires a hire, rejects ultimate and migrates old saves',()=>{
+ let s=expanded();assert.equal(reducer(s,{type:'sow-tier',tier:3}).gardens[4].sowTier,0)
+ s=employ(s,'sow');s=reducer(s,{type:'sow-tier',tier:3});assert.equal(teamFor(s).sowTier,3);assert.equal(teamFor(s,0).sowTier,0)
+ for(const tier of [-1,5,1.5])assert.equal(teamFor(reducer(s,{type:'sow-tier',tier})).sowTier,3)
+ s=reducer(s,{type:'select',id:9});assert.equal(teamFor(s).sowTier,3)
+ assert.deepEqual(parseSave(JSON.stringify(s)),s)
+ const old=structuredClone(s);for(const t of old.gardens)delete t.sowTier
+ assert.ok(parseSave(JSON.stringify(old)).gardens.every(t=>t.sowTier===0))
+ for(const tier of [null,5,-1,0.5,'2']){const invalid=structuredClone(s);invalid.gardens[0].sowTier=tier;assert.equal(parseSave(JSON.stringify(invalid)),null)}
+})
+
+test('squirrels wait without spending stock or falling back, resume when funded and never overspend',()=>{
+ let s=reducer(newGame(),{type:'start'});s.coins=1e6;s=employ(s,'sow',2);s=reducer(s,{type:'sow-tier',tier:2});s.coins=299
+ for(const [i,w] of teamFor(s).workers.sow.entries())Object.assign(w,{phase:'act',target:i,clock:0.5,stock:1})
+ const before=structuredClone(teamFor(s).workers.sow)
+ s=reducer(s,{type:'tick',dt:10});assert.deepEqual(teamFor(s).workers.sow,before);assert.equal(s.coins,299);assert.ok(s.pots.every(p=>p.plant===null))
+ s.coins=300;s=reducer(s,{type:'tick',dt:1});assert.equal(s.coins,0);assert.equal(s.pots.filter(p=>p.plant!==null).length,1)
+ assert.equal(teamFor(s).workers.sow[1].stock,1);assert.equal(teamFor(s).workers.sow[1].clock,0.5)
+ s.coins=300;s=reducer(s,{type:'tick',dt:1});assert.equal(s.coins,0);assert.equal(s.pots.filter(p=>p.plant!==null).length,2)
+ s=reducer(s,{type:'sow-tier',tier:0});s=reducer(s,{type:'tick',dt:40});assert.ok(s.pots.filter(p=>p.plant!==null).length>2)
+})

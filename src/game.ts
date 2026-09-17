@@ -26,7 +26,7 @@ export const WATER_DURATION = 1.2
 export const GERMINATION_SECONDS = 5
 export const isGerminating = (p: Pot) => p.plant !== null && (p.germination ?? p.growth) < GERMINATION_SECONDS
 export type Pot = { variant?: number; germination?: number; revealedAt?: number; watering?: number; plant: number | null; growth: number; wateredAt: number }
-export type Team = { snails: Worker[]; workers: Record<WorkerKind,Worker[]>; cursor: number; equipment:Record<CrewKind,number>; decorations:string[];hiddenDecorations:string[];autoHarvest:boolean;autoSow:boolean }
+export type Team = { sowTier: Exclude<Tier,5>; snails: Worker[]; workers: Record<WorkerKind,Worker[]>; cursor: number; equipment:Record<CrewKind,number>; decorations:string[];hiddenDecorations:string[];autoHarvest:boolean;autoSow:boolean }
 export type GameState = {
   fertilizer:number;extraRandom:number;variants:string[];weather:{kind:number;started:number;next:number};
   campaignVersion:4;activeGarden:number;gardens:Team[];purchases:string[];legacyBonuses:Record<EffectId,number>;
@@ -36,7 +36,7 @@ export type GameState = {
   harvests:number;clicks:number;wonAt:number|null;lastSaved:number;started:boolean;
 }
 const zeroBonuses=()=>Object.fromEntries(EFFECT_IDS.map(id=>[id,0])) as Record<EffectId,number>
-export const newTeam = ():Team => ({snails:[],workers:{harvest:[],sow:[]},cursor:0,equipment:{water:0,harvest:0,sow:0},decorations:[],hiddenDecorations:[],autoHarvest:true,autoSow:true})
+export const newTeam = ():Team => ({sowTier:0,snails:[],workers:{harvest:[],sow:[]},cursor:0,equipment:{water:0,harvest:0,sow:0},decorations:[],hiddenDecorations:[],autoHarvest:true,autoSow:true})
 const emptyPot = (): Pot => ({ plant: null, growth: 0, wateredAt: -10 })
 export function newGame():GameState {
  return {fertilizer:0,extraRandom:Math.floor(Math.random()*4294967296),variants:[],weather:{kind:0,started:-20,next:300+Math.random()*300},
@@ -150,6 +150,8 @@ function advanceWorker(s: GameState, kind: ActorKind, w: Worker, dt: number, pag
   const team = teamFor(s,page)
   let remaining = dt
   while (remaining > .000001) {
+    // Check every job step: other crews and manual purchases share the same wallet.
+    if (kind === 'sow' && s.coins < price(s, PLANTS[seedPlantId(team.sowTier)])) return
     if ((w.phase === 'walk' || w.phase === 'act') && !validTarget(s, kind, w.target)) {
       w.phase = 'idle'; w.target = null; w.path = []; w.clock = 0
     }
@@ -188,7 +190,7 @@ function advanceWorker(s: GameState, kind: ActorKind, w: Worker, dt: number, pag
         else w.stock = capacity(s, kind, page)
       } else if (validTarget(s, kind, w.target)) {
         if (kind === 'harvest') harvest(s, w.target!, w)
-        else if (kind === 'sow') { const id=seedPlantId(highestSeed(s)); plantIn(s, w.target!, s.coins >= price(s, PLANTS[id]) ? id : 0); w.stock-- }
+        else if (kind === 'sow') { const id=seedPlantId(team.sowTier); plantIn(s, w.target!, id); w.stock-- }
         else { water(s, w.target!, kind !== 'player'); w.stock-- }
       }
       w.phase = 'idle'; w.clock = 0; w.target = null
@@ -213,7 +215,7 @@ function advance(s: GameState, dt: number) {
     if(team.autoSow) team.workers.sow.forEach(w=>advanceWorker(s,'sow',w,dt,page))
   }
 }
-export type Action = {type:'hire';id:string} | {type:'expand'} | {type:'open-garden'} | {type:'fertilize';index:number} | {type:'decorate';id:string} | {type:'decoration-toggle';id:string} | { type: 'garden'; index: number } | { type: 'dig'; index: number } | { type: 'water'; index: number } | { type: 'move'; from: number; to: number } | { type: 'refill' } | { type: 'tick'; dt: number } | { type: 'pot'; index: number } | { type: 'select'; id: number }
+export type Action = {type:'sow-tier';tier:number} | {type:'hire';id:string} | {type:'expand'} | {type:'open-garden'} | {type:'fertilize';index:number} | {type:'decorate';id:string} | {type:'decoration-toggle';id:string} | { type: 'garden'; index: number } | { type: 'dig'; index: number } | { type: 'water'; index: number } | { type: 'move'; from: number; to: number } | { type: 'refill' } | { type: 'tick'; dt: number } | { type: 'pot'; index: number } | { type: 'select'; id: number }
   | { type: 'buy'; id: UpgradeId } | { type: 'toggle'; key: 'autoHarvest' | 'autoSow' } | { type: 'start' } | { type: 'reset' }
 export function reducer(state: GameState, action: Action): GameState {
   if (action.type === 'reset') return { ...newGame(), started: true }
@@ -224,6 +226,7 @@ export function reducer(state: GameState, action: Action): GameState {
   const clone = (w: Worker): Worker => ({ ...w, path: w.path.map(p => ({ ...p })) })
   const s:GameState={...state,variants:[...state.variants],weather:{...state.weather},player:clone(state.player),pots:state.pots.map(p=>({...p})),upgrades:{...state.upgrades},legacyBonuses:{...state.legacyBonuses},discovered:[...state.discovered],harvestCounts:[...state.harvestCounts],purchases:[...state.purchases],stats:{...state.stats},gardens:state.gardens.map(t=>({...t,equipment:{...t.equipment},snails:t.snails.map(clone),workers:{harvest:t.workers.harvest.map(clone),sow:t.workers.sow.map(clone)},decorations:[...t.decorations],hiddenDecorations:[...t.hiddenDecorations]}))}
   const team=teamFor(s)
+  if(action.type==='sow-tier' && team.workers.sow.length>0 && Number.isInteger(action.tier) && action.tier>=0 && action.tier<ULTIMATE_TIER) team.sowTier=action.tier as Exclude<Tier,5>
   if(action.type==='toggle') team[action.key]=!team[action.key]
   if(action.type==='hire') {
     const u=hireCatalog(s.activeGarden).find(u=>u.id===action.id)
@@ -341,6 +344,8 @@ export function parseSave(raw:string|null):GameState|null {
   for(let page=0;page<s.gardens.length;page++){
    const t=s.gardens[page]
    if(!t||!t.workers||!integer(t.cursor)||!t.equipment||typeof t.autoHarvest!=='boolean'||typeof t.autoSow!=='boolean'||!unique(t.decorations)||t.decorations.some(id=>!DECORATIONS.some(d=>d.id===id))||!unique(t.hiddenDecorations)||t.hiddenDecorations.some(id=>!t.decorations.includes(id)))return null
+   if(t.sowTier===undefined)t.sowTier=0
+   if(!integer(t.sowTier)||t.sowTier>=ULTIMATE_TIER)return null
    for(const kind of ['water','harvest','sow'] as CrewKind[]){const crew=crewFor(t,kind);if(!Array.isArray(crew)||crew.length>5||!integer(t.equipment[kind])||t.equipment[kind]>4||crew.some(w=>!workerValid(w,page)))return null}
   }
   return s

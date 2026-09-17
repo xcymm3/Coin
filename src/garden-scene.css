@@ -341,3 +341,14 @@
 .reduce-motion .pool-dipping-can,.reduce-motion .pool-dipping-can i{animation:none}
 @media(prefers-reduced-motion:reduce){.pool-dipping-can,.pool-dipping-can i{animation:none}}
 @media(max-width:620px){.supply-station.water-station{width:80px}.water-station .pixel-pool{width:70px;height:34px;border-width:5px}.water-station .pool-refill-button{min-height:48px}.water-station b{font-size:8px}.pool-dipping-can{width:36px;height:36px;top:-10px}}
+/* Local sowing choice belongs beside the garden tools, only after hiring. */
+.zen-garden .squirrel-seed-picker{display:flex;flex:0 0 176px;min-width:0;flex-direction:column;gap:5px;padding:6px 8px;background:var(--color-wood-dark);border:2px solid var(--color-wood-light);box-shadow:2px 3px var(--color-shade);color:var(--color-paper);font-size:11px;text-shadow:1px 1px var(--color-wood-deep)}
+.squirrel-seed-picker select{width:100%;min-width:0;font:inherit;border:2px solid var(--color-wood-light);border-radius:0;padding:5px 2px;color:var(--color-gold-light);background:var(--color-wood-deep);cursor:pointer}
+.squirrel-seed-picker select:focus-visible{outline:2px solid var(--color-gold);outline-offset:2px}
+.squirrel-seed-picker small{font-size:10px;color:var(--color-gold-light)}
+@media(max-width:1200px){.zen-garden.has-squirrels .tool-slots{flex-wrap:wrap;row-gap:9px}.zen-garden .squirrel-seed-picker{flex:0 0 100%;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;padding:4px 7px;gap:2px 10px}.squirrel-seed-picker small{grid-column:1/-1}.zen-garden.has-squirrels .garden-floor{top:219px}.has-squirrels .weather-overlay>span{top:219px}}
+@media(max-width:980px){.zen-garden.has-squirrels .garden-floor{top:208px}}
+@media(max-width:620px){.zen-garden.has-squirrels{min-height:675px}.zen-garden.has-squirrels .garden-floor{top:198px}.has-squirrels .weather-overlay>span{top:198px}.zen-garden .squirrel-seed-picker{font-size:10px}.squirrel-seed-picker select{padding:3px 2px}.squirrel-seed-picker small{font-size:9px}}
+.observation-mode .zen-garden.has-squirrels .garden-floor{top:38px}
+@media(min-width:621px) and (max-width:980px){.zen-garden.has-squirrels .garden-floor{top:220px}.has-squirrels .weather-overlay>span{top:220px}}
+@media(min-width:981px) and (max-width:1200px){.zen-garden.has-squirrels .garden-floor{top:232px}.has-squirrels .weather-overlay>span{top:232px}}
