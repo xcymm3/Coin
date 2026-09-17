@@ -324,3 +324,20 @@
 .zen-garden .garden-scene-caption{z-index:2}
 @media(max-width:620px){.zen-garden .tool-slots{gap:8px}.zen-garden .tool-button{border-width:2px}.zen-garden .garden-tools{top:36px}.zen-garden .tool-hint{margin-top:5px}.zen-garden .refill-can{bottom:10px}}
 @media(max-width:350px){.zen-garden{--tool-size:54px}.zen-garden .tool-slots{gap:7px}}
+/* Shared pixel pool: direct refilling at the water, with an in-world dip animation. */
+.supply-station.water-station{width:110px}
+.water-station .pool-refill-button{position:relative;display:block;width:100%;padding:0 4px 3px;min-height:60px}
+.water-station .pixel-pool{width:96px;height:44px;margin:3px auto 4px;border-width:6px;box-shadow:3px 3px #394f45,inset 3px 3px #367f89}
+.water-station .pool-refill-button:disabled{opacity:1}
+.water-station .pool-refill-button:not(:disabled):hover .pixel-pool{border-color:var(--color-gold-light)}
+.water-station .pool-refill-button:focus-visible{outline:2px dashed var(--color-gold-light);outline-offset:2px}
+.pool-dipping-can{position:absolute;left:30%;top:-14px;width:48px;height:48px;pointer-events:none;animation:pool-dip 1.2s steps(4) both}
+.pool-dipping-can .garden-tool-art{width:100%;height:100%;max-height:none}
+.pool-dipping-can i{position:absolute;left:8px;bottom:0;width:3px;height:4px;background:#b5e6de;box-shadow:24px -3px #b5e6de;animation:pool-splash .4s steps(3) infinite}
+.pool-dipping-can i:last-child{left:15px;animation-delay:-.2s}
+@keyframes pool-dip{0%{transform:translate(7px,-8px)}35%,70%{transform:translate(0,10px) rotate(-12deg)}100%{transform:translate(7px,-8px)}}
+@keyframes pool-splash{to{translate:0 -8px;opacity:0}}
+.is-paused .pool-dipping-can,.is-paused .pool-dipping-can i{animation-play-state:paused}
+.reduce-motion .pool-dipping-can,.reduce-motion .pool-dipping-can i{animation:none}
+@media(prefers-reduced-motion:reduce){.pool-dipping-can,.pool-dipping-can i{animation:none}}
+@media(max-width:620px){.supply-station.water-station{width:80px}.water-station .pixel-pool{width:70px;height:34px;border-width:5px}.water-station .pool-refill-button{min-height:48px}.water-station b{font-size:8px}.pool-dipping-can{width:36px;height:36px;top:-10px}}
