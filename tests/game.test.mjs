@@ -5,6 +5,38 @@ import {newGame as legacyNewGame,reducer as legacyReducer,UPGRADES as LEGACY_UPG
 import {expanded,employ} from './helpers.mjs'
 const pot=(plant,growth=0)=>({plant,growth,wateredAt:-10})
 
+test('manual and squirrel planting reveal rare species immediately and grow on the first tick',()=>{
+ for(const automatic of [false,true]){
+  let s=reducer(newGame(),{type:'start'});s.elapsed=10;s.coins=100000;s.randomState=42
+  if(automatic){
+   s=employ(s,'sow');s=reducer(s,{type:'sow-tier',tier:2})
+   Object.assign(teamFor(s).workers.sow[0],{phase:'act',target:0,clock:.8,stock:1})
+   s=reducer(s,{type:'tick',dt:.1})
+  }else{
+   s=reducer(s,{type:'select',id:6});s=reducer(s,{type:'pot',index:0})
+  }
+  const planted=s.pots[0]
+  assert.ok(PLANTS[planted.plant].tier>=2)
+  assert.equal(planted.germination,undefined)
+  assert.equal(planted.revealedAt,s.elapsed)
+  assert.equal(planted.growth,0)
+  const after=reducer(s,{type:'tick',dt:.25})
+  assert.equal(after.pots[0].growth,.25)
+  assert.equal(after.pots[0].revealedAt,planted.revealedAt)
+  assert.deepEqual(parseSave(JSON.stringify(after)),after)
+ }
+})
+
+test('old unrevealed plants preserve growth and never trigger delayed reveal',()=>{
+ let s=reducer(newGame(),{type:'start'})
+ s.pots[0]={...pot(6,1),germination:1}
+ s=parseSave(JSON.stringify(s));assert.ok(s)
+ assert.equal(s.pots[0].growth,1)
+ s=reducer(s,{type:'tick',dt:5})
+ assert.equal(s.pots[0].growth,6)
+ assert.equal(s.pots[0].revealedAt,undefined)
+})
+
 test('pots start at four, charge per slot, reject locked planting and stop at fifteen',()=>{
  let s=newGame()
  assert.equal(teamFor(s).potCount,4)

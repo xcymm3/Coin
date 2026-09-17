@@ -29,8 +29,7 @@ export const WEATHER_DURATION = 15
 export const activeWeather = (s: GameState, at = s.elapsed) => at >= s.weather.started && at < s.weather.started + WEATHER_DURATION ? s.weather.kind : null
 export const infiniteWater = (s: GameState) => activeWeather(s) === 2
 export const WATER_DURATION = 1.2
-export const GERMINATION_SECONDS = 5
-export const isGerminating = (p: Pot) => p.plant !== null && (p.germination ?? p.growth) < GERMINATION_SECONDS
+// germination is retained only to round-trip old saves; it no longer gates growth or visibility.
 export type Pot = { variant?: number; germination?: number; revealedAt?: number; watering?: number; plant: number | null; growth: number; wateredAt: number }
 export type Team = { potCount:number; sowTier: Exclude<Tier,7>; snails: Worker[]; workers: Record<WorkerKind,Worker[]>; cursor: number; equipment:Record<CrewKind,number>; decorations:string[];hiddenDecorations:string[];autoHarvest:boolean;autoSow:boolean }
 export type GameState = {
@@ -69,10 +68,6 @@ function grow(s: GameState, i: number, amount: number) {
   const pot = s.pots[i]
   if (pot?.plant === null || !pot) return
   const plant = PLANTS[pot.plant]
-  if (isGerminating(pot)) {
-    pot.germination = Math.min(GERMINATION_SECONDS, (pot.germination ?? pot.growth) + amount)
-    if (!isGerminating(pot) && plant.tier >= 2 && plant.tier < ULTIMATE_TIER) pot.revealedAt = s.elapsed
-  }
   pot.growth = Math.min(plant.seconds, pot.growth + amount)
   if (pot.growth >= plant.seconds) {
     const key = `${plant.id}:${pot.variant ?? 0}`
@@ -113,7 +108,8 @@ function plantIn(s: GameState, i: number, id: number) {
   const plant = PLANTS[id]
   s.coins -= cost
   const roll=extraRandom(s), variant=variantFor(id)&&roll<.1?1:0
-  s.pots[i] = { variant, plant: id, germination: 0, growth: plant.seconds * (1 - 2 ** -s.upgrades.lantern), wateredAt: -10 }
+  s.pots[i] = { variant, plant: id, growth: plant.seconds * (1 - 2 ** -s.upgrades.lantern), wateredAt: -10 }
+  if (plant.tier >= 2 && plant.tier < ULTIMATE_TIER) s.pots[i].revealedAt = s.elapsed
 }
 function harvest(s: GameState, i: number, carrier?: Worker, at = s.elapsed) {
   const p = s.pots[i]
