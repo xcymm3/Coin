@@ -240,6 +240,16 @@ export default function Garden({ initialState, persist = true }: { initialState?
             {squirrelPicker}
           </div>
           <div className="tool-shelf-actions"><button className="text-button" onClick={()=>{setObserving(true);setMobilePanel('garden');setFloats([]);setToast('')}}>观赏</button><button className="text-button" aria-label="玩法指南" onClick={()=>setPanel('help')}>?</button></div>
+          <div className="seed-shortcuts" role="group" aria-label="快捷选种">
+            {TIERS.map((name, i) => {
+              const tier=i as Tier
+              if (!unlocked(s,tier)) return null
+              const id=seedPlantId(tier), cost=price(s,PLANTS[id]), active=selected.tier===tier
+              return <button key={tier} className={`seed-shortcut blue-button tier-${tier} ${active?'selected':''} ${s.coins<cost?'unaffordable':''}`} aria-pressed={active} aria-label={`${name}，${cost===0?'免费':`${number(cost)}金币`}${s.coins<cost?'，金币不足':''}`} onClick={()=>choose(id)}>
+                <span className="seed-bag"><Sprite id={13}/></span><span><strong>{name.replace('种子','')}</strong><small>{s.coins<cost?'不足 · ':''}{cost===0?'免费':number(cost)}</small></span>
+              </button>
+            })}
+          </div>
           <p className="tool-hint">{tool === 'fertilizer' ? '消耗 1 份，让未成熟的非终极植物立即成熟 · 手动收获时 5% 掉落' : tool === 'shovel' ? '点击挖除任何植物 · 无收益 · 再点铲子取消' : tool === 'cart' ? moveFrom === null ? '选择植物 → 用花园左右箭头跨园 → 点击花盆搬运或交换' : `已选 ${GARDENS[Math.floor(moveFrom/15)].name} · ${moveFrom%15+1} 号盆，可跨园搬运；再点小推车取消` : tool === 'water' ? '点击植物浇水 · 点击左下角水池打水' : '点击空盆播种，点击成熟植物收获'}</p>
         </div>
           <h2 className="scene-garden-name" aria-live="polite">{garden.name}</h2>

@@ -1,5 +1,5 @@
 /* Hallmark · existing pixel garden · pre-emit critique: P5 H4 E4 S5 R5 V4 */
-.mobile-plant-info,.mobile-return{display:none}
+.mobile-plant-info,.mobile-return,.seed-shortcuts{display:none}
 
 @media (max-width:620px), (max-width:980px) and (orientation:portrait), (pointer:coarse) and (max-width:980px) {
   .game-shell{padding:6px 8px max(8px,env(safe-area-inset-bottom));background-attachment:scroll}
@@ -96,4 +96,19 @@
   .zen-garden .squirrel-seed-picker{flex:0 1 230px;width:230px;max-width:100%;height:44px;grid-template-columns:auto minmax(0,1fr);gap:4px;padding:0 4px;border:0;box-shadow:none;background:none;font-size:10px}
   .zen-garden .squirrel-seed-picker>span{white-space:nowrap}
   .zen-garden .squirrel-seed-picker select{height:44px;min-height:44px;font-size:12px;padding:2px 4px}
+  .zen-garden .tool-slots,.zen-garden.has-squirrels .tool-slots{flex-wrap:nowrap;align-items:end;gap:4px}
+  .zen-garden .tool-button,.zen-garden .watering-cubby{width:44px;height:44px;flex-basis:44px}
+  .zen-garden .squirrel-seed-picker{flex:1;width:auto;min-width:64px;height:58px;display:flex;flex-direction:column;align-items:stretch;gap:0;padding:0}
+  .zen-garden .squirrel-seed-picker>span{font-size:9px;line-height:14px;overflow:hidden;white-space:nowrap}
+  .zen-garden .squirrel-seed-picker select{font-size:11px;padding:2px}
+  .seed-shortcuts{display:flex;gap:5px;overflow-x:auto;overscroll-behavior-x:contain;touch-action:pan-x;scrollbar-width:thin;scrollbar-color:var(--color-gold-dark) var(--color-wood-dark);padding:3px 0 5px;margin-top:4px}
+  .seed-shortcut{display:flex;align-items:center;gap:3px;flex:0 0 76px;min-height:54px;padding:3px;text-align:left}
+  .seed-shortcut .seed-bag,.seed-shortcut .seed-bag .sprite{width:24px;height:30px;flex-shrink:0}
+  .seed-shortcut strong{display:block;font-size:12px;white-space:nowrap}
+  .seed-shortcut small{display:block;font-size:10px;color:var(--color-gold);line-height:1.4}
+  .seed-shortcut.selected{border-color:var(--color-gold);box-shadow:inset 0 0 0 1px var(--color-gold-dark)}
+  .seed-shortcut.unaffordable small{color:var(--color-muted)}
+  .zen-garden .garden-floor,.zen-garden.has-squirrels .garden-floor{top:194px}
+  .weather-overlay>span,.has-squirrels .weather-overlay>span{top:174px}
+  .observation-mode .seed-shortcuts{display:none}
 }

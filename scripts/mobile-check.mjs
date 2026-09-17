@@ -52,6 +52,18 @@ try {
   s.weather={kind:1,started:100,next:500}
   for(let i=60;i<75;i++)s.pots[i]={plant:i===61?9:10+i%3,growth:i===61?100:PLANTS[10+i%3].seconds*.3,wateredAt:-10}
   page=await open(s)
+  const quick=page.getByRole('group',{name:'快捷选种'})
+  const picker=page.locator('.zen-garden .squirrel-seed-picker select')
+  const sowTier=await picker.inputValue()
+  await page.getByRole('button',{name:/水壶工具/}).tap()
+  const lastSeed=quick.getByRole('button').last()
+  await lastSeed.scrollIntoViewIfNeeded()
+  await lastSeed.tap()
+  assert.equal(await lastSeed.getAttribute('aria-pressed'),'true')
+  assert.equal(await picker.inputValue(),sowTier,'manual seed choice preserves squirrel tier')
+  assert.equal(await page.getByRole('button',{name:/水壶工具/}).getAttribute('aria-pressed'),'false')
+  assert.equal(await page.getByRole('region',{name:'花园',exact:true}).isVisible(),true)
+  assert.ok(await quick.evaluate(e=>e.scrollWidth>e.clientWidth || e.clientWidth>600),'seed strip scrolls on phones')
   await page.getByTestId('pot-61').tap()
   assert.match(await page.getByTestId('plant-inspector').innerText(),/永恒星之花/)
   await page.getByRole('button',{name:'上一座花园'}).tap()
