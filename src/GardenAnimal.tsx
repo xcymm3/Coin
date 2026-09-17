@@ -1,0 +1,20 @@
+import type { CrewKind } from './upgrades'
+/** Art parts are separate so locomotion follows each animal's anatomy. */
+export function GardenAnimal({kind}:{kind:CrewKind}) {
+ return <svg className={`creature-art creature-${kind}`} viewBox="0 0 80 64" aria-hidden="true" strokeLinecap="round" strokeLinejoin="round">
+ {kind==='water'?<>
+  <g className="snail-foot"><path d="M7 51Q14 40 40 42L59 34Q67 34 68 43L73 51Q77 56 65 57H16Q3 57 7 51Z" fill="#d2b67f" stroke="#55442f" strokeWidth="2"/><path d="M11 52Q30 48 52 52T70 53" fill="none" stroke="#f7dfa3" strokeWidth="3"/><path d="m19 53 4 1m7-1 4 1m7-1 4 1" stroke="#b79a64" strokeWidth="1.5"/></g>
+  <g className="snail-shell"><path d="M15 43C6 26 19 10 35 11c18 1 25 24 12 35Z" fill="#b77947" stroke="#543d2b" strokeWidth="2.5"/><path d="M17 37C12 19 35 10 44 24c8 14-8 23-16 15-8-8 4-16 8-10 3 5-3 7-4 4" fill="none" stroke="#6f452c" strokeWidth="4"/><path d="M17 25q5-11 17-9" fill="none" stroke="#f0c486" strokeWidth="3"/><path d="M19 42q10 8 24 1" fill="none" stroke="#e4a664" strokeWidth="2"/></g>
+  <g className="snail-head"><path d="M55 45q-5-9 0-17 5-6 11 0 6 8 0 19" fill="#d2b67f" stroke="#55442f" strokeWidth="2"/><g className="snail-feelers"><path d="m56 28-3-11m9 10 4-13" fill="none" stroke="#b79b65" strokeWidth="3"/><ellipse cx="53" cy="16" rx="3.6" ry="4.5" fill="#fff6d7" stroke="#55442f" strokeWidth="1.5"/><ellipse cx="67" cy="13" rx="3.6" ry="4.5" fill="#fff6d7" stroke="#55442f" strokeWidth="1.5"/><circle cx="54" cy="17" r="1.8" fill="#292d28"/><circle cx="68" cy="14" r="1.8" fill="#292d28"/></g><path d="M60 35q3 4 6 0" fill="none" stroke="#6d4936" strokeWidth="1.6"/><ellipse cx="56" cy="35" rx="2.8" ry="1.6" fill="#d99379"/></g>
+ </>:kind==='harvest'?<>
+  <g className="beetle-legs leg-a" stroke="#394630" strokeWidth="3" fill="none"><path d="m24 36-12 5-4-5m30 11-8 10h-7m24-21 11 2 6-5"/></g><g className="beetle-legs leg-b" stroke="#394630" strokeWidth="3" fill="none"><path d="m23 45-11 6-5-1m30-15-9-9h-6m31 18 10 8h7"/></g>
+  <g className="beetle-body"><ellipse cx="34" cy="34" rx="22" ry="19" fill="#65884d" stroke="#304333" strokeWidth="2.5"/><path d="M31 17q-7 16 3 35" fill="none" stroke="#344f33" strokeWidth="2"/><path d="M18 29q1-9 10-11" fill="none" stroke="#b2ce75" strokeWidth="4"/><ellipse cx="42" cy="29" rx="6" ry="9" fill="#7e9d55"/><circle cx="23" cy="39" r="3" fill="#405e36"/><circle cx="42" cy="44" r="3" fill="#405e36"/>
+  <g className="creature-head"><path d="m56 24 2-10m6 13 7-7" fill="none" stroke="#37432e" strokeWidth="2"/><circle cx="59" cy="32" r="12" fill="#adbe77" stroke="#304333" strokeWidth="2"/><ellipse cx="65" cy="29" rx="4" ry="5" fill="#fff5d5"/><circle cx="66" cy="30" r="2.4" fill="#26332b"/><circle cx="67" cy="29" r=".8" fill="white"/><ellipse cx="59" cy="37" rx="3" ry="2" fill="#dbb08a"/><path d="m64 38 4-2" stroke="#4f5b36" strokeWidth="1.5"/></g></g>
+ </>:<>
+  <g className="squirrel-tail"><path d="M28 49C4 47 0 20 13 7 24-3 37 9 29 19c-5 6-12 0-10-4-8 8 3 16 14 19Z" fill="#b96936" stroke="#64432e" strokeWidth="2.5"/><path d="M20 47C5 36 5 15 17 10" fill="none" stroke="#e9b274" strokeWidth="5"/></g>
+  <path className="squirrel-leg leg-a" d="m36 49-5 9h11" fill="#a65c32" stroke="#64432e" strokeWidth="3"/><path className="squirrel-leg leg-b" d="m54 48 4 10h9" fill="#a65c32" stroke="#64432e" strokeWidth="3"/>
+  <g className="squirrel-body"><path d="M27 49q-1-24 18-25 18 3 17 26-17 12-35-1Z" fill="#cd854b" stroke="#64432e" strokeWidth="2.5"/><ellipse cx="47" cy="43" rx="11" ry="13" fill="#f2d3a2"/>
+  <g className="creature-head"><path d="m42 26-2-18q8-9 12 7l7-9q9 0 5 16 10 6 8 14-12 13-29 1Z" fill="#cd854b" stroke="#64432e" strokeWidth="2"/><path d="m44 13 3 10m14-12-3 12" stroke="#edb395" strokeWidth="3"/><path d="M58 30q12-3 15 4-4 11-16 6Z" fill="#f7ddb0"/><ellipse cx="59" cy="27" rx="4" ry="5" fill="#302e28"/><circle cx="60" cy="25" r="1.5" fill="white"/><ellipse cx="72" cy="33" rx="3" ry="2" fill="#493429"/><ellipse cx="53" cy="34" rx="3.5" ry="2" fill="#e9a17b"/></g><path className="squirrel-paw" d="m48 42 12 3" stroke="#aa6539" strokeWidth="5"/></g>
+ </>}
+ </svg>
+}

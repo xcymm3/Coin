@@ -1,8 +1,10 @@
+import { GardenAnimal } from './GardenAnimal'
+import { GardenHabitat } from './GardenHabitat'
 import { ToolArt } from './ToolArt'
 import { WorkerEquipment } from './WorkerEquipment'
 import { DecorationArt } from './DecorationArt'
 import { useEffect, useReducer, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { PLANTS, TIERS, UPGRADES, SAVE_KEY, newGame, parseSave, reducer, unlocked, price, reward, upgradePrice, clickPower, growthRate, formatTime, capacity, STATIONS, WATER_DURATION, upgradeLock, isGerminating, GERMINATION_SECONDS, ULTIMATE_ID, ULTIMATE_TIER, TIER_PLANTS, seedPlantId, GARDENS, gardenCount, teamFor, workerDuration, hireCatalog, hireAvailable, crewFor, MATERIALS, CREW_NAMES, decorationPrice, GARDEN_PRICES, EXPANSION_PRICE, expansionLock, VARIANTS, DECORATIONS, WEATHER, type Tier, type GameState } from './game'
+import { PLANTS, TIERS, UPGRADES, SAVE_KEY, newGame, parseSave, reducer, unlocked, price, reward, upgradePrice, clickPower, growthRate, formatTime, capacity, STATIONS, WATER_DURATION, upgradeLock, isGerminating, GERMINATION_SECONDS, ULTIMATE_ID, ULTIMATE_TIER, TIER_PLANTS, seedPlantId, GARDENS, gardenCount, teamFor, hireCatalog, hireAvailable, crewFor, MATERIALS, CREW_NAMES, decorationPrice, GARDEN_PRICES, EXPANSION_PRICE, expansionLock, VARIANTS, DECORATIONS, WEATHER, type Tier, type GameState } from './game'
 import { configureAudio, sound, unlockAudio } from './audio'
 import { ExtraPlant } from './ExtraPlant'
 import { Sprout } from './Sprout'
@@ -18,12 +20,9 @@ function Sprite({ id, className = '' }: { id: number; className?: string }) {
 function PlantSprite({ id, className = '' }: { id: number; className?: string }) {
   return id < 10 ? <Sprite id={id} className={className} /> : <ExtraPlant id={id} className={className} />
 }
-function Animal({ kind }: { kind: 'harvest' | 'sow' }) {
-  return <svg className={`animal-art animal-${kind}`} viewBox="0 0 32 28" aria-hidden="true" shapeRendering="crispEdges">
-    {kind === 'harvest' ? <><path className="animal-outline" d="M4 7h3v3h3V5h13v5h4v3h3v3h-3v6h-4v3H9v-3H5v-6H2v-3h5V9H4Z" /><path className="animal-shell" d="M9 7h12v3h3v11h-3v2H10v-3H7v-9h2Z" /><path className="animal-outline" d="M15 8h2v15h-2ZM10 12h3v3h-3ZM19 17h3v3h-3Z" /><path className="animal-face" d="M24 10h5v9h-5Z" /><path className="animal-eye" d="M26 11h2v3h-2Z" /><path className="animal-basket" d="M9 1h12v5H9ZM11 0h8v2h-8Z" /></> : <><path className="animal-outline" d="M2 5h3V2h6v3h3v9h4V8h3V3h4v4h3v5h3v8h-4v3h-5v3H10v-3H6v-6H3v-5H1V5Z" /><path className="animal-fur" d="M4 5h6v3h2v8H8v-4H5V9H3V6Zm7 11h9v-6h3V6h2v6h3v7h-4v4H11v-3H8v-5Z" /><path className="animal-face" d="M19 17h7v4h-4v3h-7v-5h4Z" /><path className="animal-eye" d="M25 12h2v3h-2Z" /><path className="animal-basket" d="M8 14h8v8H8ZM10 12h4v3h-4Z" /></>}
-  </svg>
-}
+function Animal({kind}:{kind:'harvest'|'sow'}) { return <GardenAnimal kind={kind}/> }
 function Icon({ name }: { name: string }) {
+  if (name === 'snail') return <GardenAnimal kind="water"/>
   if (name === 'beetle' || name === 'squirrel') return <Animal kind={name === 'beetle' ? 'harvest' : 'sow'} />
   const sprites: Record<string, number> = { coin: 15, seed: 13, water: 14, snail: 12, pot: 10, star: 9 }
   if (name in sprites) return <Sprite id={sprites[name]} className="icon-sprite" />
@@ -225,7 +224,7 @@ export default function Garden({ initialState, persist = true }: { initialState?
           <div className="garden-decorations" aria-hidden="true">{team.decorations.filter(id=>!team.hiddenDecorations.includes(id)).map(id=><div key={id} className={`decoration decoration-${id}`}><DecorationArt id={id}/></div>)}</div>
           <div className="greenhouse-rail" aria-hidden="true"><span /> <span /> <span /></div>
           <div className="board-corner tl" /><div className="board-corner tr" /><div className="board-corner bl" /><div className="board-corner br" />
-          <div className="garden-floor" inert={observing}><svg className="garden-landmark" viewBox="0 0 120 40" preserveAspectRatio={s.activeGarden === 1 ? "none" : "xMidYMid meet"} aria-hidden="true" shapeRendering="crispEdges">{s.activeGarden===0?<path fill="#476848" d="M12 36V8h4v28h-4M4 12h8v4H4m12 4h10v4H16m-12 2h8v4H4"/>:s.activeGarden===1?<><path fill="#428eaa" d="M0 22h26v-8h30v8h30v-9h34v17H86v7H56v-9H26v8H0Z"/><path fill="#a0dfd0" d="M0 23h26v-6h28v4H28v6H0m64 0h22v-6h24v4H90v6H64Z"/></>:s.activeGarden===2?<><path fill="#80552e" d="M41 29h38v8H41zM48 23h24v6H48z"/><path fill="#ead18b" d="M47 18h27v7H47z"/><path fill="#5e4530" d="M59 1h4v21h-4z"/></>:s.activeGarden===3?<><path fill="#58a4b1" d="M30 35V16l8-12 8 12v19zm24 0V12L65 0l11 12v23zm30 0V21l8-10 8 10v14z"/><path fill="#d2fcf0" d="M38 4v26h-4V16zm27-4v30h-5V12zm27 11v21h-4V21z"/></>:<><path fill="none" stroke="#c7a559" strokeWidth="3" d="M38 5h45v23H38zM50 0h20v36H50z"/><path fill="#f5db78" d="M56 12h10v10H56z"/><path fill="#66517c" d="M45 34h34v5H45z"/></>}</svg>
+          <div className="garden-floor" inert={observing}><GardenHabitat page={s.activeGarden}/><svg className="garden-landmark" viewBox="0 0 120 40" preserveAspectRatio={s.activeGarden === 1 ? "none" : "xMidYMid meet"} aria-hidden="true" shapeRendering="crispEdges">{s.activeGarden===0?<path fill="#476848" d="M12 36V8h4v28h-4M4 12h8v4H4m12 4h10v4H16m-12 2h8v4H4"/>:s.activeGarden===1?<><path fill="#428eaa" d="M0 22h26v-8h30v8h30v-9h34v17H86v7H56v-9H26v8H0Z"/><path fill="#a0dfd0" d="M0 23h26v-6h28v4H28v6H0m64 0h22v-6h24v4H90v6H64Z"/></>:s.activeGarden===2?<><path fill="#80552e" d="M41 29h38v8H41zM48 23h24v6H48z"/><path fill="#ead18b" d="M47 18h27v7H47z"/><path fill="#5e4530" d="M59 1h4v21h-4z"/></>:s.activeGarden===3?<><path fill="#58a4b1" d="M30 35V16l8-12 8 12v19zm24 0V12L65 0l11 12v23zm30 0V21l8-10 8 10v14z"/><path fill="#d2fcf0" d="M38 4v26h-4V16zm27-4v30h-5V12zm27 11v21h-4V21z"/></>:<><path fill="none" stroke="#c7a559" strokeWidth="3" d="M38 5h45v23H38zM50 0h20v36H50z"/><path fill="#f5db78" d="M56 12h10v10H56z"/><path fill="#66517c" d="M45 34h34v5H45z"/></>}</svg>
             <div className="floor-details" aria-hidden="true"><i className="moss moss-a" /><i className="moss moss-b" /><i className="moss moss-c" /><span className="garden-stones">▪ ▰ ▪</span></div>
             {Array.from({ length: 15 }, (_, localIndex) => {
             const i = s.activeGarden*15+localIndex
@@ -264,11 +263,13 @@ export default function Garden({ initialState, persist = true }: { initialState?
             {([
               ...team.snails.map((w, i) => ({ kind: 'water' as const, w, on: true, name: `浇水蜗牛${i + 1}`, level: team.equipment.water })),
               ...(['harvest','sow'] as const).flatMap(kind=>team.workers[kind].map((w,i)=>({kind,w,on:kind==='harvest'?team.autoHarvest:team.autoSow&&s.selected!==ULTIMATE_ID,name:`${CREW_NAMES[kind]}${i+1}`,level:team.equipment[kind]})))
-            ]).map(({ kind, w, on, name, level }, i) => <div key={`${kind}-${i}`} data-testid={`worker-${kind}`} data-phase={w.phase} data-target={w.target ?? ''} className={`garden-resident task-animal actor-${kind} ${on ? `worker-${w.phase}` : 'worker-paused'} ${level>0 ? 'wearing-boots' : ''} material-${level}`} style={{ left: `${w.x}%`, top: `${w.y}%`, zIndex: Math.round(w.y) + 1, '--facing': w.facing, '--equipment-scale': 1, '--gear-color': MATERIALS[level].color, '--gear-light': MATERIALS[level].light } as CSSProperties} aria-label={`${name} · ${MATERIALS[level].name}装备：${!on ? '休息中' : w.phase === 'return' ? '返回补给站' : w.phase === 'service' ? kind === 'harvest' ? '交付收获' : '装填补给' : w.phase === 'act' ? '正在照料' : w.phase === 'walk' ? '前往花盆' : '等待目标'}`}>
-              <span className="resident-shadow" />{kind === 'water' ? <Sprite id={12} /> : <Animal kind={kind} />}
-              <WorkerEquipment kind={kind} level={level} loaded={kind==='harvest'?w.count>0:w.stock>0}/><span className="cargo-pips" aria-hidden="true">{Array.from({ length: Math.min(8,capacity(s, kind)) }, (_, j) => <i key={j} className={j < (kind === 'harvest' ? w.count : w.stock) ? 'filled' : ''} />)}</span>
-              {kind === 'water' && w.phase === 'act' && <span className="pour-stream">▪<i>▪</i><b>▪</b></span>}
-              {on && (w.phase === 'act' || w.phase === 'service') && <span className="worker-action">{w.phase === 'service' ? kind === 'harvest' ? `交付 ${number(w.cargo)}` : '装填' : kind === 'harvest' ? '采摘' : kind === 'sow' ? '播种' : '浇水'}<Progress value={w.clock / workerDuration(s,w.phase === 'service',kind)} gold={kind === 'harvest'} /></span>}
+            ]).map(({ kind, w, on, name, level }, i) => <div key={`${kind}-${i}`} data-testid={`worker-${kind}`} data-phase={w.phase} data-target={w.target ?? ''} className={`garden-resident task-animal actor-${kind} ${on ? `worker-${w.phase}` : 'worker-paused'} living-animal material-${level}`} style={{ left: `${w.x}%`, top: `${w.y}%`, zIndex: Math.round(w.y) + 1, '--facing': w.facing, '--equipment-scale': 1, '--gait-delay': `${-i*.29}s`, '--gear-color': MATERIALS[level].color, '--gear-light': MATERIALS[level].light } as CSSProperties} aria-label={`${name} · ${MATERIALS[level].name}装备：${!on ? '休息中' : w.phase === 'return' ? '返回补给站' : w.phase === 'service' ? kind === 'harvest' ? '交付收获' : '装填补给' : w.phase === 'act' ? '正在照料' : w.phase === 'walk' ? '前往花盆' : '等待目标'}`}>
+              <span className="resident-shadow" />
+              <span className="resident-body"><GardenAnimal kind={kind}/><WorkerEquipment kind={kind} level={level} loaded={kind==='harvest'?w.count>0:w.stock>0}/>
+                {on && kind==='water' && w.phase==='act' && <span className="animal-water-drops" aria-hidden="true"><i/><i/><i/></span>}
+                {on && kind==='sow' && w.phase==='act' && <span className="creature-seeds" aria-hidden="true"><i/><i/><i/></span>}
+                {on && kind==='harvest' && w.phase==='act' && <span className="creature-leaf" aria-hidden="true">❧</span>}
+              </span>
             </div>)}
           </div>
           <div className="garden-scene-caption"><small>{garden.subtitle} · 产值 ×{garden.reward} · 环境生长 ×{garden.growth}</small><span>{inspectedPot !== null && s.pots[inspectedPot] ? (() => { const pot = s.pots[inspectedPot]; const p = pot.plant === null ? null : PLANTS[pot.plant]; return isGerminating(pot) ? '神秘种子 · 经过 5 秒有效成长揭晓，浇水可加速' : p ? `${p.name} · ${pot.growth >= p.seconds ? '已成熟，点击收获' : `成长 ${Math.floor(pot.growth / p.seconds * 100)}%`} · 收获 ${reward(s, p)} 金币` : '空花盆 · 点击种下当前选择的种子' })() : '选择顶部工具，再点击盆栽使用'}</span><small>{team.snails.length ? `${team.snails.length} 只蜗牛在园中漫游` : '雇用蜗牛后，它会往返水池与花盆'}</small></div>
