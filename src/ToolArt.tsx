@@ -1,20 +1,23 @@
-import type { CSSProperties } from 'react'
 export type GardenTool = 'water' | 'fertilizer' | 'cart' | 'shovel'
-export function ToolArt({kind}:{kind:GardenTool}) {
- return <svg className={`garden-tool-art art-${kind}`} viewBox="0 0 48 48" shapeRendering="crispEdges" aria-hidden="true" style={{'--tool-shadow':'#352617'} as CSSProperties}>
-  {kind==='water'&&<>
-   <path fill="#392a18" d="M13 10h23v5h4v24h-4v4H12v-4H8V26L2 16v-6h7l7 10h3v-5h-6z"/>
-   <path fill="#cba42d" d="M14 19h21v20H13V25H9L4 15v-3h3l8 11h4v-4z"/>
-   <path fill="#ffe374" d="M15 21h5v17h-5zM3 11h6v4H3zM15 11h18v4H15z"/>
-   <path fill="#e7ba38" d="M32 12h6v5h3v13h-5V18h-4z"/>
-   <path fill="#705824" d="M20 18h12v4H20zM21 35h13v4H21z"/>
-   <path fill="#8bd7dc" d="M22 18h9v2h-9z"/>
-  </>}
+export function ToolArt({kind,waterLevel=3}:{kind:GardenTool;waterLevel?:number}) {
+ return <svg className={`garden-tool-art art-${kind}`} viewBox="0 0 48 48" shapeRendering="crispEdges" aria-hidden="true">
+  {kind==='water'&&<g strokeLinejoin="round">
+   <path d="M30 9C47 4 48 31 33 30" fill="none" stroke="#42351b" strokeWidth="7"/>
+   <path d="M30 9C44 6 45 27 34 27" fill="none" stroke="#f5cc46" strokeWidth="4"/>
+   <path d="M15 21 7 14 4 5 1 7l2 13 12 13" fill="#dfb32f" stroke="#49391d" strokeWidth="2"/>
+   <path d="M14 16Q25 11 36 16l-1 24Q24 46 13 40Z" fill={waterLevel===0?'#94824d':'#e5bc32'} stroke="#49391d" strokeWidth="2"/>
+   <path d="M17 19h15v19q-7 4-15 0z" fill="#615f46"/>
+   {waterLevel>0&&<path d={waterLevel===3?'M17 21q7 3 15 0v17q-7 4-15 0Z':waterLevel===2?'M17 29q7 3 15 0v9q-7 4-15 0Z':'M17 35q7 2 15 0v3q-7 4-15 0Z'} fill={waterLevel===1?'#5a9a99':'#4fbac7'}/>}
+   {waterLevel>0&&<path d={waterLevel===3?'M18 21q7 3 13 0':waterLevel===2?'M18 29q7 3 13 0':'M18 35q7 2 13 0'} fill="none" stroke="#c9f6df" strokeWidth="2"/>}
+   <path d="M14 17q11-6 22 0-11 7-22 0Z" fill="#514b27" stroke="#ffe36a" strokeWidth="2"/>
+   <path d="M14 21v16m1-14v12" stroke={waterLevel===0?'#c0af75':'#fff09b'} strokeWidth="3"/>
+   <path d="M5 7 8 14l6 5" stroke="#fff0a0" strokeWidth="2" fill="none"/>
+  </g>}
   {kind==='fertilizer'&&<>
    <path fill="#362819" d="M12 5h24v8l5 8v20H7V21l5-8z"/>
-   <path fill="#d6bd7d" d="M14 7h20v7l5 9v15H10V23l5-9z"/>
-   <path fill="#f1dfad" d="M16 15h5v6h-6v14h-4V23zM14 7h20v3H14z"/>
-   <path fill="#a2834a" d="M14 11h20v4H14zM33 22h5v16H13v-3h20z"/>
+   <path fill="#55b6b5" d="M14 7h20v7l5 9v15H10V23l5-9z"/>
+   <path fill="#b6f0c3" d="M16 15h5v6h-6v14h-4V23zM14 7h20v3H14z"/>
+   <path fill="#257476" d="M14 11h20v4H14zM33 22h5v16H13v-3h20z"/>
    <path fill="#2d6440" d="M16 23h16v10H16z"/>
    <path fill="#91c653" d="M19 22h4v4h2v-6h5v6h-4v5h-4v-5h-3z"/>
   </>}
