@@ -79,3 +79,21 @@
   .observation-mode .zen-garden{height:calc(100svh - 80px)}
   .observation-mode .zen-garden .garden-floor{top:42px}
 }
+
+/* Portrait keeps navigation at the garden edges and controls above the plants. */
+@media (orientation:portrait) and (max-width:980px) {
+  .topbar .coin-stat{gap:5px;padding:4px 6px}
+  .coin-stat .sprite{width:24px}
+  .coin-stat>div{display:flex;align-items:center;justify-content:space-between;gap:5px;flex:1;min-width:0}
+  .coin-stat small{font-size:10px;letter-spacing:0;white-space:nowrap}
+  .coin-stat strong{font-size:clamp(15px,4.5vw,21px);white-space:nowrap;text-align:right}
+  .zen-garden .scene-garden-name{left:12px;max-width:calc(100% - 116px)}
+  .zen-garden .scene-arrow{top:50%;width:48px;height:60px}
+  .zen-garden .scene-prev{left:0}
+  .zen-garden .scene-next{right:0}
+  .scene-arrow svg{width:30px;height:40px}
+  .zen-garden .garden-floor{left:46px;right:46px}
+  .zen-garden .squirrel-seed-picker{flex:0 1 230px;width:230px;max-width:100%;height:44px;grid-template-columns:auto minmax(0,1fr);gap:4px;padding:0 4px;border:0;box-shadow:none;background:none;font-size:10px}
+  .zen-garden .squirrel-seed-picker>span{white-space:nowrap}
+  .zen-garden .squirrel-seed-picker select{height:44px;min-height:44px;font-size:12px;padding:2px 4px}
+}
