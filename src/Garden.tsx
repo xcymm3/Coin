@@ -176,9 +176,6 @@ export default function Garden({ initialState, persist = true }: { initialState?
   }
   function choose(id: number) { setTool(null); setMoveFrom(null); dispatch({ type: 'select', id }); sound('tap') }
   function reset() { setTool(null); setMoveFrom(null); setObserving(false); setInspectedPot(null); setFloats([]); setMobilePanel('garden'); dispatch({ type: 'reset' }); offlineApplied.current = true; setVictoryDismissed(false); setPanel(null); setScreen('game'); setCategory(0); setToast('新的花园，从一包免费种子开始。') }
-  const star = s.pots.find(p => p.plant === ULTIMATE_ID)
-  const nextGoal = s.wonAt !== null ? '星之花已经绽放。继续创造你的奇妙花园吧。' : star ? '照料永恒星之花，让第一颗星星在花园绽放' : s.coins >= PLANTS[ULTIMATE_ID].cost ? '终极种子已买得起，选择后点击空盆种下星之花' : `攒够 ${number(PLANTS[ULTIMATE_ID].cost)} 金币即可购买终极种子`
-  const goalProgress = s.wonAt !== null ? 1 : star ? star.growth / PLANTS[ULTIMATE_ID].seconds : Math.min(1,s.coins / PLANTS[ULTIMATE_ID].cost)
 
 
   return <div className={`game-shell ${!settings.motion ? 'reduce-motion' : ''} ${screen === 'menu' ? 'on-menu' : ''} ${paused ? 'is-paused' : ''} ${observing ? 'observation-mode' : ''}`}>
@@ -200,7 +197,7 @@ export default function Garden({ initialState, persist = true }: { initialState?
           const open = unlocked(s, i as Tier), active = selected.tier === i
           return <button key={name} className={`tier-card blue-button tier-${i} ${active ? 'selected' : ''}`} aria-pressed={active} disabled={!open} onClick={() => choose(seedPlantId(i as Tier))}>
             <span className="seed-bag"><Sprite id={13} /></span>
-            <span className="tier-copy"><strong>{name}</strong><b>{i === 0 ? '免费 · 无限' : `${number(price(s, PLANTS[seedPlantId(i as Tier)]))} 金币`}</b><small>{!open ? `还差 ${number(price(s, PLANTS[seedPlantId(i as Tier)])-s.coins)} 金币` : i === ULTIMATE_TIER ? '种出星星 · 完成旅程' : `${TIER_PLANTS[i].filter(id => s.harvestCounts[id] > 0).length} / 4 已收获`}</small></span>
+            <span className="tier-copy"><strong>{name}</strong><b>{i === 0 ? '免费 · 无限' : `${number(price(s, PLANTS[seedPlantId(i as Tier)]))} 金币`}</b><small>{i === ULTIMATE_TIER ? '种出星星 · 完成旅程' : `${TIER_PLANTS[i].filter(id => s.harvestCounts[id] > 0).length} / 4 已收获`}</small></span>
           </button>
         })}</div>
         <div className="shop-note"><Icon name="seed" /><p>选好等级，点击空花盆<br />购买并随机播种。</p></div>
@@ -276,7 +273,6 @@ export default function Garden({ initialState, persist = true }: { initialState?
           </div>
           <div className="garden-scene-caption"><small>{garden.subtitle} · 产值 ×{garden.reward} · 环境生长 ×{garden.growth}</small><span>{inspectedPot !== null && s.pots[inspectedPot] ? (() => { const pot = s.pots[inspectedPot]; const p = pot.plant === null ? null : PLANTS[pot.plant]; return isGerminating(pot) ? '神秘种子 · 经过 5 秒有效成长揭晓，浇水可加速' : p ? `${p.name} · ${pot.growth >= p.seconds ? '已成熟，点击收获' : `成长 ${Math.floor(pot.growth / p.seconds * 100)}%`} · 收获 ${reward(s, p)} 金币` : '空花盆 · 点击种下当前选择的种子' })() : '选择顶部工具，再点击盆栽使用'}</span><small>{team.snails.length ? `${team.snails.length} 只蜗牛在园中漫游` : '雇用蜗牛后，它会往返水池与花盆'}</small></div>
         </div>
-        <div className="quest-panel"><Sprite id={9} /><div><div className="quest-caption"><span>{s.wonAt !== null ? '旅程完成' : '星之花的约定'}</span><b>{Math.min(100, Math.floor(goalProgress * 100))}%</b></div><p>{nextGoal}</p><Progress value={goalProgress} gold /></div></div>
       </section>
 
       <aside ref={shopRef} className={`upgrade-panel ${mobilePanel === 'upgrades' ? 'mobile-active' : ''}`} aria-label="花园商店">

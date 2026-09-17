@@ -220,3 +220,7 @@
 @media(prefers-reduced-motion:reduce){.refill-drops{animation:none!important}}.reduce-motion .refill-drops{animation:none!important}
 .scene-arrow:not(:disabled):active{transform:translateY(-50%)}
 @media(max-width:620px){.garden-scene-caption small{display:none}.garden-scene-caption{bottom:5px;line-height:1.3}}
+/* Unaffordable stock reads as inactive across seeds, research, hiring and decor. */
+.seed-panel .tier-card:disabled,.upgrade-panel .upgrade-card:disabled{filter:brightness(.43) saturate(.12);opacity:1;cursor:not-allowed;box-shadow:inset 0 2px #263b3d;border-color:#344546}
+.seed-panel .tier-card.selected:disabled{border-color:#677060;box-shadow:inset 0 0 0 1px #414e40}
+.seed-panel .tier-card:disabled:hover,.upgrade-panel .upgrade-card:disabled:hover{filter:brightness(.43) saturate(.12)}
