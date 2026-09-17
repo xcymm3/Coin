@@ -12,6 +12,7 @@ import { plantPosition } from './gardenScene'
 import './App.css'
 import './garden-scene.css'
 import './mobile-garden.css'
+import './landscape-garden.css'
 
 const number = (n: number) => n >= 1e12 ? `${(n/1e12).toFixed(1)}兆` : n >= 1e8 ? `${(n/1e8).toFixed(1)}亿` : n >= 1e5 ? `${(n/1e4).toFixed(1)}万` : Math.floor(n).toLocaleString('en-US')
 const asset = `${import.meta.env.BASE_URL}assets/garden-atlas.png`
@@ -75,6 +76,7 @@ export default function Garden({ initialState, persist = true }: { initialState?
   useEffect(() => { shopRef.current?.scrollTo({top:0}) }, [category, s.activeGarden])
   const garden = GARDENS[s.activeGarden], team = teamFor(s, s.activeGarden)
   const [inspectedPot, setInspectedPot] = useState<number | null>(null)
+  const [landscapeShopOpen, setLandscapeShopOpen] = useState(true)
   const [mobilePanel, setMobilePanel] = useState<'garden' | 'seeds' | 'upgrades'>('garden')
   const [settings, setSettings] = useState(loadSettings)
   const [toast, setToast] = useState('')
@@ -138,9 +140,11 @@ export default function Garden({ initialState, persist = true }: { initialState?
     }
     offlineApplied.current = true; dispatch({ type: 'start' }); setScreen('game')
   }
-  const compactLayout = () => window.matchMedia('(max-width: 620px), (max-width: 980px) and (orientation: portrait), (pointer: coarse) and (max-width: 980px)').matches
+  const landscapeLayout = () => window.matchMedia('(orientation: landscape) and (max-height: 600px) and (max-width: 1200px)').matches
+  const compactLayout = () => landscapeLayout() || window.matchMedia('(max-width: 620px), (max-width: 980px) and (orientation: portrait), (pointer: coarse) and (max-width: 980px)').matches
   function showMobilePanel(next: 'garden' | 'seeds' | 'upgrades') {
     setMobilePanel(next)
+    if (next === 'upgrades') setLandscapeShopOpen(true)
     if (compactLayout()) window.scrollTo({top:0,behavior:'instant'})
   }
   function potClick(index: number) {
@@ -187,7 +191,15 @@ export default function Garden({ initialState, persist = true }: { initialState?
   function reset() { setTool(null); setMoveFrom(null); setObserving(false); setInspectedPot(null); setFloats([]); setMobilePanel('garden'); dispatch({ type: 'reset' }); offlineApplied.current = true; setVictoryDismissed(false); setPanel(null); setScreen('game'); setCategory(0); setToast('新的花园，从一包免费种子开始。') }
 
 
-  return <div className={`game-shell ${!settings.motion ? 'reduce-motion' : ''} ${screen === 'menu' ? 'on-menu' : ''} ${paused ? 'is-paused' : ''} ${observing ? 'observation-mode' : ''}`}>
+  const squirrelPicker = team.workers.sow.length>0 && <label className="squirrel-seed-picker">
+              <span>松鼠播种 · 本园</span>
+              <select aria-label="本园松鼠播种种子" value={team.sowTier} onChange={e=>dispatch({type:'sow-tier',tier:Number(e.target.value)})}>
+                {TIERS.slice(0,ULTIMATE_TIER).map((name,tier)=><option key={tier} value={tier}>{name} · {tier===0?'免费':`${number(PLANTS[seedPlantId(tier as Tier)].cost)} 金币`}</option>)}
+              </select>
+              <small role="status">{!team.autoSow?'自动播种已关闭':s.coins<PLANTS[seedPlantId(team.sowTier)].cost?'金币不足 · 等待中':'按所选种子播种'}</small>
+            </label>
+
+  return <div className={`game-shell ${landscapeShopOpen ? 'landscape-shop-open' : 'landscape-shop-closed'} ${!settings.motion ? 'reduce-motion' : ''} ${screen === 'menu' ? 'on-menu' : ''} ${paused ? 'is-paused' : ''} ${observing ? 'observation-mode' : ''}`}>
     <Fireflies />
     {observing && <div className="observation-toolbar"><span>{s.wonAt !== null ? '星之花已绽放 · 花园仍在生长' : '静静生长 · 助手继续照料'}</span><button className="blue-button" onClick={() => setObserving(false)}>退出观赏 <small>Esc</small></button></div>}
     <header className="topbar">
@@ -195,6 +207,7 @@ export default function Garden({ initialState, persist = true }: { initialState?
       <div className="stat wood"><Icon name="leaf" /><div><small>收获图鉴</small><strong>{harvestedKinds}<em>/ {PLANTS.length}</em></strong></div></div>
       <div className="brand"><span>MOONLIT GARDEN</span><h1>月光奇植园</h1></div>
       <div className="time-display"><span className="live-dot" />{s.wonAt !== null ? '自由种植' : '花园时光'}<strong data-testid="elapsed">{formatTime(s.elapsed)}</strong></div>
+      <button className="landscape-shop-toggle blue-button" aria-expanded={landscapeShopOpen} aria-controls="garden-shop" onClick={() => setLandscapeShopOpen(!landscapeShopOpen)}>{landscapeShopOpen ? '收起商店' : '打开商店'}</button>
       <button className="blue-button icon-button" aria-label="植物图鉴" onClick={() => setPanel('book')}><Icon name="book" /></button>
       <button className="blue-button icon-button" aria-label="游戏设置" onClick={() => setPanel('settings')}><Icon name="gear" /></button>
     </header>
@@ -209,6 +222,7 @@ export default function Garden({ initialState, persist = true }: { initialState?
             <span className="tier-copy"><strong>{name}</strong><b>{i === 0 ? '免费 · 无限' : `${number(price(s, PLANTS[seedPlantId(i as Tier)]))} 金币`}</b><small>{i === ULTIMATE_TIER ? '种出星星 · 完成旅程' : `${TIER_PLANTS[i].filter(id => s.harvestCounts[id] > 0).length} / 4 已收获`}</small></span>
           </button>
         })}</div>
+        <div className="landscape-seed-picker">{squirrelPicker}</div>
         <div className="shop-note"><Icon name="seed" /><p>选好等级，点击空花盆<br />购买并随机播种。</p></div>
       </aside>
 
@@ -223,13 +237,7 @@ export default function Garden({ initialState, persist = true }: { initialState?
             <button className={`tool-button ${tool === 'fertilizer' ? 'selected' : ''}`} title="肥料 · 使非终极植物立即成熟" aria-label="肥料工具" aria-pressed={tool === 'fertilizer'} onClick={()=>{setTool(tool === 'fertilizer' ? null : 'fertilizer');setMoveFrom(null)}}><ToolArt kind="fertilizer"/><b className="tool-quantity">×{s.fertilizer}</b><span>肥料</span></button>
             <button className={`tool-button ${tool === 'cart' ? 'selected' : ''}`} title="小推车 · 选择植物，切换花园后点击花盆搬运或交换" aria-label="小推车工具" aria-pressed={tool === 'cart'} onClick={() => { setTool(tool === 'cart' ? null : 'cart'); setMoveFrom(null) }}><ToolArt kind="cart"/>{moveFrom !== null && s.pots[moveFrom]?.plant != null && <span className="cart-passenger" aria-hidden="true"><PlantSprite id={s.pots[moveFrom].plant!} variant={!!s.pots[moveFrom].variant}/></span>}<span>小推车</span></button>
             <button className={`tool-button ${tool === 'shovel' ? 'selected' : ''}`} title="铲子 · 挖除植物，不获得收益" aria-label="铲子工具" aria-pressed={tool === 'shovel'} onClick={() => { setTool(tool === 'shovel' ? null : 'shovel'); setMoveFrom(null) }}><ToolArt kind="shovel"/><span>铲子</span></button>
-            {team.workers.sow.length>0&&<label className="squirrel-seed-picker">
-              <span>松鼠播种 · 本园</span>
-              <select aria-label="本园松鼠播种种子" value={team.sowTier} onChange={e=>dispatch({type:'sow-tier',tier:Number(e.target.value)})}>
-                {TIERS.slice(0,ULTIMATE_TIER).map((name,tier)=><option key={tier} value={tier}>{name} · {tier===0?'免费':`${number(PLANTS[seedPlantId(tier as Tier)].cost)} 金币`}</option>)}
-              </select>
-              <small role="status">{!team.autoSow?'自动播种已关闭':s.coins<PLANTS[seedPlantId(team.sowTier)].cost?'金币不足 · 等待中':'按所选种子播种'}</small>
-            </label>}
+            {squirrelPicker}
           </div>
           <div className="tool-shelf-actions"><button className="text-button" onClick={()=>{setObserving(true);setMobilePanel('garden');setFloats([]);setToast('')}}>观赏</button><button className="text-button" aria-label="玩法指南" onClick={()=>setPanel('help')}>?</button></div>
           <p className="tool-hint">{tool === 'fertilizer' ? '消耗 1 份，让未成熟的非终极植物立即成熟 · 手动收获时 5% 掉落' : tool === 'shovel' ? '点击挖除任何植物 · 无收益 · 再点铲子取消' : tool === 'cart' ? moveFrom === null ? '选择植物 → 用花园左右箭头跨园 → 点击花盆搬运或交换' : `已选 ${GARDENS[Math.floor(moveFrom/15)].name} · ${moveFrom%15+1} 号盆，可跨园搬运；再点小推车取消` : tool === 'water' ? '点击植物浇水 · 点击左下角水池打水' : '点击空盆播种，点击成熟植物收获'}</p>
@@ -295,7 +303,8 @@ export default function Garden({ initialState, persist = true }: { initialState?
           </div>
           <div className="garden-scene-caption"><small>{garden.subtitle} · 产值 ×{garden.reward} · 环境生长 ×{garden.growth}</small><span>{inspectedPot !== null && s.pots[inspectedPot] ? (() => { const pot = s.pots[inspectedPot]; const p = pot.plant === null ? null : PLANTS[pot.plant]; return p ? `${p.name} · ${pot.growth >= p.seconds ? '已成熟，点击收获' : `成长 ${Math.floor(pot.growth / p.seconds * 100)}%`} · 收获 ${plantedReward(s,inspectedPot)} 金币` : '空花盆 · 点击种下当前选择的种子' })() : '选择顶部工具，再点击盆栽使用'}</span><small>{team.snails.length ? `${team.snails.length} 只蜗牛在园中漫游` : '雇用蜗牛后，它会往返水池与花盆'}</small></div>
         </div>
-        <div className="mobile-plant-info" aria-label="植物信息" data-testid="plant-inspector">
+        <div className={`mobile-plant-info ${inspectedPot !== null ? 'has-selection' : ''}`} aria-label="植物信息" data-testid="plant-inspector">
+          <button className="landscape-info-close blue-button" aria-label="关闭植物信息" onClick={() => setInspectedPot(null)}>×</button>
           {inspectedPot !== null && s.pots[inspectedPot] ? (() => {
             const pot=s.pots[inspectedPot], plant=pot.plant===null?null:PLANTS[pot.plant]
             if (!plant) return <div><strong>第 {inspectedPot%15+1} 盆 · 空花盆</strong><p>点击花盆种下{TIERS[selected.tier]}</p></div>
@@ -305,7 +314,7 @@ export default function Garden({ initialState, persist = true }: { initialState?
         </div>
       </section>
 
-      <aside ref={shopRef} className={`upgrade-panel ${mobilePanel === 'upgrades' ? 'mobile-active' : ''}`} aria-label="花园商店">
+      <aside id="garden-shop" ref={shopRef} className={`upgrade-panel ${mobilePanel === 'upgrades' ? 'mobile-active' : ''}`} aria-label="花园商店">
         <h2 className="panel-title"><Icon name="leaf"/>商 店<Icon name="leaf"/></h2>
         <div className="shop-location">{garden.name}<small>{category===0?'专属研究 · 效果全园共享':'购买与效果仅限当前花园'}</small></div>
         <div className="upgrade-tabs" role="tablist" aria-label="商店分类">{['升级','雇佣','装饰'].map((name,i)=><button role="tab" aria-selected={category===i} key={name} onClick={()=>{setCategory(i);sound('tap')}} className={category===i?'selected':''}><Icon name={['leaf','snail','star'][i]}/><span>{name}</span></button>)}</div>
@@ -317,7 +326,7 @@ export default function Garden({ initialState, persist = true }: { initialState?
         <div className="garden-expansion" aria-label="花园扩建">{team.potCount<15&&<button className="blue-button" disabled={s.coins<potPrice(s)} onClick={()=>{dispatch({type:'expand'});sound('buy');setToast(`已添加第 ${team.potCount+1} 个花盆`)}}>花盆 +1 · {team.potCount}/15 · ◈ {number(potPrice(s))}</button>}{gardenCount(s)<5&&<button className="blue-button" disabled={!!expansionLock(s)||s.coins<GARDEN_PRICES[gardenCount(s)]} onClick={()=>{dispatch({type:'open-garden'});setInspectedPot(null);setMoveFrom(null);sound('buy')}}>{expansionLock(s)??`开辟${GARDENS[gardenCount(s)].name} · ◈ ${number(GARDEN_PRICES[gardenCount(s)])}`}</button>}</div>
         <div className="garden-bonuses"><div className="eyebrow">本园团队 · 独立经营</div>{(['water','harvest','sow'] as const).map(kind=><p key={kind}><span>{CREW_NAMES[kind]}</span><b>{crewFor(team,kind).length}/5 · {MATERIALS[team.equipment[kind]].name}</b></p>)}<div className="eyebrow">全园能力 · {s.purchases.length}/15 项研究</div><p><span>手动浇水</span><b>+{clickPower(s)} 秒</b></p><p><span>本页自然成长</span><b>×{growthRate(s).toFixed(1)}</b></p><p><span>本页收获收益</span><b>×{2**s.upgrades.profit*garden.reward}</b></p></div>
         <div className="automation-controls">{team.workers.harvest.length>0&&<label><input type="checkbox" checked={team.autoHarvest} onChange={()=>dispatch({type:'toggle',key:'autoHarvest'})}/>本园自动收获</label>}{team.workers.sow.length>0&&<label><input type="checkbox" checked={team.autoSow} onChange={()=>dispatch({type:'toggle',key:'autoSow'})}/>本园自动播种</label>}</div>
-        <button className="mobile-return blue-button" onClick={()=>showMobilePanel('garden')}>← 返回花园</button>
+        <button className="mobile-return blue-button" onClick={()=>{showMobilePanel('garden');if(landscapeLayout())setLandscapeShopOpen(false)}}>← 返回花园</button>
       </aside>
     </main>
     <footer className="statusbar"><span><i className="live-dot" />{saveError ? '存档失败，请检查浏览器存储空间' : '自动存档 · 离线成长'}</span><span>选择水壶，点击浇水 <span className="keycap">CLICK</span></span><span>累计收获 <b>{s.harvests}</b> 株 · 收益 <b>{number(s.earned)}</b></span></footer>

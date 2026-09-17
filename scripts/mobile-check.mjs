@@ -59,7 +59,7 @@ try {
   await page.getByTestId('pot-61').tap()
   const metrics=await page.evaluate(()=>{
    const rect=selector=>{const r=document.querySelector(selector).getBoundingClientRect();return {width:r.width,height:r.height,bottom:r.bottom}}
-   return {width:innerWidth,height:innerHeight,scrollWidth:document.documentElement.scrollWidth,scrollHeight:document.documentElement.scrollHeight,pool:rect('.pool-refill-button'),info:rect('.mobile-plant-info'),arrow:rect('.scene-prev'),help:rect('[aria-label="玩法指南"]'),picker:rect('.squirrel-seed-picker select')}
+   return {width:innerWidth,height:innerHeight,scrollWidth:document.documentElement.scrollWidth,scrollHeight:document.documentElement.scrollHeight,pool:rect('.pool-refill-button'),info:rect('.mobile-plant-info'),arrow:rect('.scene-prev'),help:rect('[aria-label="玩法指南"]'),picker:rect('.zen-garden .squirrel-seed-picker select')}
   })
   assert.equal(metrics.scrollWidth,width)
   assert.ok(metrics.info.bottom<=height && metrics.pool.bottom<=height,'garden and inspector fit viewport')

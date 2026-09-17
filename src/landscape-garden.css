@@ -1,0 +1,98 @@
+/* Compact landscape uses viewport dimensions, including touch and mouse devices. */
+.landscape-shop-toggle,.landscape-seed-picker,.landscape-info-close{display:none}
+
+@media (orientation:landscape) and (max-height:600px) and (max-width:1200px) {
+  .game-shell{height:100svh;min-height:0;padding:4px max(6px,env(safe-area-inset-right)) max(4px,env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-left));display:flex;flex-direction:column;overflow:hidden}
+  .topbar{width:100%;height:44px;min-height:44px;flex-wrap:nowrap;gap:6px;margin-bottom:4px}
+  .topbar .brand,.topbar .time-display,.topbar .stat:not(.coin-stat){display:none}
+  .topbar .coin-stat{order:0;flex:1;min-width:0;height:44px;padding:2px 8px;gap:8px}
+  .coin-stat .sprite{width:28px;flex-shrink:0}
+  .coin-stat small{font-size:10px}.coin-stat strong{font-size:20px}
+  .topbar .icon-button{order:0;width:44px;height:44px;flex:0 0 44px}
+  .topbar .icon-button .pixel-icon{width:24px;height:24px}
+  .landscape-shop-toggle{display:block;min-height:44px;padding:4px 10px;font-size:12px}
+  .mobile-nav,.statusbar{display:none}
+  .game-layout{width:100%;margin:0;grid-template-rows:minmax(0,1fr);display:grid;grid-template-columns:110px minmax(0,1fr) 180px;gap:6px;flex:1;min-height:0;overflow:hidden}
+  .landscape-shop-closed .game-layout{grid-template-columns:110px minmax(0,1fr)}
+  .seed-panel,.upgrade-panel,.upgrade-panel.mobile-active{grid-column:auto;display:flex;flex-direction:column;height:100%;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:6px;gap:6px;scrollbar-width:thin}
+  .landscape-shop-closed .upgrade-panel{display:none}
+  .seed-panel .panel-title{white-space:nowrap}
+  .seed-panel .panel-title .pixel-icon{display:none}
+  .seed-panel .panel-title,.upgrade-panel .panel-title{font-size:15px;min-height:22px;padding:0;flex-shrink:0}
+  .panel-title .pixel-icon{width:14px;height:14px}
+  .seed-panel .tier-list{gap:4px;flex-shrink:0}
+  .seed-panel .tier-card{flex-direction:row;min-height:56px;padding:4px;gap:3px}
+  .tier-card .seed-bag{display:none}
+  .tier-card .seed-bag .sprite{width:24px;height:28px}
+  .tier-card .tier-copy strong{font-size:12px;letter-spacing:0;white-space:nowrap}
+  .tier-card .tier-copy b{font-size:10px;white-space:normal}
+  .tier-card .tier-copy small,.seed-panel .shop-note{display:none}
+  .landscape-seed-picker{display:block;position:sticky;bottom:0;background:var(--color-blue-dark);z-index:2}
+  .landscape-seed-picker:empty{display:none}
+  .landscape-seed-picker .squirrel-seed-picker{display:flex;flex-direction:column;gap:3px;padding:4px 0;font-size:10px}
+  .landscape-seed-picker select{width:100%;min-width:0;min-height:44px;font-size:12px;padding:2px}
+  .landscape-seed-picker small{display:none}
+  .garden-section,.garden-section.mobile-active{display:flex;position:relative;min-width:0;min-height:0;height:100%;gap:0}
+  .zen-garden,.zen-garden.has-squirrels,.observation-mode .zen-garden{--tool-size:44px;flex:1;width:100%;height:100%;min-height:0;padding:0;border-width:4px}
+  .zen-garden .scene-garden-name{top:3px;left:46px;transform:none;font-size:12px;line-height:26px;padding:0 4px;max-width:calc(100% - 190px);letter-spacing:0}
+  .zen-garden .garden-tools{top:44px;left:8px;right:8px}
+  .zen-garden .tool-slots,.zen-garden.has-squirrels .tool-slots{gap:4px;justify-content:flex-start;flex-wrap:nowrap}
+  .zen-garden .tool-button,.zen-garden .watering-cubby{width:44px;height:44px;flex:0 0 44px}
+  .zen-garden .tool-button>span:last-child{font-size:9px;bottom:1px}
+  .zen-garden .squirrel-seed-picker,.zen-garden .tool-hint{display:none}
+  .zen-garden .tool-shelf-actions{top:-44px;right:-8px;gap:0;padding:0}
+  .zen-garden .tool-shelf-actions button{min-width:44px;min-height:44px;padding:0 4px;font-size:12px}
+  .zen-garden .scene-arrow{top:22px;width:44px;height:44px;display:flex;align-items:center;justify-content:center}
+  .scene-arrow svg{width:22px;height:28px}
+  .scene-prev{left:0}.scene-next{right:88px}
+  .zen-garden .garden-floor,.zen-garden.has-squirrels .garden-floor{top:96px;left:16px;right:16px;bottom:34px}
+  .garden-floor .pot{width:min(19%,25cqh);min-width:44px;min-height:44px}
+  .garden-floor .ground-marker{width:44px;height:44px}
+  .garden-floor .pot.inspected{outline:2px solid var(--color-gold-light);outline-offset:1px}
+  .garden-floor .pot:hover .plant-name,.garden-floor .pot:focus-visible .plant-name,
+  .garden-floor .pot-sign strong,.garden-floor .pot-sign small,
+  .garden-floor .pot:hover .pot-sign strong,.garden-floor .pot:hover .pot-sign small,
+  .garden-floor .pot:focus-visible .pot-sign strong,.garden-floor .pot:focus-visible .pot-sign small{display:none}
+  .garden-floor .pot:hover .pot-sign,.garden-floor .pot:focus-visible .pot-sign{width:46%;min-width:0;padding:0;border:0;background:none}
+  .garden-scene-caption{display:none}
+  .weather-overlay>span,.has-squirrels .weather-overlay>span{top:46px;right:5px;max-width:calc(100% - 202px);font-size:10px;line-height:15px;padding:2px 4px;white-space:normal}
+  .supply-station.water-station{width:76px}
+  .water-station .pool-refill-button{min-height:44px;min-width:76px}
+  .water-station .pixel-pool{width:60px;height:26px}
+  .supply-station b{font-size:9px;white-space:nowrap;color:var(--color-paper);text-shadow:1px 1px var(--color-ink)}
+  .mobile-plant-info{display:none}
+  .mobile-plant-info.has-selection{display:grid;position:absolute;z-index:145;right:8px;bottom:8px;width:min(270px,calc(100% - 16px));grid-template-columns:minmax(0,1fr) 56px;gap:3px 8px;min-height:0;padding:6px 8px;background:var(--color-blue-dark);border:2px solid var(--color-blue-edge);color:var(--color-paper)}
+  .mobile-plant-info>div{grid-column:1;grid-row:1 / span 2;align-self:center}
+  .mobile-plant-info strong{display:block;font-size:13px;color:var(--color-gold-light)}
+  .mobile-plant-info p{font-size:11px;line-height:1.5}
+  .mobile-plant-copy .progress{height:5px;margin:3px 0}
+  .mobile-plant-info button{min-width:44px;min-height:44px;padding:3px;font-size:12px;grid-column:2}
+  .mobile-plant-info .landscape-info-close{display:block;grid-row:1;justify-self:end;width:44px;font-size:20px}
+  .upgrade-panel .shop-location{display:none}
+  .upgrade-panel .garden-expansion{order:2;display:flex;flex-direction:column;gap:4px;margin:0;padding:4px;border:2px solid var(--color-gold)}
+  .upgrade-panel .garden-expansion:empty{display:none}
+  .garden-expansion button{min-height:44px;padding:4px;font-size:11px;white-space:normal}
+  .upgrade-panel .upgrade-tabs{order:3;min-height:44px;margin:0;max-width:none;flex-shrink:0}
+  .upgrade-panel .upgrade-tabs button{min-height:44px;font-size:11px;flex-direction:row;gap:2px;padding:2px}
+  .upgrade-panel .upgrade-tabs button>svg,.upgrade-panel .upgrade-tabs button>.sprite{display:none}
+  .upgrade-panel .upgrade-tabs button span:last-child{font-size:12px}
+  .upgrade-panel .upgrade-list{order:4;display:flex;flex-direction:column;flex-shrink:0;gap:4px}
+  .upgrade-card{min-height:78px;padding:5px;gap:5px}
+  .upgrade-art{width:30px;height:34px;flex:0 0 30px}
+  .upgrade-copy strong{font-size:12px}.upgrade-copy b{font-size:11px}
+  .upgrade-copy .upgrade-description,.upgrade-copy small{font-size:10px}
+  .upgrade-panel .garden-bonuses{order:5;display:block;font-size:10px;padding:6px}
+  .upgrade-panel .automation-controls{order:6}
+  .automation-controls label{min-height:44px;display:flex;align-items:center}
+  .mobile-return{display:block;order:7;position:sticky;bottom:0;min-height:44px;font-size:12px;flex-shrink:0;z-index:2}
+  .toast{bottom:8px;max-width:calc(100% - 32px);font-size:12px;pointer-events:none}
+  .observation-mode .mobile-plant-info{display:none}
+  .observation-mode .zen-garden .garden-floor{top:42px}
+}
+
+@media (orientation:landscape) and (max-height:600px) and (max-width:700px) {
+  .game-layout{grid-template-columns:94px minmax(0,1fr) 150px;gap:4px}
+  .landscape-shop-closed .game-layout{grid-template-columns:94px minmax(0,1fr)}
+  .tier-card .seed-bag{display:none}
+  .zen-garden .scene-garden-name{font-size:10px;left:44px;max-width:calc(100% - 176px);padding:0}
+}
