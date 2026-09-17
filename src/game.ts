@@ -274,7 +274,7 @@ export function reducer(state: GameState, action: Action): GameState {
       if (w.target === action.index) { w.phase = 'idle'; w.target = null; w.clock = 0; w.path = [] }
     }
   }
-  if (action.type === 'move' && Math.floor(action.from/15)===Math.floor(action.to/15) && action.from !== action.to && s.pots[action.from]?.plant != null && s.pots[action.to]) {
+  if (action.type === 'move' && Number.isInteger(action.from) && Number.isInteger(action.to) && action.from !== action.to && s.pots[action.from]?.plant != null && s.pots[action.to]) {
     // Move the whole pot state, preserving growth, discovery and watering history.
     ;[s.pots[action.from], s.pots[action.to]] = [s.pots[action.to], s.pots[action.from]]
     for (const w of [s.player, ...Array.from({length:gardenCount(s)},(_,p)=>{const t=teamFor(s,p);return [...t.snails,...t.workers.harvest,...t.workers.sow]}).flat()]) {

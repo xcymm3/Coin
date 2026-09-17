@@ -1,18 +1,18 @@
 export type GardenTool = 'water' | 'fertilizer' | 'cart' | 'shovel'
 export function ToolArt({kind,waterLevel=3}:{kind:GardenTool;waterLevel?:number}) {
  return <svg className={`garden-tool-art art-${kind}`} viewBox="0 0 48 48" shapeRendering="crispEdges" aria-hidden="true">
-  {kind==='water'&&<g strokeLinejoin="round">
-   <path d="M30 9C47 4 48 31 33 30" fill="none" stroke="#42351b" strokeWidth="7"/>
-   <path d="M30 9C44 6 45 27 34 27" fill="none" stroke="#f5cc46" strokeWidth="4"/>
-   <path d="M15 21 7 14 4 5 1 7l2 13 12 13" fill="#dfb32f" stroke="#49391d" strokeWidth="2"/>
-   <path d="M14 16Q25 11 36 16l-1 24Q24 46 13 40Z" fill={waterLevel===0?'#94824d':'#e5bc32'} stroke="#49391d" strokeWidth="2"/>
-   <path d="M17 19h15v19q-7 4-15 0z" fill="#615f46"/>
-   {waterLevel>0&&<path d={waterLevel===3?'M17 21q7 3 15 0v17q-7 4-15 0Z':waterLevel===2?'M17 29q7 3 15 0v9q-7 4-15 0Z':'M17 35q7 2 15 0v3q-7 4-15 0Z'} fill={waterLevel===1?'#5a9a99':'#4fbac7'}/>}
-   {waterLevel>0&&<path d={waterLevel===3?'M18 21q7 3 13 0':waterLevel===2?'M18 29q7 3 13 0':'M18 35q7 2 13 0'} fill="none" stroke="#c9f6df" strokeWidth="2"/>}
-   <path d="M14 17q11-6 22 0-11 7-22 0Z" fill="#514b27" stroke="#ffe36a" strokeWidth="2"/>
-   <path d="M14 21v16m1-14v12" stroke={waterLevel===0?'#c0af75':'#fff09b'} strokeWidth="3"/>
-   <path d="M5 7 8 14l6 5" stroke="#fff0a0" strokeWidth="2" fill="none"/>
-  </g>}
+  {kind==='water'&&<>
+   <path d="M30 8h11v3h4v17h-4v4h-7v-5h5v-3h2V14h-3v-2h-8Z" fill="#473621"/>
+   <path d="M31 10h9v3h3v13h-3v4h-5v-3h4v-3h2V14h-3v-2h-7Z" fill="#e9bd42"/>
+   <path d="M1 5h5v7h3v5h7v-2h20v3h2v22h-3v3H15v-3h-3V26H8v-5H5v-7H2Z" fill="#473621"/>
+   <path d="M3 7h2v7h3v5h8v3h-3v-1H9v-3H6v-4H4Z" fill="#f6d66c"/>
+   <path d="M15 18h20v21h-3v2H17v-2h-2Z" fill={waterLevel===0?'#9f8d55':'#dbb33c'}/>
+   <path d="M19 21h13v16H19Z" fill="#646244"/>
+   {waterLevel>0&&<path d={`M19 ${waterLevel===3?23:waterLevel===2?29:34}h13v${waterLevel===3?14:waterLevel===2?8:3}H19Z`} fill="#5ab7bb"/>}
+   {waterLevel>0&&<path d={`M20 ${waterLevel===3?23:waterLevel===2?29:34}h10v2H20Z`} fill="#bfedcd"/>}
+   <path d="M16 16h17v2h3v2H15v-2h1Z" fill="#f3d56b"/>
+   <path d="M18 17h14v2H18Z" fill="#61522c"/><path d="M15 22h2v15h-2Zm3 17h13v2H18Z" fill="#efcf6d"/>
+  </>}
   {kind==='fertilizer'&&<>
    <path fill="#362819" d="M12 5h24v8l5 8v20H7V21l5-8z"/>
    <path fill="#55b6b5" d="M14 7h20v7l5 9v15H10V23l5-9z"/>

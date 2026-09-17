@@ -76,3 +76,21 @@ test('v3 migration preserves money, plants, collection, cargo, opened gardens an
 test('save rejects invalid local workers, equipment, purchases and duplicate decorations',()=>{
  const s=expanded();for(const mutate of [n=>n.gardens[0].equipment.water=5,n=>n.gardens[0].decorations=['bunting','bunting'],n=>n.purchases.push('invalid'),n=>n.activeGarden=5,n=>n.gardens[0].workers.harvest=null]){const n=structuredClone(s);mutate(n);assert.equal(parseSave(JSON.stringify(n)),null)}
 })
+
+test('cross-garden cart preserves the entire plant and clears reservations on both gardens',()=>{
+ let s=expanded();s.activeGarden=0;s=employ(s,'water');s.activeGarden=1;s=employ(s,'harvest')
+ const source={plant:8,growth:27,germination:5,variant:2,watering:0.8,wateredAt:12,revealedAt:9}
+ const target={plant:6,growth:18,germination:5,variant:1,wateredAt:8}
+ s.pots[0]=source;s.pots[15]=target
+ for(const [w,index] of [[teamFor(s,0).snails[0],0],[teamFor(s,1).workers.harvest[0],15]]){w.phase='walk';w.target=index;w.path=[{x:20,y:30}];w.clock=0.2}
+ const before=structuredClone(s)
+ s=reducer(s,{type:'move',from:0,to:15})
+ assert.deepEqual(s.pots[15],source);assert.deepEqual(s.pots[0],target)
+ assert.equal(s.coins,before.coins);assert.equal(s.harvests,before.harvests)
+ assert.deepEqual(s.harvestCounts,before.harvestCounts)
+ for(const w of [teamFor(s,0).snails[0],teamFor(s,1).workers.harvest[0]]){assert.equal(w.target,null);assert.equal(w.phase,'idle');assert.deepEqual(w.path,[])}
+ s=reducer(s,{type:'move',from:15,to:74});assert.deepEqual(s.pots[74],source);assert.equal(s.pots[15].plant,null)
+ assert.deepEqual(reducer(s,{type:'move',from:74,to:75}),s)
+ assert.deepEqual(reducer(s,{type:'move',from:74,to:-1}),s)
+ assert.deepEqual(parseSave(JSON.stringify(s)),s)
+})
