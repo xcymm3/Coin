@@ -13,6 +13,7 @@ import './App.css'
 import './garden-scene.css'
 import './mobile-garden.css'
 import './landscape-garden.css'
+import './squirrel-picker.css'
 
 const number = (n: number) => n >= 1e12 ? `${(n/1e12).toFixed(1)}兆` : n >= 1e8 ? `${(n/1e8).toFixed(1)}亿` : n >= 1e5 ? `${(n/1e4).toFixed(1)}万` : Math.floor(n).toLocaleString('en-US')
 const asset = `${import.meta.env.BASE_URL}assets/garden-atlas.png`
@@ -67,7 +68,7 @@ export default function Garden({ initialState, persist = true }: { initialState?
   // Capture absence once at page load; time spent in menus must remain paused.
   const [offlineSeconds] = useState(() => Math.min(1800, Math.max(0, (Date.now() - s.lastSaved) / 1000)))
   const [screen, setScreen] = useState<'menu' | 'game'>('menu')
-  const [panel, setPanel] = useState<'settings' | 'book' | 'help' | 'reset' | null>(null)
+  const [panel, setPanel] = useState<'settings' | 'book' | 'help' | 'reset' | 'squirrel' | null>(null)
   const [tool, setTool] = useState<'water' | 'cart' | 'shovel' | 'fertilizer' | null>(null)
   const [moveFrom, setMoveFrom] = useState<number | null>(null)
   const [observing, setObserving] = useState(false)
@@ -191,13 +192,10 @@ export default function Garden({ initialState, persist = true }: { initialState?
   function reset() { setTool(null); setMoveFrom(null); setObserving(false); setInspectedPot(null); setFloats([]); setMobilePanel('garden'); dispatch({ type: 'reset' }); offlineApplied.current = true; setVictoryDismissed(false); setPanel(null); setScreen('game'); setCategory(0); setToast('新的花园，从一包免费种子开始。') }
 
 
-  const squirrelPicker = team.workers.sow.length>0 && <label className="squirrel-seed-picker">
-              <span>松鼠播种 · 本园</span>
-              <select aria-label="本园松鼠播种种子" value={team.sowTier} onChange={e=>dispatch({type:'sow-tier',tier:Number(e.target.value)})}>
-                {TIERS.slice(0,ULTIMATE_TIER).map((name,tier)=><option key={tier} value={tier}>{name} · {tier===0?'免费':`${number(PLANTS[seedPlantId(tier as Tier)].cost)} 金币`}</option>)}
-              </select>
-              <small role="status">{!team.autoSow?'自动播种已关闭':s.coins<PLANTS[seedPlantId(team.sowTier)].cost?'金币不足 · 等待中':'按所选种子播种'}</small>
-            </label>
+  const squirrelPicker = team.workers.sow.length>0 && <button className="squirrel-picker-button blue-button" aria-label={`松鼠播种选种，当前${TIERS[team.sowTier]}`} aria-haspopup="dialog" title={`本园松鼠播种：${TIERS[team.sowTier]}`} onClick={()=>setPanel('squirrel')}>
+    <GardenAnimal kind="sow"/>
+    <span className={`squirrel-current-seed tier-${team.sowTier}`}><span className="seed-bag"><Sprite id={13}/></span></span>
+  </button>
 
   return <div className={`game-shell ${landscapeShopOpen ? 'landscape-shop-open' : 'landscape-shop-closed'} ${!settings.motion ? 'reduce-motion' : ''} ${screen === 'menu' ? 'on-menu' : ''} ${paused ? 'is-paused' : ''} ${observing ? 'observation-mode' : ''}`}>
     <Fireflies />
@@ -349,6 +347,16 @@ export default function Garden({ initialState, persist = true }: { initialState?
       <button className="primary-button" onClick={play}>{s.started ? '继续我的花园' : '开始种植'}<span>▶</span></button>
       <div className="menu-links"><button onClick={() => setPanel('help')}>玩法指南</button><span>◆</span><button onClick={() => setPanel('settings')}>游戏设置</button>{s.started && <><span>◆</span><button onClick={() => setPanel('reset')}>新的花园</button></>}</div>
       <small className="menu-footnote">{PLANTS.length} 种奇植 · 五园专属研究 · 独立动物团队 · 慢慢种下自己的星空</small>
+    </Modal>}
+    {panel === 'squirrel' && <Modal title="松鼠播种选种" className="squirrel-seed-modal" close={()=>setPanel(null)}>
+      <h2>松鼠播种选种</h2><p className="modal-intro">{garden.name} · 仅设置本园松鼠，手动选种保持不变。</p>
+      <p className="squirrel-sow-status">{!team.autoSow?'自动播种已关闭，可在商店开启。':'金币不足时松鼠会等待，足够后继续播种。'}</p>
+      <div className="squirrel-seed-options">{TIERS.slice(0,ULTIMATE_TIER).map((name,tier)=>{
+        const cost=PLANTS[seedPlantId(tier as Tier)].cost
+        return <button key={tier} className={`blue-button squirrel-seed-option tier-${tier}`} aria-pressed={team.sowTier===tier} onClick={()=>{dispatch({type:'sow-tier',tier});sound('tap');setPanel(null)}}>
+          <span className="seed-bag"><Sprite id={13}/></span><span><strong>{name}</strong><small>{cost===0?'免费':`${number(cost)} 金币 / 颗`}</small>{s.coins<cost&&<small>金币不足 · 选后等待</small>}</span><b>{team.sowTier===tier?'✓':''}</b>
+        </button>
+      })}</div>
     </Modal>}
     {panel === 'settings' && <Modal title="游戏设置" close={() => setPanel(null)}>
       <h2>游戏设置</h2><p className="modal-intro">暂歇片刻，花园里的时间也会停下来。</p>

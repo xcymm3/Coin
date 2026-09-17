@@ -1,0 +1,27 @@
+.squirrel-picker-button{position:relative;display:flex;align-items:center;justify-content:center;flex:0 0 58px;width:58px;height:58px;padding:4px;overflow:visible}
+.squirrel-picker-button>svg{width:46px;height:46px}
+.squirrel-current-seed{position:absolute;right:-3px;bottom:-3px;padding:1px;border:2px solid var(--color-gold);background:var(--color-blue-dark);pointer-events:none}
+.squirrel-picker-button .squirrel-current-seed .seed-bag,.squirrel-picker-button .squirrel-current-seed .seed-bag .sprite{display:block;width:20px;height:23px}
+.squirrel-seed-modal{width:min(460px,calc(100vw - 24px))}
+.squirrel-seed-modal h2{font-size:23px;padding-right:28px}
+.squirrel-sow-status{font-size:12px;line-height:1.6;color:var(--color-gold-light);margin-bottom:12px}
+.squirrel-seed-options{display:grid;gap:6px}
+.squirrel-seed-option{display:flex;align-items:center;gap:10px;min-height:62px;padding:6px 10px;text-align:left}
+.squirrel-seed-option[aria-pressed=true]{border-color:var(--color-gold);box-shadow:inset 0 0 0 1px var(--color-gold-dark)}
+.squirrel-seed-option .seed-bag,.squirrel-seed-option .sprite{width:32px;height:38px;flex-shrink:0}
+.squirrel-seed-option>span:nth-child(2){flex:1;min-width:0}
+.squirrel-seed-option strong{display:block;font-size:15px}
+.squirrel-seed-option small{display:block;font-size:11px;line-height:1.5;color:var(--color-gold-light)}
+.squirrel-seed-option>b{width:16px;color:var(--color-gold)}
+.squirrel-seed-option.tier-4 .seed-bag,.squirrel-current-seed.tier-4 .seed-bag{filter:hue-rotate(300deg)}
+.squirrel-seed-option.tier-5 .seed-bag,.squirrel-current-seed.tier-5 .seed-bag{filter:hue-rotate(20deg) saturate(.5)}
+.squirrel-seed-option.tier-6 .seed-bag,.squirrel-current-seed.tier-6 .seed-bag{filter:hue-rotate(140deg)}
+@media (orientation:portrait) and (max-width:980px){
+  .squirrel-picker-button{width:44px;height:44px;flex-basis:44px;margin-left:4px}
+  .squirrel-picker-button>svg{width:36px;height:36px}
+  .squirrel-picker-button .squirrel-current-seed .seed-bag,.squirrel-picker-button .squirrel-current-seed .seed-bag .sprite{width:16px;height:19px}
+}
+@media (orientation:landscape) and (max-height:600px) and (max-width:1200px){
+  .zen-garden .squirrel-picker-button{display:none}
+  .landscape-seed-picker .squirrel-picker-button{margin:4px auto}
+}

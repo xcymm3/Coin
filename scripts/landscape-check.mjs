@@ -23,7 +23,7 @@ try {
   const metrics=await p.evaluate(()=>({w:document.documentElement.scrollWidth,h:document.documentElement.scrollHeight,boxes:[...document.querySelectorAll('.pot,.pool-refill-button,.scene-arrow,[aria-label="玩法指南"]')].map(e=>e.getBoundingClientRect().toJSON())}))
   assert.equal(metrics.w,width);assert.equal(metrics.h,height)
   for(const r of metrics.boxes){assert.ok(r.width>=44&&r.height>=44,'touch target');assert.ok(r.x>=0&&r.y>=0&&r.right<=width&&r.bottom<=height,'fits viewport')}
-  const picker=p.locator('.landscape-seed-picker select');await picker.selectOption('1');assert.equal(await picker.inputValue(),'1')
+  const picker=p.locator('.landscape-seed-picker .squirrel-picker-button');await picker.tap();await p.getByRole('dialog',{name:'松鼠播种选种'}).getByRole('button',{name:/^稀有种子/}).tap();assert.match(await picker.getAttribute('aria-label'),/当前稀有种子/)
   await p.screenshot({path:`${output}/garden-${width}.png`})
   const oldWidth=(await p.locator('.garden-board').boundingBox()).width
   await p.getByRole('button',{name:'收起商店',exact:true}).tap()

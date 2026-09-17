@@ -53,14 +53,14 @@ try {
   for(let i=60;i<75;i++)s.pots[i]={plant:i===61?9:10+i%3,growth:i===61?100:PLANTS[10+i%3].seconds*.3,wateredAt:-10}
   page=await open(s)
   const quick=page.getByRole('group',{name:'快捷选种'})
-  const picker=page.locator('.zen-garden .squirrel-seed-picker select')
-  const sowTier=await picker.inputValue()
+  const picker=page.locator('.zen-garden .squirrel-picker-button')
+  const sowTier=await picker.getAttribute('aria-label')
   await page.getByRole('button',{name:/水壶工具/}).tap()
   const lastSeed=quick.getByRole('button').last()
   await lastSeed.scrollIntoViewIfNeeded()
   await lastSeed.tap()
   assert.equal(await lastSeed.getAttribute('aria-pressed'),'true')
-  assert.equal(await picker.inputValue(),sowTier,'manual seed choice preserves squirrel tier')
+  assert.equal(await picker.getAttribute('aria-label'),sowTier,'manual seed choice preserves squirrel tier')
   assert.equal(await page.getByRole('button',{name:/水壶工具/}).getAttribute('aria-pressed'),'false')
   assert.equal(await page.getByRole('region',{name:'花园',exact:true}).isVisible(),true)
   assert.ok(await quick.evaluate(e=>e.scrollWidth>e.clientWidth || e.clientWidth>600),'seed strip scrolls on phones')
@@ -71,7 +71,7 @@ try {
   await page.getByTestId('pot-61').tap()
   const metrics=await page.evaluate(()=>{
    const rect=selector=>{const r=document.querySelector(selector).getBoundingClientRect();return {width:r.width,height:r.height,bottom:r.bottom}}
-   return {width:innerWidth,height:innerHeight,scrollWidth:document.documentElement.scrollWidth,scrollHeight:document.documentElement.scrollHeight,pool:rect('.pool-refill-button'),info:rect('.mobile-plant-info'),arrow:rect('.scene-prev'),help:rect('[aria-label="玩法指南"]'),picker:rect('.zen-garden .squirrel-seed-picker select')}
+   return {width:innerWidth,height:innerHeight,scrollWidth:document.documentElement.scrollWidth,scrollHeight:document.documentElement.scrollHeight,pool:rect('.pool-refill-button'),info:rect('.mobile-plant-info'),arrow:rect('.scene-prev'),help:rect('[aria-label="玩法指南"]'),picker:rect('.zen-garden .squirrel-picker-button')}
   })
   assert.equal(metrics.scrollWidth,width)
   assert.ok(metrics.info.bottom<=height && metrics.pool.bottom<=height,'garden and inspector fit viewport')
