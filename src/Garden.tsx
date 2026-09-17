@@ -1,3 +1,4 @@
+import { GardenBackdrop } from './GardenBackdrop'
 import { GardenAnimal } from './GardenAnimal'
 import { GardenHabitat } from './GardenHabitat'
 import { ToolArt } from './ToolArt'
@@ -204,6 +205,7 @@ export default function Garden({ initialState, persist = true }: { initialState?
 
       <section className={`garden-section ${mobilePanel === 'garden' ? 'mobile-active' : ''}`} aria-label="花园">
         <div className={`garden-board garden-${garden.theme} wood zen-garden`}>
+          <GardenBackdrop page={s.activeGarden}/>
         <div className="garden-tools" role="group" aria-label="园艺工具">
           <div className="tool-slots">
             <div className="watering-cubby">
