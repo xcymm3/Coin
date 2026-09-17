@@ -9,13 +9,17 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "check:pacing": "node --experimental-strip-types scripts/pacing-acceptance.mjs"
+    "check:pacing": "node --experimental-strip-types scripts/pacing-acceptance.mjs",
+    "build:android": "node scripts/build-android.mjs"
   },
   "dependencies": {
+    "@capacitor/android": "8.5.2",
+    "@capacitor/core": "8.5.2",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
+    "@capacitor/cli": "8.5.2",
     "@eslint/js": "^10.0.1",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
