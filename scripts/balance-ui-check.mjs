@@ -7,9 +7,15 @@ mkdirSync('.artifacts/balance-ui',{recursive:true})
 try{
  for(const mobile of [false,true]){
   const name=mobile?'android':'desktop'
-  const page=await browser.newPage({...mobile?devices['Pixel 7']:{},viewport:mobile?{width:390,height:844}:{width:1440,height:1000},deviceScaleFactor:1})
+  const page=await browser.newPage({...mobile?devices['Pixel 7']:{},viewport:mobile?{width:390,height:844}:{width:1280,height:720},deviceScaleFactor:1})
   const errors=[];page.on('pageerror',e=>errors.push(e.message))
   const s=newGame();s.coins=10000
+  const helper={...s.player,path:[],stock:0}
+  s.gardens[0].snails=[{...helper}]
+  s.gardens[0].workers.harvest=[{...helper}]
+  s.gardens[0].workers.sow=[{...helper}]
+  s.gardens[0].equipment={water:1,harvest:1,sow:1}
+  s.gardens[0].harvests=1000
   await page.addInitScript(({s,key})=>localStorage.setItem(key,JSON.stringify({...s,lastSaved:Date.now()})),{s,key:SAVE_KEY})
   await page.goto(process.env.PREVIEW_URL || 'http://127.0.0.1:5174/')
   await page.getByRole('button',{name:/开始种植|继续我的花园/}).click()
@@ -25,15 +31,12 @@ try{
   assert.doesNotMatch(await page.locator('.upgrade-panel').innerText(),/第1园解锁 · 全园共享/)
   await page.screenshot({path:`.artifacts/balance-ui/${name}-research.png`,fullPage:true})
   await page.getByRole('tab',{name:'雇佣',exact:true}).click()
-  assert.equal(await page.getByTestId('hire-recruit-sow-1').isDisabled(),true)
-  await page.getByTestId('hire-recruit-water-1').click()
-  const next=page.getByTestId('hire-recruit-water-2')
-  assert.equal(await next.isDisabled(),true)
-  assert.match(await next.innerText(),/0\/40/)
+  assert.equal(await page.locator('.hire-list .upgrade-card').count(),6)
+  if(!mobile)assert.equal(await page.locator('.upgrade-panel').evaluate(e=>e.scrollHeight<=e.clientHeight),true)
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true)
   await page.screenshot({path:`.artifacts/balance-ui/${name}-team.png`,fullPage:true})
   assert.deepEqual(errors,[])
-  console.log(`PASS ${name}: staged research, compact shop, local harvest gates, no overflow or page errors`)
+  console.log(`PASS ${name}: staged research, six compact hire cards, no overflow or page errors`)
   await page.close()
  }
 }finally{await browser.close()}

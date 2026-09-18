@@ -367,3 +367,14 @@
 .creature-water .snail-foot{animation-timing-function:steps(2,end)}
 .creature-water .snail-head,.creature-water .snail-shell,.creature-water .snail-feelers{animation-timing-function:steps(2,end)}
 @keyframes snail-wave{0%,100%{transform:translateX(0)}50%{transform:translateX(1px)}}
+
+/* Six simultaneous hire and equipment choices fit inside a 720px-tall desktop shop. */
+@media (min-width:981px){
+ .hire-list{gap:5px;margin-top:8px}
+ .hire-list .upgrade-card{min-height:56px;height:56px;padding:4px 5px;gap:5px}
+ .hire-list .upgrade-art{width:32px;height:38px;flex:0 0 32px;align-items:center}
+ .hire-list .upgrade-art .creature-art,.hire-list .upgrade-art .sprite{width:34px;height:34px}
+ .hire-list .upgrade-copy strong{font-size:13px;line-height:1.2;letter-spacing:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .hire-list .upgrade-copy>b{display:block;font-size:10px;line-height:1.25;margin-top:1px}
+ .hire-list .upgrade-description{margin-top:1px;font-size:9px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+}
