@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {newGame,reducer,PLANTS,UPGRADES,TIER_PLANTS,SEED_PRICES,seedLock,unlocked,seedEconomyFor,plantedReward,seedPlantId,hireCatalog,hireLock,parseSave,teamFor,reward,plantChance,SPECIES_ODDS,REWARD_DIVISORS} from '../src/game.ts'
+import {newGame,reducer,PLANTS,UPGRADES,TIER_PLANTS,SEED_PRICES,SEED_UNLOCK,PROGRESSION_THRESHOLDS,seedLock,seedVisible,unlocked,seedEconomyFor,plantedReward,seedPlantId,hireCatalog,hireLock,parseSave,teamFor,reward,plantChance,SPECIES_ODDS,REWARD_DIVISORS,nextResearch,upgradeRevealThreshold,upgradeVisible} from '../src/game.ts'
 import {expanded,employ} from './helpers.mjs'
 
 test('rollback reads local-economy saves and preserves their paid receipts after saving again',()=>{
@@ -27,6 +27,24 @@ test('harvest research starts affordably, requires local practice and advances o
  }
  assert.equal(2**s.upgrades.profit,4)
  assert.ok(parseSave(JSON.stringify(s)))
+})
+
+test('hidden lifetime coin stages reveal seeds and research without exceeding twice an upgrade price',()=>{
+ const s=newGame();s.coins=1e18;s.upgrades.profit=12
+ assert.deepEqual(Array.from({length:8},(_,tier)=>tier).filter(tier=>seedVisible(s,tier)),[0,1])
+ assert.deepEqual(nextResearch(s).map(u=>u.id),['g0-profit-1'])
+ s.earned=SEED_UNLOCK[2]-1
+ assert.equal(seedVisible(s,2),false);assert.equal(unlocked(s,2),false)
+ s.earned++
+ assert.equal(seedVisible(s,2),true);assert.equal(unlocked(s,2),true)
+ assert.deepEqual(nextResearch(s).map(u=>u.id),['g0-profit-1','g0-soil','g0-click'])
+ for(const u of UPGRADES){
+  const threshold=upgradeRevealThreshold(u)
+  assert.ok(PROGRESSION_THRESHOLDS.includes(threshold))
+  assert.ok(threshold<=u.cost*2,`${u.id}: ${threshold} > ${u.cost*2}`)
+  s.earned=Math.max(0,threshold-1);if(threshold)assert.equal(upgradeVisible(s,u),false)
+  s.earned=threshold;assert.equal(upgradeVisible(s,u),true)
+ }
 })
 
 test('even a rich garden cannot buy a whole automation team instantly',()=>{
@@ -108,7 +126,7 @@ test('previous economy saves preserve owned fourfold rewards, money, plants and 
 
 test('each paid regular tier has losses and gains at its baseline, with positive same-tier expectation',()=>{
  for(let tier=1;tier<7;tier++){
-  const s=newGame();s.coins=SEED_PRICES[tier];s.upgrades.profit=Math.log2(REWARD_DIVISORS[tier])
+  const s=newGame();s.coins=SEED_PRICES[tier];s.earned=SEED_UNLOCK[tier];s.upgrades.profit=Math.log2(REWARD_DIVISORS[tier])
   assert.equal(seedLock(s,tier),null)
   const values=TIER_PLANTS[tier].map(id=>reward(s,PLANTS[id],0,-Infinity))
   assert.ok(values.some(value=>value<SEED_PRICES[tier]))

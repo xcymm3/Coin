@@ -5,7 +5,7 @@ import { GardenHabitat } from './GardenHabitat'
 import { ToolArt } from './ToolArt'
 import { DecorationArt } from './DecorationArt'
 import { useEffect, useReducer, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { PLANTS, TIERS, UPGRADES, SAVE_KEY, newGame, parseSave, reducer, unlocked, price, upgradePrice, growthRate, formatTime, capacity, STATIONS, WATER_DURATION, upgradeLock, nextResearch, ULTIMATE_ID, ULTIMATE_TIER, TIER_PLANTS, seedPlantId, GARDENS, gardenCount, teamFor, hireCatalog, hireAvailable, hireLock, seedLock, MATERIALS, CREW_NAMES, decorationPrice, GARDEN_PRICES, potPrice, expansionLock, variantFor, plantedReward, DECORATIONS, WEATHER, WEATHER_EFFECTS, WEATHER_DURATION, activeWeather, infiniteWater, type Tier, type GameState } from './game'
+import { PLANTS, TIERS, UPGRADES, SAVE_KEY, newGame, parseSave, reducer, unlocked, price, upgradePrice, growthRate, formatTime, capacity, STATIONS, WATER_DURATION, upgradeLock, nextResearch, ULTIMATE_ID, ULTIMATE_TIER, TIER_PLANTS, seedPlantId, seedVisible, GARDENS, gardenCount, teamFor, hireCatalog, hireAvailable, hireLock, seedLock, MATERIALS, CREW_NAMES, decorationPrice, GARDEN_PRICES, potPrice, expansionLock, variantFor, plantedReward, DECORATIONS, WEATHER, WEATHER_EFFECTS, WEATHER_DURATION, activeWeather, infiniteWater, type Tier, type GameState } from './game'
 import { configureAudio, sound, unlockAudio } from './audio'
 import { ExtraPlant } from './ExtraPlant'
 import { Sprout } from './Sprout'
@@ -100,6 +100,7 @@ export default function Garden({ initialState, persist = true }: { initialState?
   const paused = screen !== 'game' || panel !== null || won
   const harvestedKinds = s.harvestCounts.filter(count => count > 0).length
   const selected = PLANTS[s.selected]
+  const research = nextResearch(s)
   const rainbow = infiniteWater(s)
   const weather = activeWeather(s)
   const waterLevel = rainbow?3: s.player.stock===0?0:s.player.stock/capacity(s,'player')<=.25?1:s.player.stock/capacity(s,'player')<=.65?2:3
@@ -249,6 +250,7 @@ export default function Garden({ initialState, persist = true }: { initialState?
       <aside className={`seed-panel wood ${mobilePanel === 'seeds' ? 'mobile-active' : ''}`} aria-label="种子商店">
         <h2 className="panel-title"><Icon name="leaf" />种 子<Icon name="leaf" /></h2>
         <div className="tier-list">{TIERS.map((name, i) => {
+          if(!seedVisible(s,i as Tier))return null
           const open = unlocked(s, i as Tier), active = selected.tier === i
           return <button key={name} className={`tier-card blue-button tier-${i} ${active ? 'selected' : ''}`} aria-pressed={active} disabled={!open} onClick={() => choose(seedPlantId(i as Tier))}>
             <span className="seed-bag"><Sprite id={13} /></span>
@@ -276,7 +278,7 @@ export default function Garden({ initialState, persist = true }: { initialState?
           <div className="seed-shortcuts" role="group" aria-label="快捷选种">
             {TIERS.map((name, i) => {
               const tier=i as Tier
-              if (!unlocked(s,tier)) return null
+              if (!seedVisible(s,tier)||!unlocked(s,tier)) return null
               const id=seedPlantId(tier), cost=price(s,PLANTS[id]), active=selected.tier===tier
               return <button key={tier} className={`seed-shortcut blue-button tier-${tier} ${active?'selected':''} ${s.coins<cost?'unaffordable':''}`} aria-pressed={active} aria-label={`${name}，${cost===0?'免费':`${number(cost)}金币`}${s.coins<cost?'，金币不足':''}`} onClick={()=>choose(id)}>
                 <span className="seed-bag"><Sprite id={13}/></span><span><strong>{name.replace('种子','')}</strong><small>{s.coins<cost?'不足 · ':''}{cost===0?'免费':number(cost)}</small></span>
@@ -362,7 +364,7 @@ export default function Garden({ initialState, persist = true }: { initialState?
         <h2 className="panel-title"><Icon name="leaf"/>商 店<Icon name="leaf"/></h2>
         <div className="upgrade-tabs" role="tablist" aria-label="商店分类">{['升级','雇佣','装饰'].map((name,i)=><button role="tab" aria-selected={category===i} key={name} onClick={()=>{setCategory(i);sound('tap')}} className={category===i?'selected':''}><Icon name={['leaf','snail','star'][i]}/><span>{name}</span></button>)}</div>
         <div className={`upgrade-list ${category===1?'hire-list':''}`}>
-          {category===0 && <>{nextResearch(s).map(u=><button key={u.id} data-testid={`upgrade-${u.id}`} className="upgrade-card" disabled={s.coins<upgradePrice(s,u)||!!upgradeLock(s,u.id)} onClick={()=>{dispatch({type:'buy',id:u.id});sound('buy');setToast(`${u.name} · ${u.detail}`)}}><span className="upgrade-art"><Icon name={u.icon}/></span><span className="upgrade-copy"><strong>{u.name}</strong><b>◈ {number(u.cost)}</b><span className="upgrade-description">{upgradeLock(s,u.id)??u.detail}</span></span></button>)}{UPGRADES.every(u=>s.purchases.includes(u.id))&&<p className="shop-empty">全园研究已满级。<br/>可从花园右侧箭头开辟下一园。</p>}</>}
+          {category===0 && <>{research.map(u=><button key={u.id} data-testid={`upgrade-${u.id}`} className="upgrade-card" disabled={s.coins<upgradePrice(s,u)||!!upgradeLock(s,u.id)} onClick={()=>{dispatch({type:'buy',id:u.id});sound('buy');setToast(`${u.name} · ${u.detail}`)}}><span className="upgrade-art"><Icon name={u.icon}/></span><span className="upgrade-copy"><strong>{u.name}</strong><b>◈ {number(u.cost)}</b><span className="upgrade-description">{upgradeLock(s,u.id)??u.detail}</span></span></button>)}{UPGRADES.every(u=>s.purchases.includes(u.id))?<p className="shop-empty">全园研究已满级。<br/>可从花园右侧箭头开辟下一园。</p>:research.length===0&&<p className="shop-empty">继续经营花园，会出现新的研究项目。</p>}</>}
           {category===1 && <>{hireCatalog(s.activeGarden).filter(u=>hireAvailable(team,u)).map(u=><button key={u.id} data-testid={`hire-${u.id}`} className="upgrade-card" disabled={s.coins<u.cost||!!hireLock(s,u)} onClick={()=>{dispatch({type:'hire',id:u.id});sound('buy');setToast(`${garden.name} · ${u.name}`)}}><span className="upgrade-art"><Icon name={u.kind==='water'?'snail':u.kind==='harvest'?'beetle':'squirrel'}/></span><span className="upgrade-copy"><strong>{u.name}</strong><b>◈ {number(u.cost)}</b><span className="upgrade-description">{hireLock(s,u)??u.detail}</span></span></button>)}{hireCatalog(s.activeGarden).every(u=>!hireAvailable(team,u))&&<p className="shop-empty">本园团队已满编，装备全部达到钻石制。</p>}</>}
           {category===2 && <>{DECORATIONS.filter(d=>!team.decorations.includes(d.id)).map(d=><button key={d.id} data-testid={`decorate-${d.id}`} className="upgrade-card" disabled={s.coins<decorationPrice(d.cost,s.activeGarden)} onClick={()=>{dispatch({type:'decorate',id:d.id});sound('buy')}}><span className="upgrade-art"><Icon name="star"/></span><span className="upgrade-copy"><strong>{d.name}</strong><b>◈ {number(decorationPrice(d.cost,s.activeGarden))}</b><span className="upgrade-description">{d.detail} · 仅本园外观</span></span></button>)}{team.decorations.length===DECORATIONS.length&&<p className="shop-empty">本园装饰已购齐。可在设置中调整展示。</p>}</>}
         </div>
@@ -385,6 +387,7 @@ export default function Garden({ initialState, persist = true }: { initialState?
       <h2>松鼠播种选种</h2><p className="modal-intro">{garden.name} · 仅设置本园松鼠，手动选种保持不变。</p>
       <p className="squirrel-sow-status">{!team.autoSow?'自动播种已关闭，可在商店开启。':'金币或收益条件不足时松鼠会等待，满足后继续播种。'}</p>
       <div className="squirrel-seed-options">{TIERS.slice(0,ULTIMATE_TIER).map((name,tier)=>{
+        if(!seedVisible(s,tier as Tier))return null
         const cost=PLANTS[seedPlantId(tier as Tier)].cost, lock=seedLock(s,tier as Tier)
         return <button key={tier} className={`blue-button squirrel-seed-option tier-${tier}`} aria-pressed={team.sowTier===tier} onClick={()=>{dispatch({type:'sow-tier',tier});sound('tap');setPanel(null)}}>
           <span className="seed-bag"><Sprite id={13}/></span><span><strong>{name}</strong><small>{cost===0?'免费':`${number(cost)} 金币 / 颗`}</small>{lock?<small>{lock} · 选后等待</small>:s.coins<cost&&<small>金币不足 · 选后等待</small>}</span><b>{team.sowTier===tier?'✓':''}</b>

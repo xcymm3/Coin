@@ -2,7 +2,7 @@ import { parseSave as parseLegacySave } from './legacyGame.ts'
 import { DECORATIONS, variantFor } from './collectibles.ts'
 export * from './collectibles.ts'
 import { plantPosition } from './gardenScene.ts'
-import { PLANTS, ULTIMATE_ID, ULTIMATE_TIER, INITIAL_POTS, TIER_PLANTS, SEED_ODDS, SPECIES_ODDS, seedPlantId, plantChance, type Tier, type Plant } from './catalog.ts'
+import { PLANTS, ULTIMATE_ID, ULTIMATE_TIER, INITIAL_POTS, TIER_PLANTS, SEED_ODDS, SPECIES_ODDS, PROGRESSION_THRESHOLDS, SEED_UNLOCK, seedPlantId, plantChance, type Tier, type Plant } from './catalog.ts'
 export * from './catalog.ts'
 import {PLANTS as PREVIOUS_PLANTS} from './legacyCatalog.ts'
 import { UPGRADES, GARDENS, EFFECT_IDS, hireCatalog, decorationPrice, GARDEN_PRICES, type CrewKind, type HireOption, type EffectId, type UpgradeId, type Upgrade } from './upgrades.ts'
@@ -55,7 +55,20 @@ export function newGame():GameState {
   player:newWorker(8,4),randomState:Math.floor(Math.random()*4294967296),economyVersion:2,version:1,coins:0,earned:0,elapsed:0,pots:Array.from({length:15},emptyPot),
   upgrades:zeroBonuses(),selected:0,discovered:[],harvestCounts:PLANTS.map(()=>0),untrackedHarvests:0,harvests:0,clicks:0,wonAt:null,lastSaved:Date.now(),started:false}
 }
+export const progressStage = (s:Pick<GameState,'earned'>) => {
+ let stage=0
+ while(stage+1<PROGRESSION_THRESHOLDS.length&&s.earned>=PROGRESSION_THRESHOLDS[stage+1])stage++
+ return stage
+}
+export const seedVisible = (s:Pick<GameState,'earned'>,tier:Tier) => s.earned>=SEED_UNLOCK[tier]
+export const upgradeRevealThreshold = (u:Upgrade) => {
+ let threshold:number=PROGRESSION_THRESHOLDS[0]
+ for(const candidate of PROGRESSION_THRESHOLDS)if(candidate<=u.cost*2)threshold=candidate
+ return threshold
+}
+export const upgradeVisible = (s:Pick<GameState,'earned'>,u:Upgrade) => s.earned>=upgradeRevealThreshold(u)
 export function seedLock(s:GameState,tier:Tier,page=s.activeGarden):string|null {
+ if(!seedVisible(s,tier))return `累计获得 ${SEED_UNLOCK[tier].toLocaleString('zh-CN')} 金币后开放`
  if(tier===0||tier===ULTIMATE_TIER)return null
  const cost=PLANTS[seedPlantId(tier)].cost, typical=PLANTS[TIER_PLANTS[tier][1]]
  const normalGross=PLANTS.reduce((sum,p)=>sum+plantChance(tier,p.id)*reward(s,p,page,-Infinity),0)
@@ -66,9 +79,9 @@ export function unlocked(s: GameState, tier: Tier, page=s.activeGarden) {
 }
 export function upgradeLock(s: GameState,id:UpgradeId):string|null {
  const u=UPGRADES.find(u=>u.id===id)
- return !u?'未知升级':u.page>=gardenCount(s)?`解锁第${u.page+1}园 · ${GARDENS[u.page].name}后购买`:u.requires&&!s.purchases.includes(u.requires)?'先完成上一级丰收研究':teamFor(s,u.page).harvests<(u.harvests??0)?`第${u.page+1}园收获 ${teamFor(s,u.page).harvests}/${u.harvests} 株后开放`:null
+ return !u?'未知升级':!upgradeVisible(s,u)?`继续经营花园后开放`:u.page>=gardenCount(s)?`解锁第${u.page+1}园 · ${GARDENS[u.page].name}后购买`:u.requires&&!s.purchases.includes(u.requires)?'先完成上一级丰收研究':teamFor(s,u.page).harvests<(u.harvests??0)?`第${u.page+1}园收获 ${teamFor(s,u.page).harvests}/${u.harvests} 株后开放`:null
 }
-export const nextResearch=(s:GameState)=>{const next=(['profit','soil','click'] as const).map(effect=>UPGRADES.find(u=>u.effects[effect]&&!s.purchases.includes(u.id)));return next.filter((u):u is Upgrade=>u!==undefined)}
+export const nextResearch=(s:GameState)=>{const next=(['profit','soil','click'] as const).map(effect=>UPGRADES.find(u=>u.effects[effect]&&!s.purchases.includes(u.id)));return next.filter((u):u is Upgrade=>u!==undefined&&upgradeVisible(s,u))}
 export const price = (_s:GameState,plant:Plant)=>plant.cost
 export const upgradePrice = (_s: GameState, u: Upgrade) => u.cost
 export const reward = (s: GameState, p: Plant, page = s.activeGarden, at = s.elapsed) => Math.round(p.reward * 2 ** s.upgrades.profit * gardenReward(page)) * (activeWeather(s, at) === 1 ? 7 : 1)

@@ -7,7 +7,7 @@ const pot=(plant,growth=0)=>({plant,growth,wateredAt:-10})
 
 test('manual and squirrel planting reveal rare species immediately and grow on the first tick',()=>{
  for(const automatic of [false,true]){
-  let s=reducer(newGame(),{type:'start'});s.elapsed=10;s.coins=100000;s.randomState=42
+  let s=reducer(newGame(),{type:'start'});s.elapsed=10;s.coins=100000;s.earned=500;s.randomState=42
   if(automatic){
    s=employ(s,'sow');s=reducer(s,{type:'sow-tier',tier:2})
    Object.assign(teamFor(s).workers.sow[0],{phase:'act',target:0,clock:.8,stock:1})
@@ -42,7 +42,7 @@ test('pots start at four, charge per slot, reject locked planting and stop at fi
  assert.equal(teamFor(s).potCount,4)
  assert.equal(reducer(s,{type:'pot',index:4}).pots[4].plant,null)
  assert.equal(reducer(s,{type:'expand'}).gardens[0].potCount,4)
- s.coins=1e6
+ s.coins=1e6;s.earned=500
  for(let count=4;count<15;count++){
   const before=s.coins,cost=potPrice(s)
   s=reducer(s,{type:'expand'})
@@ -178,7 +178,7 @@ test('ultimate selection does not stop sowing and harvesting after planting or s
 })
 
 test('opening second garden with ultimate selected keeps old crew working and new hires can sow',()=>{
- let s=reducer(newGame(),{type:'start'});s.coins=1e12
+ let s=reducer(newGame(),{type:'start'});s.coins=1e12;s.earned=1e16
  s=reducer(s,{type:'expand'});teamFor(s).harvests=1000;for(const u of UPGRADES.filter(u=>u.page===0))s=reducer(s,{type:'buy',id:u.id})
  s=employ(s,'sow');s=employ(s,'harvest');s=reducer(s,{type:'select',id:9})
  while(teamFor(s).potCount<15)s=reducer(s,{type:'expand'});s=reducer(s,{type:'open-garden'});assert.equal(s.activeGarden,1);assert.equal(teamFor(s).workers.sow.length,0)
@@ -200,7 +200,7 @@ test('squirrel seed selection is local, requires a hire, rejects ultimate and mi
 })
 
 test('squirrels wait without spending stock or falling back, resume when funded and never overspend',()=>{
- let s=reducer(newGame(),{type:'start'});s.coins=1e6;s=employ(s,'sow',2);s=reducer(s,{type:'sow-tier',tier:2});s.coins=499
+ let s=reducer(newGame(),{type:'start'});s.coins=1e6;s.earned=500;s=employ(s,'sow',2);s=reducer(s,{type:'sow-tier',tier:2});s.coins=499
  for(const [i,w] of teamFor(s).workers.sow.entries())Object.assign(w,{phase:'act',target:i,clock:0.5,stock:1})
  const before=structuredClone(teamFor(s).workers.sow)
  s=reducer(s,{type:'tick',dt:10});assert.deepEqual(teamFor(s).workers.sow,before);assert.equal(s.coins,499);assert.ok(s.pots.every(p=>p.plant===null))

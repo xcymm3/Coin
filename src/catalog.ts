@@ -59,5 +59,7 @@ export const seedEconomy = (tier: Tier) => {
   const seconds = PLANTS.reduce((sum, p) => sum + plantChance(tier, p.id) * p.seconds, 0)
   return { gross, net: gross - SEED_PRICES[tier], seconds, grossPerMinute: gross / seconds * 60 * INITIAL_POTS, netPerMinute: (gross - SEED_PRICES[tier]) / seconds * 60 * INITIAL_POTS }
 }
-// Five-garden campaign milestones; see docs/CAMPAIGN.md for measured pacing.
-export const SEED_UNLOCK = [0, 2000, 60000, 3000000, 150000000, 150000000]
+// Lifetime coin milestones are an internal progression track and are never rendered as a progress bar.
+// Ordinary and rare seeds are visible from the start; every later milestone reveals one more tier.
+export const PROGRESSION_THRESHOLDS = [0, 500, 10000, 500000, 50000000, 10000000000, 23000000000000] as const
+export const SEED_UNLOCK = [0, 0, 500, 10000, 500000, 50000000, 10000000000, 23000000000000] as const
