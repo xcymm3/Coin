@@ -2,11 +2,33 @@ import type { CrewKind } from './upgrades'
 /** Integer-grid silhouettes and separate parts keep animation in the sprite style. */
 export function GardenAnimal({kind}:{kind:CrewKind}) {
  return <svg className={`creature-art creature-${kind}`} viewBox="0 0 40 32" shapeRendering="crispEdges" aria-hidden="true">
- {kind==='water'?<g transform="scale(.5)" shapeRendering="geometricPrecision" strokeLinecap="round" strokeLinejoin="round">
-  <g className="snail-foot"><path d="M7 51Q14 40 40 42L59 34Q67 34 68 43L73 51Q77 56 65 57H16Q3 57 7 51Z" fill="#d2b67f" stroke="#55442f" strokeWidth="2"/><path d="M11 52Q30 48 52 52T70 53" fill="none" stroke="#f7dfa3" strokeWidth="3"/><path d="m19 53 4 1m7-1 4 1m7-1 4 1" stroke="#b79a64" strokeWidth="1.5"/></g>
-  <g className="snail-shell"><path d="M15 43C6 26 19 10 35 11c18 1 25 24 12 35Z" fill="#b77947" stroke="#543d2b" strokeWidth="2.5"/><path d="M17 37C12 19 35 10 44 24c8 14-8 23-16 15-8-8 4-16 8-10 3 5-3 7-4 4" fill="none" stroke="#6f452c" strokeWidth="4"/><path d="M17 25q5-11 17-9" fill="none" stroke="#f0c486" strokeWidth="3"/><path d="M19 42q10 8 24 1" fill="none" stroke="#e4a664" strokeWidth="2"/></g>
-  <g className="snail-head"><path d="M55 45q-5-9 0-17 5-6 11 0 6 8 0 19" fill="#d2b67f" stroke="#55442f" strokeWidth="2"/><g className="snail-feelers"><path d="m56 28-3-11m9 10 4-13" fill="none" stroke="#b79b65" strokeWidth="3"/><ellipse cx="53" cy="16" rx="3.6" ry="4.5" fill="#fff6d7" stroke="#55442f" strokeWidth="1.5"/><ellipse cx="67" cy="13" rx="3.6" ry="4.5" fill="#fff6d7" stroke="#55442f" strokeWidth="1.5"/><circle cx="54" cy="17" r="1.8" fill="#292d28"/><circle cx="68" cy="14" r="1.8" fill="#292d28"/></g><path d="M60 35q3 4 6 0" fill="none" stroke="#6d4936" strokeWidth="1.6"/><ellipse cx="56" cy="35" rx="2.8" ry="1.6" fill="#d99379"/></g>
- </g>:kind==='harvest'?<>
+ {kind==='water'?<>
+  <g className="snail-foot">
+   <path d="M6 23h8v-2h14v-3h6v5h2v2h2v3h-3v1H8v-1H3v-3h3Z" fill="#55442f"/>
+   <path d="M7 24h8v-2h14v-2h4v4h2v2h1v1H8v-1H5v-1h2Z" fill="#d2b67f"/>
+   <path d="M8 25h24v1h3v1H8ZM10 27h3v1h-3Zm7 0h3v1h-3Zm7 0h3v1h-3Z" fill="#f7dfa3"/>
+  </g>
+  <g className="snail-shell">
+   <path d="M11 5h9v1h4v2h2v3h2v10h-2v3h-4v1H11v-1H7v-3H5V11h2V8h2V6h2Z" fill="#543d2b"/>
+   <path d="M11 7h9v1h3v2h2v3h1v7h-2v3H11v-1H8v-3H7v-7h2V9h2Z" fill="#b77947"/>
+   <path d="M11 8h8v1h-7v2H9v3H8v-3h2V9h1Z" fill="#f0c486"/>
+   <path d="M14 10h7v2h2v7h-2v2h-9v-2h-2v-5h2v-2h6v2h2v4h-5v-2h3v-2h-5v1h-1v3h2v1h6v-1h1v-5h-1v-1h-6Z" fill="#6f452c"/>
+   <path d="M11 22h11v1H11ZM8 19h2v3H8Z" fill="#e4a664"/>
+  </g>
+  <g className="snail-head">
+   <path d="M28 13h5v1h2v3h1v6h-2v2h-6v-2h-2v-6h1v-3h1Z" fill="#55442f"/>
+   <path d="M29 14h3v1h2v3h1v4h-2v2h-4v-2h-2v-5h1v-2h1Z" fill="#d2b67f"/>
+   <g className="snail-feelers">
+    <path d="M26 9h2v5h1v2h-2v-3h-1Zm7-3h2v9h-2Z" fill="#b79b65"/>
+    <path d="M24 5h5v1h1v5h-1v1h-5v-1h-1V6h1Zm8-3h5v1h1v5h-1v1h-5V8h-1V3h1Z" fill="#55442f"/>
+    <path d="M24 6h5v5h-5Zm8-3h5v5h-5Z" fill="#fff6d7"/>
+    <path d="M27 7h2v3h-2Zm8-3h2v3h-2Z" fill="#292d28"/>
+    <path d="M27 7h1v1h-1Zm8-3h1v1h-1Z" fill="#ffffff"/>
+   </g>
+   <path d="M30 19h1v1h2v-1h1v2h-4Z" fill="#6d4936"/>
+   <path d="M27 18h2v2h-2Z" fill="#d99379"/>
+  </g>
+ </>:kind==='harvest'?<>
   <g className="beetle-legs leg-a" fill="#343c26"><path d="M10 19H5v-3H3v5h7Zm8 4h-2v5h-5v2h7Zm8-5h5v-4h2v6h-7Z"/></g><g className="beetle-legs leg-b" fill="#343c26"><path d="M10 23H6v3H2v2h6v-3h2Zm8-12h-2V7h-5V5h7Zm8 12h5v3h5v2h-7v-3h-3Z"/></g>
   <g className="beetle-body"><path d="M10 8h11v2h4v3h2v10h-3v3H11v-2H7v-3H5v-8h2v-3h3Z" fill="#2d402b"/><path d="M11 10h10v2h3v10h-2v2H11v-2H8v-9h3Z" fill="#61823d"/><path d="M11 11h5v3h-4v3H9v-4h2Z" fill="#a3c66b"/><path d="M17 10h2v14h-2ZM11 20h3v2h-3Zm10-5h2v3h-2Z" fill="#3e592d"/><path d="M20 11h2v3h-2Z" fill="#88a34c"/><g className="creature-head"><path d="M27 12V7h2v5h3V9h4v2h-2v3h2v3h2v6h-3v2h-7v-2h-3v-8h2Z" fill="#33432b"/><path d="M28 14h6v3h2v5h-3v1h-5v-2h-2v-5h2Z" fill="#a3b96b"/><path d="M32 15h4v5h-4Z" fill="#f8edc0"/><path d="M34 16h2v3h-2Z" fill="#263229"/><path d="M29 21h3v1h-3Z" fill="#d2a76e"/></g></g>
  </>:<>

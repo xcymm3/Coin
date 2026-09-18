@@ -355,5 +355,7 @@
 @media(min-width:621px) and (max-width:980px){.zen-garden.has-squirrels .garden-floor{top:220px}.has-squirrels .weather-overlay>span{top:220px}}
 @media(min-width:981px) and (max-width:1200px){.zen-garden.has-squirrels .garden-floor{top:232px}.has-squirrels .weather-overlay>span{top:232px}}
 
-/* Restored rounded snail uses the original 80 × 64 coordinate system. */
-.creature-water .snail-foot{transform-origin:38px 54px}.creature-water .snail-shell{transform-origin:31px 42px}.creature-water .snail-head{transform-origin:60px 44px}.creature-water .snail-feelers{transform-origin:60px 28px}
+/* Pixel-grid movement keeps the new snail silhouette crisp in every location. */
+.creature-water .snail-foot{animation-timing-function:steps(2,end)}
+.creature-water .snail-head,.creature-water .snail-shell,.creature-water .snail-feelers{animation-timing-function:steps(2,end)}
+@keyframes snail-wave{0%,100%{transform:translateX(0)}50%{transform:translateX(1px)}}
