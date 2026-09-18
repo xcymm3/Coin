@@ -6,6 +6,7 @@ import { PLANTS, ULTIMATE_ID, ULTIMATE_TIER, INITIAL_POTS, TIER_PLANTS, SEED_ODD
 export * from './catalog.ts'
 import {PLANTS as PREVIOUS_PLANTS} from './legacyCatalog.ts'
 import { UPGRADES, GARDENS, EFFECT_IDS, hireCatalog, decorationPrice, GARDEN_PRICES, type CrewKind, type HireOption, type EffectId, type UpgradeId, type Upgrade } from './upgrades.ts'
+import { formatNumber } from './format.ts'
 export * from './upgrades.ts'
 export type WorkerKind = 'harvest' | 'sow'
 export type ActorKind = WorkerKind | 'water' | 'player'
@@ -68,7 +69,7 @@ export const upgradeRevealThreshold = (u:Upgrade) => {
 }
 export const upgradeVisible = (s:Pick<GameState,'earned'>,u:Upgrade) => s.earned>=upgradeRevealThreshold(u)
 export function seedLock(s:GameState,tier:Tier,page=s.activeGarden):string|null {
- if(!seedVisible(s,tier))return `累计获得 ${SEED_UNLOCK[tier].toLocaleString('zh-CN')} 金币后开放`
+ if(!seedVisible(s,tier))return `累计获得 ${formatNumber(SEED_UNLOCK[tier])} 金币后开放`
  if(tier===0||tier===ULTIMATE_TIER)return null
  const cost=PLANTS[seedPlantId(tier)].cost, typical=PLANTS[TIER_PLANTS[tier][1]]
  const normalGross=PLANTS.reduce((sum,p)=>sum+plantChance(tier,p.id)*reward(s,p,page,-Infinity),0)

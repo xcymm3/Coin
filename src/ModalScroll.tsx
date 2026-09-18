@@ -20,7 +20,7 @@ export function ModalScroll({children}:{children:ReactNode}){
  }
  return <div className="modal-scroll-frame">
   <div id={id} ref={body} className="modal-body" onScroll={measure}><div ref={content} className="modal-content">{children}</div></div>
-  {max>0&&<div className="pixel-scrollbar" role="scrollbar" tabIndex={0} aria-label="弹窗内容滚动条" aria-controls={id} aria-orientation="vertical" aria-valuemin={0} aria-valuemax={max} aria-valuenow={Math.round(scroll.top)}
+  {max>0&&<div className="pixel-scrollbar" role="scrollbar" tabIndex={0} aria-label="弹窗内容滚动条 / Dialog content scrollbar" aria-controls={id} aria-orientation="vertical" aria-valuemin={0} aria-valuemax={max} aria-valuenow={Math.round(scroll.top)}
    onPointerDown={e=>{if(e.button!==0)return;e.preventDefault();const offset=e.target===e.currentTarget?thumb/2:e.clientY-e.currentTarget.getBoundingClientRect().top-top;drag.current={offset};e.currentTarget.setPointerCapture(e.pointerId);seek(e.clientY,e.currentTarget,offset)}}
    onPointerMove={e=>{if(drag.current)seek(e.clientY,e.currentTarget,drag.current.offset)}}
    onPointerUp={()=>{drag.current=null}} onPointerCancel={()=>{drag.current=null}} onLostPointerCapture={()=>{drag.current=null}}

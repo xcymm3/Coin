@@ -13,5 +13,7 @@
   --font-display: 'Garden Pixel', 'Microsoft YaHei', sans-serif;
   --font-body: 'Garden Pixel', 'Microsoft YaHei', sans-serif;
   --font-number: 'Garden Pixel', 'Lucida Console', monospace;
-  --ease-out: cubic-bezier(.2,.7,.2,1); --dur-fast: 120ms;
+  --ease-out: cubic-bezier(.2,.7,.2,1); --dur-fast: 120ms; --dur-normal: 220ms;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px;
 }

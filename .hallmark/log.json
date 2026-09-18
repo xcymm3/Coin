@@ -1,1 +1,4 @@
-[{"date":"2026-09-15","macrostructure":"Bespoke game workbench","theme":"custom","theme_axes":"dark / pixel / amber-green","vibe":"Moonlit forest, terracotta pots, wooden garden","enrichment":"generated pixel sprites and materials","brief":"月光奇植园 · 增量游戏 Demo，严格遵循用户像素参考图"}]
+[
+  {"date":"2026-09-18","macrostructure":"Index-First","theme":"custom","theme_axes":"dark / pixel / amber-green","vibe":"Immersive moonlit forest menu","enrichment":"existing pixel garden sprites","brief":"专业初始菜单、侧栏设置、中英切换与短阶大数格式"},
+  {"date":"2026-09-15","macrostructure":"Bespoke game workbench","theme":"custom","theme_axes":"dark / pixel / amber-green","vibe":"Moonlit forest, terracotta pots, wooden garden","enrichment":"generated pixel sprites and materials","brief":"月光奇植园 · 增量游戏 Demo，严格遵循用户像素参考图"}
+]
