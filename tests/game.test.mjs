@@ -71,8 +71,9 @@ test('previous campaign saves retain purchased pots and proportional growth',()=
  assert.deepEqual(migrated.legacyVariants,s.variants)
  assert.deepEqual(parseSave(JSON.stringify(migrated)),migrated)
 })
-test('each garden has four gradual harvest researches and two other researches',()=>{
+test('harvest research uses twenty continuous levels while each garden has two other researches',()=>{
  assert.equal(UPGRADES.length,30)
+ assert.deepEqual(UPGRADES.filter(u=>u.effects.profit).map(u=>u.name),Array.from({length:20},(_,i)=>`丰收研究 ${i+1}级`))
  let s=expanded();const before=s
  for(let page=0;page<5;page++)assert.equal(UPGRADES.filter(u=>u.page===page).length,6)
  for(const u of UPGRADES.filter(u=>u.page===4&&u.effects.profit))s=reducer(s,{type:'buy',id:u.id});for(let page=0;page<5;page++)assert.equal(reward(s,PLANTS[0],page),reward(before,PLANTS[0],page)*4)
