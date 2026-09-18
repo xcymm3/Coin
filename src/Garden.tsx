@@ -1,5 +1,6 @@
 import { GardenBackdrop } from './GardenBackdrop'
 import { GardenAnimal } from './GardenAnimal'
+import { ModalScroll } from './ModalScroll'
 import { GardenHabitat } from './GardenHabitat'
 import { ToolArt } from './ToolArt'
 import { DecorationArt } from './DecorationArt'
@@ -14,6 +15,7 @@ import './garden-scene.css'
 import './mobile-garden.css'
 import './landscape-garden.css'
 import './squirrel-picker.css'
+import './modal-scroll.css'
 
 const number = (n: number) => n >= 1e12 ? `${(n/1e12).toFixed(1)}兆` : n >= 1e8 ? `${(n/1e8).toFixed(1)}亿` : n >= 1e5 ? `${(n/1e4).toFixed(1)}万` : Math.floor(n).toLocaleString('en-US')
 const asset = `${import.meta.env.BASE_URL}assets/garden-atlas.png`
@@ -46,8 +48,8 @@ function Progress({ value, gold = false }: { value: number; gold?: boolean }) {
 function Modal({ title, children, close, className = '' }: { title: string; children: ReactNode; close?: () => void; className?: string }) {
   const ref = useRef<HTMLDialogElement>(null)
   useEffect(() => { ref.current?.showModal() }, [])
-  return <dialog ref={ref} className={`wood modal ${className}`} aria-label={title} onCancel={e => { e.preventDefault(); close?.() }}>
-    {close && <button className="close-button blue-button" aria-label="关闭菜单" onClick={close}>×</button>}{children}
+  return <dialog ref={ref} className={`wood modal ${close ? 'closable-modal' : ''} ${className}`} aria-label={title} onCancel={e => { e.preventDefault(); close?.() }}>
+    {close ? <><header className="modal-header"><strong>{title}</strong><button className="close-button blue-button" aria-label="关闭菜单" onClick={close}>×</button></header><ModalScroll>{children}</ModalScroll></> : children}
   </dialog>
 }
 function PixelBurst({ kind }: { kind: string }) {
