@@ -21,11 +21,11 @@ export const GARDENS = [
 
 // Four harvest research steps plus soil and watering; effects are shared.
 export const UPGRADE_BASES = [270,500000,9600000,1500000000,150000000000]
-const names=[['苔庭丰收术','腐叶沃土','晨露灌注'],['溪谷授粉术','潮汐沃土','流泉灌注'],['琥珀育种术','暖砂沃土','日光灌注'],['极光丰收术','冰晶沃土','霜羽灌注'],['星海丰收术','星尘沃土','银河灌注']]
+
 export const UPGRADES: Upgrade[] = GARDENS.flatMap((_,page)=>[
- ...[.15,.25,.35,.5].map((ratio,level)=>({id:level===3?`g${page}-profit`:`g${page}-profit-${level+1}`,page,name:`${names[page][0]} ${level+1}/4`,cost:page===0?[40,65,85,110][level]:Math.round(UPGRADE_BASES[page]*ratio),icon:'coin',detail:'全园收获价值提升约 41% · 分四级研究',effects:{profit:.5},requires:level?`g${page}-profit-${level}`:undefined,harvests:[0,12,30,60][level]})),
- {id:`g${page}-soil`,page,name:names[page][1],cost:Math.round(UPGRADE_BASES[page]*1.4),icon:'leaf',detail:'全园自然生长速度 ×2',effects:{soil:1}},
- {id:`g${page}-click`,page,name:names[page][2],cost:Math.round(UPGRADE_BASES[page]*1.9),icon:'hand',detail:'手动浇水成长 ×2，水壶容量 ×2',effects:{click:1,splash:1}},
+ ...[.15,.25,.35,.5].map((ratio,level)=>({id:level===3?`g${page}-profit`:`g${page}-profit-${level+1}`,page,name:`丰收研究 ${page+1}级 · ${level+1}/4`,cost:page===0?[40,65,85,110][level]:Math.round(UPGRADE_BASES[page]*ratio),icon:'coin',detail:'全园收获价值提升约 41% · 本级分4次强化',effects:{profit:.5},requires:level?`g${page}-profit-${level}`:undefined,harvests:[0,12,30,60][level]})),
+ {id:`g${page}-soil`,page,name:`沃土研究 ${page+1}级`,cost:Math.round(UPGRADE_BASES[page]*1.4),icon:'leaf',detail:'全园自然生长速度 ×2',effects:{soil:1}},
+ {id:`g${page}-click`,page,name:`灌注研究 ${page+1}级`,cost:Math.round(UPGRADE_BASES[page]*1.9),icon:'hand',detail:'手动浇水成长 ×2，水壶容量 ×2',effects:{click:1,splash:1}},
 ])
 export const ULTIMATE_PURCHASES=30
 export const EXPANSION_PRICE=1800

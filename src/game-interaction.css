@@ -1,0 +1,8 @@
+.game-shell,.game-shell *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.game-shell input,.game-shell textarea,.game-shell [contenteditable=true]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+.garden-floor .purchase-pot{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:62px;height:56px;background:#153b36;border:2px solid #cbaa61;box-shadow:inset 0 0 0 2px #28594d,2px 3px #193729;opacity:1;color:#ffe09b;text-shadow:1px 1px #1b2925;touch-action:manipulation}
+.garden-floor .purchase-pot>span{font-size:24px;line-height:1}
+.garden-floor .purchase-pot>small{display:block;font-size:10px;line-height:1.3;white-space:nowrap}
+.garden-floor .purchase-pot:disabled{border-color:#788c72;color:#bac4a8;background:#273c34;cursor:not-allowed}
+.garden-floor .future-pot{pointer-events:none}
+@media(orientation:portrait) and (max-width:980px){.garden-floor .purchase-pot{width:52px;height:48px}.garden-floor .purchase-pot>small{font-size:9px}}

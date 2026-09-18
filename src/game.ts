@@ -27,7 +27,7 @@ export function hireLock(s:GameState,option:HireOption,page=s.activeGarden):stri
  const t=teamFor(s,page), needed=(option.type==='equipment'?[30,70,140,240][option.level-1]:[0,40,90,160,250][option.level-1])+({water:0,harvest:12,sow:24}[option.kind])
  return t.harvests<needed?`本园收获 ${t.harvests}/${needed} 株后开放`:s.elapsed<t.hireReadyAt?`团队磨合中 · ${formatTime(Math.ceil(t.hireReadyAt-s.elapsed))}`:null
 }
-export const expansionLock = (s: GameState) => teamFor(s,gardenCount(s)-1).potCount<15?'先将最新花园扩至15盆':UPGRADES.filter(u=>u.page===gardenCount(s)-1).some(u=>!s.purchases.includes(u.id)) ? '先完成最新花园的六级专属研究' : null
+export const expansionLock = (s: GameState) => teamFor(s,gardenCount(s)-1).potCount<15?'先将最新花园扩至15盆':UPGRADES.filter(u=>u.page===gardenCount(s)-1).some(u=>!s.purchases.includes(u.id)) ? '先完成最新花园解锁的研究' : null
 export const potPrice=(s:GameState,page=s.activeGarden)=>Math.round(8*[1,50,3000,300000,30000000][page]*1.55**(teamFor(s,page).potCount-4))
 export const plantedReward=(s:GameState,index:number,at=s.elapsed)=>{const p=s.pots[index];return p?.plant==null?0:Math.max(reward(s,PLANTS[p.plant],Math.floor(index/15),-Infinity),Math.ceil((p.seedCost??0)*1.05))*(p.variant&&variantFor(p.plant)?2:1)*(activeWeather(s,at)===1?7:1)}
 export const WEATHER_DURATION = 15
@@ -64,8 +64,9 @@ export function unlocked(s: GameState, tier: Tier, page=s.activeGarden) {
 }
 export function upgradeLock(s: GameState,id:UpgradeId):string|null {
  const u=UPGRADES.find(u=>u.id===id)
- return !u?'未知升级':u.page>=gardenCount(s)?`先开辟${GARDENS[u.page].name}`:u.requires&&!s.purchases.includes(u.requires)?'先完成上一级丰收研究':teamFor(s,u.page).harvests<(u.harvests??0)?`本园收获 ${teamFor(s,u.page).harvests}/${u.harvests} 株后开放`:null
+ return !u?'未知升级':u.page>=gardenCount(s)?`解锁第${u.page+1}园 · ${GARDENS[u.page].name}后购买`:u.requires&&!s.purchases.includes(u.requires)?'先完成上一级丰收研究':teamFor(s,u.page).harvests<(u.harvests??0)?`第${u.page+1}园收获 ${teamFor(s,u.page).harvests}/${u.harvests} 株后开放`:null
 }
+export const nextResearch=(s:GameState)=>{const next=(['profit','soil','click'] as const).map(effect=>UPGRADES.find(u=>u.effects[effect]&&!s.purchases.includes(u.id)));return next.filter((u):u is Upgrade=>u!==undefined)}
 export const price = (_s:GameState,plant:Plant)=>plant.cost
 export const upgradePrice = (_s: GameState, u: Upgrade) => u.cost
 export const reward = (s: GameState, p: Plant, page = s.activeGarden, at = s.elapsed) => Math.round(p.reward * 2 ** s.upgrades.profit * gardenReward(page)) * (activeWeather(s, at) === 1 ? 7 : 1)

@@ -1,0 +1,50 @@
+import assert from 'node:assert/strict'
+import {mkdirSync} from 'node:fs'
+import {newGame,reducer,UPGRADES,SAVE_KEY} from '../src/game.ts'
+const {chromium,devices}=await import(process.env.PLAYWRIGHT_MODULE || 'playwright')
+const browser=await chromium.launch();mkdirSync('.artifacts/unified-shop',{recursive:true})
+try{
+ for(const [width,height] of [[1440,1000],[390,844],[320,640]]){
+  const mobile=width<500,page=await browser.newPage({...mobile?devices['Pixel 7']:{},viewport:{width,height},deviceScaleFactor:1})
+  const errors=[];page.on('pageerror',e=>errors.push(e.message))
+  let s=newGame();s.coins=1e9;s.gardens[0].harvests=1000
+  for(const u of UPGRADES.filter(u=>u.page===0))s=reducer(s,{type:'buy',id:u.id})
+  while(s.gardens[0].potCount<14)s=reducer(s,{type:'expand'})
+  s.coins=500000
+  await page.addInitScript(({s,key})=>localStorage.setItem(key,JSON.stringify({...s,lastSaved:Date.now()})),{s,key:SAVE_KEY})
+  await page.goto(process.env.PREVIEW_URL || 'http://127.0.0.1:5174/')
+  await page.getByRole('button',{name:/开始种植|继续我的花园/}).click()
+  const plus=page.getByTestId('buy-pot')
+  assert.match(await plus.innerText(),/640/)
+  const box=await plus.boundingBox();assert.ok(box.width>=44&&box.height>=44)
+  assert.ok(box.y>=0&&box.y+box.height<=height)
+  await page.screenshot({path:`.artifacts/unified-shop/garden-${width}.png`})
+  const balance=()=>page.getByTestId('coins').innerText()
+  const before=await balance();await plus.click()
+  assert.equal(await plus.count(),0);assert.equal(await page.locator('[data-testid^="pot-"]').count(),15)
+  assert.notEqual(await balance(),before)
+  const nav=page.getByRole('navigation',{name:'游戏面板'})
+  if(mobile)await nav.getByRole('button',{name:'商店',exact:true}).click()
+  const next=page.getByTestId('upgrade-g1-profit-1')
+  assert.equal(await next.isDisabled(),true);assert.match(await next.innerText(),/丰收研究 2级/);assert.match(await next.innerText(),/解锁第2园/)
+  assert.equal(await page.locator('.upgrade-list .upgrade-card').count(),3)
+  assert.equal(await page.getByRole('button',{name:/花盆 \+1/}).count(),0)
+  await page.screenshot({path:`.artifacts/unified-shop/research-locked-${width}.png`})
+  await page.getByRole('button',{name:/开辟萤火溪谷/}).click()
+  assert.equal(await next.isDisabled(),false)
+  await next.click()
+  const labels=await page.locator('.upgrade-list .upgrade-card').allTextContents()
+  if(mobile)await nav.getByRole('button',{name:'花园',exact:true}).click()
+  await page.getByRole('button',{name:'上一座花园'}).click()
+  if(mobile)await nav.getByRole('button',{name:'商店',exact:true}).click()
+  assert.deepEqual(await page.locator('.upgrade-list .upgrade-card').allTextContents(),labels)
+  await page.keyboard.press('Control+a');assert.equal(await page.evaluate(()=>getSelection().toString()),'')
+  await page.keyboard.press('Meta+a');assert.equal(await page.evaluate(()=>getSelection().toString()),'')
+  assert.equal(await next.count(),0)
+  assert.equal(await page.locator('.shop-location').evaluate(e=>getComputedStyle(e).userSelect),'none')
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true)
+  assert.deepEqual(errors,[])
+  console.log(`PASS ${width}: direct pot purchase/cap, next-garden research locks, global list and selection blocked`)
+  await page.close()
+ }
+}finally{await browser.close()}
