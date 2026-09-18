@@ -43,7 +43,7 @@ try{
   await page.keyboard.press('Control+a');assert.equal(await page.evaluate(()=>getSelection().toString()),'')
   await page.keyboard.press('Meta+a');assert.equal(await page.evaluate(()=>getSelection().toString()),'')
   assert.equal(await next.count(),0)
-  assert.equal(await page.locator('.shop-location').evaluate(e=>getComputedStyle(e).userSelect),'none')
+  assert.equal(await page.locator('.shop-location').count(),0)
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true)
   assert.deepEqual(errors,[])
   console.log(`PASS ${width}: direct pot purchase/cap, next-garden research locks, global list and selection blocked`)

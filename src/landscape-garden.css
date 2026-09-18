@@ -69,7 +69,6 @@
   .mobile-plant-copy .progress{height:5px;margin:3px 0}
   .mobile-plant-info button{min-width:44px;min-height:44px;padding:3px;font-size:12px;grid-column:2}
   .mobile-plant-info .landscape-info-close{display:block;grid-row:1;justify-self:end;width:44px;font-size:20px}
-  .upgrade-panel .shop-location{display:none}
   .upgrade-panel .upgrade-tabs{order:3;min-height:44px;margin:0;max-width:none;flex-shrink:0}
   .upgrade-panel .upgrade-tabs button{min-height:44px;font-size:11px;flex-direction:row;gap:2px;padding:2px}
   .upgrade-panel .upgrade-tabs button>svg,.upgrade-panel .upgrade-tabs button>.sprite{display:none}

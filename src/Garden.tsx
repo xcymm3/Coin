@@ -360,7 +360,6 @@ export default function Garden({ initialState, persist = true }: { initialState?
 
       <aside id="garden-shop" ref={shopRef} className={`upgrade-panel ${mobilePanel === 'upgrades' ? 'mobile-active' : ''}`} aria-label="花园商店">
         <h2 className="panel-title"><Icon name="leaf"/>商 店<Icon name="leaf"/></h2>
-        <div className="shop-location">{category===0?'全园研究':garden.name}<small>{category===0?'等级全园同步 · 新花园解锁下一等级':'购买与效果仅限当前花园'}</small></div>
         <div className="upgrade-tabs" role="tablist" aria-label="商店分类">{['升级','雇佣','装饰'].map((name,i)=><button role="tab" aria-selected={category===i} key={name} onClick={()=>{setCategory(i);sound('tap')}} className={category===i?'selected':''}><Icon name={['leaf','snail','star'][i]}/><span>{name}</span></button>)}</div>
         <div className="upgrade-list">
           {category===0 && <>{nextResearch(s).map(u=><button key={u.id} data-testid={`upgrade-${u.id}`} className="upgrade-card" disabled={s.coins<upgradePrice(s,u)||!!upgradeLock(s,u.id)} onClick={()=>{dispatch({type:'buy',id:u.id});sound('buy');setToast(`${u.name} · ${u.detail}`)}}><span className="upgrade-art"><Icon name={u.icon}/></span><span className="upgrade-copy"><strong>{u.name}</strong><b>◈ {number(u.cost)}</b><span className="upgrade-description">{upgradeLock(s,u.id)??u.detail}</span></span></button>)}{UPGRADES.every(u=>s.purchases.includes(u.id))&&<p className="shop-empty">全园研究已满级。<br/>可从花园右侧箭头开辟下一园。</p>}</>}
