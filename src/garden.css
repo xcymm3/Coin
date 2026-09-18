@@ -202,10 +202,12 @@ input[type=checkbox] { accent-color: var(--color-green); width: 16px; height: 16
 .help-list p { font-size: 12px; line-height: 1.8; margin-top: 5px; }
 .book-modal { width: min(950px,calc(100vw - 32px)); }
 .book-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
-.book-grid article { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--color-wood-dark); border: 2px solid var(--color-wood-deep); }
-.book-grid article > .sprite { width: 85px; filter: saturate(.35); }
+.book-grid article { position:relative; display: flex; align-items: center; min-height:150px; gap: 12px; padding: 12px; background: var(--color-wood-dark); border: 2px solid var(--color-wood-deep); }
+.book-plant-art { position:relative; flex:0 0 85px; width:85px; height:96px; display:flex; align-items:center; justify-content:center; }
+.book-plant-art > .sprite { width: 85px; filter: saturate(.35); }
+.book-copy { flex:1; min-width:0; }
 .book-grid article.discovered { border-color: var(--color-wood-edge); }
-.book-grid article.discovered > .sprite { filter: none; }
+.book-grid article.discovered .book-plant-art > .sprite { filter: none; }
 .book-grid h3 { font-size: 16px; color: var(--color-gold-light); }
 .book-grid h3 small { display: block; font-size: 10px; color: var(--color-paper); font-weight: 400; margin-top: 4px; }
 .book-grid p { font-size: 11px; line-height: 1.8; margin-top: 6px; }
@@ -306,3 +308,4 @@ input[type=checkbox] { accent-color: var(--color-green); width: 16px; height: 16
 .reduce-motion *, .reduce-motion *::before { animation: none !important; transition: none !important; }
 @media (prefers-reduced-motion: reduce) { .pixel-burst,.fireflies,.plant-aura,.ripe-sparkles { display: none; } *,*::before { animation: none !important; transition: none !important; } }
 @media (max-width:620px) { .ripe-sparkles { font-size: 10px; }.ripe-sparkles i { left: 30px; }.pixel-burst i { width: 3px; height: 3px; }.pot-feedback .float-label { font-size: 12px; } }
+@media (max-width:620px) { .book-plant-art{flex-basis:63px;width:63px;height:84px}.book-plant-art>.sprite{width:63px} }

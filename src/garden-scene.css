@@ -23,6 +23,9 @@
 .garden-floor .pot:not(:disabled):active { transform: translate(-50%,-86%); }
 .garden-floor .pot::after { content: ''; position: absolute; left: 21%; right: 13%; height: 12%; bottom: 6%; z-index: -1; background: var(--color-shade); clip-path: polygon(15% 0,85% 0,85% 20%,100% 20%,100% 80%,85% 80%,85% 100%,15% 100%,15% 80%,0 80%,0 20%,15% 20%); }
 .garden-floor .pot-art { width: 100%; height: auto; margin: 0; display: block; }
+.garden-floor .pot.growing-adult .pot-art { transform:none; transform-origin:50% 88%; clip-path:inset(16% 0 0); animation:immature-sway 4s steps(8) var(--sway-delay) infinite; filter:saturate(.42) brightness(.76); }
+.garden-floor .pot.growing-adult:hover .pot-art,.garden-floor .pot.growing-adult:focus-visible .pot-art { transform:translateY(-2px); }
+@keyframes immature-sway { 0%,100%{rotate:-1deg}50%{rotate:1deg} }
 .garden-floor .pot.ready::before { display: none; }
 .garden-floor .pot:focus-visible { outline: 2px dashed var(--color-gold-light); outline-offset: 0; }
 .garden-floor .plant-name { top: -7px; left: 50%; translate: -50% 0; display: none; padding: 2px 5px; background: var(--color-blue-dark); color: var(--color-gold-light); font-size: 10px; }
@@ -137,7 +140,7 @@
 .tier-4 .seed-bag { filter:hue-rotate(280deg); }.tier-5 .seed-bag { filter:sepia(1) saturate(2); }
 .aura-3 { color:#e891e8; }.aura-4 { color:#ffb54e; }.aura-5 { color:#fff2b0; }
 
-.book-grid article.undiscovered > .sprite { filter:brightness(0); opacity:.7; }
+.book-grid article.undiscovered .book-plant-art > .sprite { filter:brightness(0); opacity:.7; }
 .book-grid article.undiscovered h3 { color:var(--color-muted); }
 .book-grid .harvest-count b { color:var(--color-gold-light); font-size:15px; }
 .garden-landmark { position:absolute;top:8%;left:-3%;width:13%;height:25%;pointer-events:none;opacity:.85; }
@@ -153,7 +156,7 @@
 .variant-sunset { filter:hue-rotate(285deg) saturate(1.45); }
 .variant-stardust { filter:brightness(1.25) saturate(.55) drop-shadow(0 0 4px #d9c8ff); }
 .variant-silhouette { filter:brightness(0);opacity:.55; }
-.variant-collection {display:flex;gap:5px;margin:8px 0}.variant-collection>span{display:flex;flex-direction:column;align-items:center;width:52px;border:1px solid #6b755e;padding:3px}.variant-collection .sprite,.variant-collection .extra-plant{width:38px!important;height:38px!important;display:block}.variant-collection small{font-size:9px}.variant-unknown{opacity:.55}.book-grid .undiscovered .variant-known .sprite,.book-grid .undiscovered .variant-known .extra-plant{filter:none;opacity:1}
+.variant-collection{position:absolute;left:0;right:0;bottom:-1px;z-index:2;margin:0;display:flex;justify-content:center}.variant-collection>span{display:flex;align-items:center;justify-content:center;width:100%;min-width:0;height:27px;padding:2px 3px;border:1px solid #6b755e;background:#243d36e8}.variant-collection .sprite,.variant-collection .extra-plant{flex:0 0 23px;width:23px!important;height:23px!important;display:block}.variant-collection small{min-width:0;font-size:8px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--color-gold-light)}.variant-unknown{opacity:.55}.book-grid .undiscovered .variant-known .sprite,.book-grid .undiscovered .variant-known .extra-plant{filter:none;opacity:1}
 .upgrade-tabs {grid-template-columns:repeat(4,minmax(0,1fr))}.upgrade-tabs button{min-width:0}.upgrade-tabs span{font-size:12px}.decoration-note{font-size:11px;line-height:1.6;color:#d1dabb;padding:8px}
 .garden-decorations{position:absolute;inset:0;pointer-events:none;z-index:101}.decoration{position:absolute;text-shadow:2px 2px #263638;font-weight:bold;image-rendering:pixelated}.decoration-bunting{top:33px;left:15%;right:15%;text-align:center;color:#e5a76c;letter-spacing:10px;font-size:17px}.decoration-fence{left:0;top:25%;writing-mode:vertical-rl;color:#eee2be;font-size:27px;letter-spacing:18px}.decoration-mushrooms{right:0;top:18%;writing-mode:vertical-rl;color:#d36c83;font-size:21px;letter-spacing:22px}.decoration-lights{top:2px;left:15%;right:15%;text-align:center;color:#ffe696;letter-spacing:12px;text-shadow:0 0 6px #f8ca67;font-size:18px}.decoration-fountain{right:2%;bottom:12%;color:#9ce6ec;font-size:48px;border-bottom:6px solid #5b8995;line-height:30px}.decoration-moon{right:2%;top:32px;color:#ede1aa;font-size:25px}
 .weather-overlay{position:absolute;inset:0;z-index:120;pointer-events:none;overflow:hidden}.weather-overlay>span{position:absolute;right:12px;top:45px;padding:5px 9px;background:#173d45d9;color:#f8e6b1;font-size:12px}.weather-0 i{position:absolute;width:2px;height:13px;background:#bedfec88;animation:garden-rain .85s linear infinite}.weather-1{background:#10192a33}.weather-1 i{position:absolute;width:4px;height:4px;background:#f2f5a5;box-shadow:0 0 8px #ecff89;animation:weather-glow 2s ease-in-out infinite alternate}.weather-2:after{content:'';position:absolute;left:12%;right:12%;top:14%;height:70%;border-radius:50% 50% 0 0;border-top:8px solid #ee899699;box-shadow:0 -7px #f7d89188,0 -14px #aee4a088,0 -21px #84ccdf88,0 -28px #b99ed788;opacity:.8}.weather-2 i{display:none}@keyframes garden-rain{from{translate:8px -30px;opacity:0}to{translate:-10px 90px;opacity:1}}@keyframes weather-glow{to{translate:8px -12px;opacity:.25}}
@@ -333,6 +336,10 @@
 .water-station .pool-refill-button:disabled{opacity:1}
 .water-station .pool-refill-button:not(:disabled):hover .pixel-pool{border-color:var(--color-gold-light)}
 .water-station .pool-refill-button:focus-visible{outline:2px dashed var(--color-gold-light);outline-offset:2px}
+.supply-station{z-index:0;top:98%;transform:translate(-50%,-52%)}
+.supply-station .pixel-crate{height:17px;margin:15px auto 3px;transform:skewX(-8deg) scaleY(.72);transform-origin:50% 100%;box-shadow:inset 3px 0 #d39c59,3px 4px #34483b55}
+.seed-station .pixel-crate .sprite{transform:translateY(-13px) scaleY(.72);transform-origin:50% 100%}
+.water-station .pixel-pool{height:27px;clip-path:polygon(10% 0,90% 0,90% 12%,100% 12%,100% 80%,90% 80%,90% 100%,10% 100%,10% 80%,0 80%,0 12%,10% 12%)}
 .pool-dipping-can{position:absolute;left:30%;top:-14px;width:48px;height:48px;pointer-events:none;animation:pool-dip 1.2s steps(4) both}
 .pool-dipping-can .garden-tool-art{width:100%;height:100%;max-height:none}
 .pool-dipping-can i{position:absolute;left:8px;bottom:0;width:3px;height:4px;background:#b5e6de;box-shadow:24px -3px #b5e6de;animation:pool-splash .4s steps(3) infinite}

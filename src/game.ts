@@ -10,7 +10,8 @@ export * from './upgrades.ts'
 export type WorkerKind = 'harvest' | 'sow'
 export type ActorKind = WorkerKind | 'water' | 'player'
 export type Worker = { x: number; y: number; facing: number; phase: 'idle' | 'walk' | 'act' | 'return' | 'service'; target: number | null; clock: number; path: { x: number; y: number }[]; stock: number; cargo: number; count: number }
-export const STATIONS = { water: { x: 8, y: 96 }, sow: { x: 48, y: 96 }, harvest: { x: 88, y: 96 } }
+// Helpers stop just in front of the ground-level supply decals instead of overlapping them.
+export const STATIONS = { water: { x: 8, y: 92 }, sow: { x: 48, y: 92 }, harvest: { x: 88, y: 92 } }
 const newWorker = (x: number, stock = 0): Worker => ({ x, y: 91, facing: 1, phase: 'idle', target: null, clock: 0, path: [], stock, cargo: 0, count: 0 })
 export const teamFor = (s: GameState, page = s.activeGarden): Team => s.gardens[page]
 export const crewFor = (team: Team, kind: CrewKind) => kind === 'water' ? team.snails : team.workers[kind]
