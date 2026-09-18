@@ -21,7 +21,8 @@ try{
   const second=page.getByTestId('upgrade-g0-profit-2')
   assert.equal(await second.isDisabled(),true)
   assert.match(await second.innerText(),/0\/12/)
-  assert.match(await page.locator('.garden-bonuses').innerText(),/1.41/)
+  assert.equal(await page.locator('.garden-bonuses').count(),0)
+  assert.doesNotMatch(await page.locator('.upgrade-panel').innerText(),/第1园解锁 · 全园共享/)
   await page.screenshot({path:`.artifacts/balance-ui/${name}-research.png`,fullPage:true})
   await page.getByRole('tab',{name:'雇佣',exact:true}).click()
   assert.equal(await page.getByTestId('hire-recruit-sow-1').isDisabled(),true)
@@ -32,7 +33,7 @@ try{
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true)
   await page.screenshot({path:`.artifacts/balance-ui/${name}-team.png`,fullPage:true})
   assert.deepEqual(errors,[])
-  console.log(`PASS ${name}: staged research, rounded multiplier, local harvest gates, no overflow or page errors`)
+  console.log(`PASS ${name}: staged research, compact shop, local harvest gates, no overflow or page errors`)
   await page.close()
  }
 }finally{await browser.close()}

@@ -68,10 +68,9 @@
   .upgrade-panel .upgrade-tabs{order:3;max-width:none;margin:0;min-height:48px}
   .upgrade-panel .upgrade-tabs button{min-height:48px;flex-direction:row;font-size:13px}
   .upgrade-panel .upgrade-list{order:4;display:flex;flex-direction:column}
-  .upgrade-panel .garden-bonuses{order:5;display:block}
   .upgrade-panel .automation-controls{order:6}
   .mobile-return{display:block;order:7;position:sticky;bottom:max(6px,env(safe-area-inset-bottom));z-index:140;min-height:48px;padding:8px;white-space:nowrap;color:var(--color-gold-light);border-color:var(--color-gold);background:var(--color-blue-dark)}
-  .upgrade-card{min-height:96px}
+  .upgrade-card{min-height:84px}
   .seed-panel .panel-title{font-size:20px;min-height:36px}
   .seed-panel .tier-card{min-height:80px}
   .toast{bottom:112px;max-width:calc(100% - 24px);font-size:12px;pointer-events:none}
