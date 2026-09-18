@@ -2,7 +2,7 @@ import { parseSave as parseLegacySave } from './legacyGame.ts'
 import { DECORATIONS, variantFor } from './collectibles.ts'
 export * from './collectibles.ts'
 import { plantPosition } from './gardenScene.ts'
-import { PLANTS, ULTIMATE_ID, ULTIMATE_TIER, INITIAL_POTS, TIER_PLANTS, SEED_ODDS, SPECIES_ODDS, seedPlantId, plantChance, type Tier, type Plant } from './catalog.ts'
+import { PLANTS, ULTIMATE_ID, ULTIMATE_TIER, INITIAL_POTS, SEED_GARDENS, TIER_PLANTS, SEED_ODDS, SPECIES_ODDS, seedPlantId, plantChance, type Tier, type Plant } from './catalog.ts'
 export * from './catalog.ts'
 import {PLANTS as PREVIOUS_PLANTS} from './legacyCatalog.ts'
 import { UPGRADES, GARDENS, EFFECT_IDS, hireCatalog, decorationPrice, GARDEN_PRICES, type CrewKind, type HireOption, type EffectId, type UpgradeId, type Upgrade } from './upgrades.ts'
@@ -28,7 +28,7 @@ export function hireLock(s:GameState,option:HireOption,page=s.activeGarden):stri
  return t.harvests<needed?`本园收获 ${t.harvests}/${needed} 株后开放`:s.elapsed<t.hireReadyAt?`团队磨合中 · ${formatTime(Math.ceil(t.hireReadyAt-s.elapsed))}`:null
 }
 export const expansionLock = (s: GameState) => teamFor(s,gardenCount(s)-1).potCount<15?'先将最新花园扩至15盆':UPGRADES.filter(u=>u.page===gardenCount(s)-1).some(u=>!s.purchases.includes(u.id)) ? '先完成最新花园的六级专属研究' : null
-export const potPrice=(s:GameState,page=s.activeGarden)=>Math.round(8*[1,50,3000,300000,30000000][page]*1.55**(teamFor(s,page).potCount-4))
+export const potPrice=(s:GameState,page=s.activeGarden)=>Math.round(8*[1,18,330,8000,250000][page]*1.55**(teamFor(s,page).potCount-4))
 export const plantedReward=(s:GameState,index:number,at=s.elapsed)=>{const p=s.pots[index];return p?.plant==null?0:Math.max(reward(s,PLANTS[p.plant],Math.floor(index/15),-Infinity),Math.ceil((p.seedCost??0)*1.05))*(p.variant&&variantFor(p.plant)?2:1)*(activeWeather(s,at)===1?7:1)}
 export const WEATHER_DURATION = 15
 export const activeWeather = (s: GameState, at = s.elapsed) => at >= s.weather.started && at < s.weather.started + WEATHER_DURATION ? s.weather.kind : null
@@ -39,7 +39,7 @@ export type Pot = { seedCost?:number; variant?: number; germination?: number; re
 export type Team = { harvests:number;hireReadyAt:number; potCount:number; sowTier: Exclude<Tier,7>; snails: Worker[]; workers: Record<WorkerKind,Worker[]>; cursor: number; equipment:Record<CrewKind,number>; decorations:string[];hiddenDecorations:string[];autoHarvest:boolean;autoSow:boolean }
 export type GameState = {
   fertilizer:number;extraRandom:number;variants:string[];legacyVariants?:string[];weather:{kind:number;started:number;next:number};
-  balanceVersion:1|2;campaignVersion:4;activeGarden:number;gardens:Team[];purchases:string[];legacyBonuses:Record<EffectId,number>;
+  balanceVersion:1|2|3;campaignVersion:4;activeGarden:number;gardens:Team[];purchases:string[];legacyBonuses:Record<EffectId,number>;
   stats:{manualGrowth:number;autoGrowth:number;manualCoins:number;autoCoins:number};
   player:Worker;randomState:number;economyVersion:2;version:1;coins:number;earned:number;elapsed:number;pots:Pot[];
   upgrades:Record<EffectId,number>;selected:number;discovered:number[];harvestCounts:number[];untrackedHarvests:number;
@@ -50,12 +50,13 @@ export const newTeam = ():Team => ({harvests:0,hireReadyAt:0,potCount:INITIAL_PO
 const emptyPot = (): Pot => ({ plant: null, growth: 0, wateredAt: -10 })
 export function newGame():GameState {
  return {fertilizer:0,extraRandom:Math.floor(Math.random()*4294967296),variants:[],weather:{kind:0,started:-20,next:300+Math.random()*300},
-  balanceVersion:2,campaignVersion:4,activeGarden:0,gardens:[newTeam()],purchases:[],legacyBonuses:zeroBonuses(),stats:{manualGrowth:0,autoGrowth:0,manualCoins:0,autoCoins:0},
+  balanceVersion:3,campaignVersion:4,activeGarden:0,gardens:[newTeam()],purchases:[],legacyBonuses:zeroBonuses(),stats:{manualGrowth:0,autoGrowth:0,manualCoins:0,autoCoins:0},
   player:newWorker(8,4),randomState:Math.floor(Math.random()*4294967296),economyVersion:2,version:1,coins:0,earned:0,elapsed:0,pots:Array.from({length:15},emptyPot),
   upgrades:zeroBonuses(),selected:0,discovered:[],harvestCounts:PLANTS.map(()=>0),untrackedHarvests:0,harvests:0,clicks:0,wonAt:null,lastSaved:Date.now(),started:false}
 }
 export function seedLock(s:GameState,tier:Tier,page=s.activeGarden):string|null {
  if(tier===0||tier===ULTIMATE_TIER)return null
+ if(page<SEED_GARDENS[tier])return `前往${GARDENS[SEED_GARDENS[tier]].name}或更高花园播种`
  const cost=PLANTS[seedPlantId(tier)].cost, typical=PLANTS[TIER_PLANTS[tier][1]]
  return reward(s,typical,page,-Infinity)<cost*1.1?'先提升丰收研究或前往高收益花园':null
 }
@@ -68,7 +69,8 @@ export function upgradeLock(s: GameState,id:UpgradeId):string|null {
 }
 export const price = (_s:GameState,plant:Plant)=>plant.cost
 export const upgradePrice = (_s: GameState, u: Upgrade) => u.cost
-export const reward = (s: GameState, p: Plant, page = s.activeGarden, at = s.elapsed) => Math.round(p.reward * 2 ** s.upgrades.profit * gardenReward(page)) * (activeWeather(s, at) === 1 ? 7 : 1)
+export const harvestMultiplier=(s:GameState,page=s.activeGarden)=>gardenReward(page)*2**(s.legacyBonuses.profit+UPGRADES.filter(u=>u.page===page&&s.purchases.includes(u.id)).reduce((sum,u)=>sum+(u.effects.profit??0),0))
+export const reward = (s: GameState, p: Plant, page = s.activeGarden, at = s.elapsed) => Math.round(p.reward * harvestMultiplier(s,page)) * (activeWeather(s, at) === 1 ? 7 : 1)
 export function seedEconomyFor(s:GameState,tier:Tier,page=s.activeGarden){
  const cost=PLANTS[seedPlantId(tier)].cost
  const gross=PLANTS.reduce((sum,p)=>sum+plantChance(tier,p.id)*Math.max(reward(s,p,page,-Infinity),Math.ceil(cost*1.05))*(variantFor(p.id)?1.1:1),0)
@@ -249,7 +251,7 @@ export function reducer(state: GameState, action: Action): GameState {
   const clone = (w: Worker): Worker => ({ ...w, path: w.path.map(p => ({ ...p })) })
   const s:GameState={...state,variants:[...state.variants],weather:{...state.weather},player:clone(state.player),pots:state.pots.map(p=>({...p})),upgrades:{...state.upgrades},legacyBonuses:{...state.legacyBonuses},discovered:[...state.discovered],harvestCounts:[...state.harvestCounts],purchases:[...state.purchases],stats:{...state.stats},gardens:state.gardens.map(t=>({...t,equipment:{...t.equipment},snails:t.snails.map(clone),workers:{harvest:t.workers.harvest.map(clone),sow:t.workers.sow.map(clone)},decorations:[...t.decorations],hiddenDecorations:[...t.hiddenDecorations]}))}
   const team=teamFor(s)
-  if(action.type==='sow-tier' && team.workers.sow.length>0 && Number.isInteger(action.tier) && action.tier>=0 && action.tier<ULTIMATE_TIER) team.sowTier=action.tier as Exclude<Tier,7>
+  if(action.type==='sow-tier' && team.workers.sow.length>0 && Number.isInteger(action.tier) && action.tier>=0 && action.tier<ULTIMATE_TIER && s.activeGarden>=SEED_GARDENS[action.tier]) team.sowTier=action.tier as Exclude<Tier,7>
   if(action.type==='toggle') team[action.key]=!team[action.key]
   if(action.type==='hire') {
     const u=hireCatalog(s.activeGarden).find(u=>u.id===action.id)
@@ -363,11 +365,16 @@ export function parseSave(raw:string|null):GameState|null {
    for(const t of s.gardens){t.harvests=0;t.hireReadyAt=0}
    s.balanceVersion=2
   }
+  if(s.balanceVersion===2){
+   // Keep purchases and actual paid receipts; obsolete squirrel plans use the best local tier.
+   if(Array.isArray(s.gardens))s.gardens.forEach((t,page)=>{if(t&&Number.isInteger(t.sowTier)&&t.sowTier>=0&&t.sowTier<7)t.sowTier=Math.min(t.sowTier,page+2) as Exclude<Tier,7>})
+   s.balanceVersion=3
+  }
   const finite=(n:unknown)=>typeof n==='number'&&Number.isFinite(n)&&n>=0
   const integer=(n:unknown)=>Number.isSafeInteger(n)&&Number(n)>=0
   const unique=(a:unknown):a is string[]=>Array.isArray(a)&&a.every(v=>typeof v==='string')&&new Set(a).size===a.length
   if(s.legacyVariants!==undefined&&(!unique(s.legacyVariants)||s.legacyVariants.some(k=>!/^\d+:[1-3]$/.test(k))))return null
-  if(s.balanceVersion!==2||s.version!==1||s.economyVersion!==2||!finite(s.coins)||!finite(s.earned)||!finite(s.elapsed)||!finite(s.lastSaved)||!integer(s.fertilizer)||!integer(s.harvests)||!integer(s.clicks)
+  if(s.balanceVersion!==3||s.version!==1||s.economyVersion!==2||!finite(s.coins)||!finite(s.earned)||!finite(s.elapsed)||!finite(s.lastSaved)||!integer(s.fertilizer)||!integer(s.harvests)||!integer(s.clicks)
    ||!integer(s.randomState)||s.randomState>4294967295||!integer(s.extraRandom)||s.extraRandom>4294967295||!integer(s.selected)||!PLANTS[s.selected]||typeof s.started!=='boolean'||(s.wonAt!==null&&!finite(s.wonAt))
    ||!unique(s.purchases)||s.purchases.some(id=>!UPGRADES.some(u=>u.id===id))||!s.upgrades||!s.legacyBonuses||EFFECT_IDS.some(k=>!integer(s.legacyBonuses[k])||s.legacyBonuses[k]>16||s.upgrades[k]!==s.legacyBonuses[k]+UPGRADES.filter(u=>s.purchases.includes(u.id)).reduce((n,u)=>n+(u.effects[k]??0),0))
    ||!Array.isArray(s.gardens)||s.gardens.length<1||s.gardens.length>5||!integer(s.activeGarden)||s.activeGarden>=s.gardens.length||s.purchases.some(id=>UPGRADES.find(u=>u.id===id)!.page>=s.gardens.length)
@@ -375,7 +382,7 @@ export function parseSave(raw:string|null):GameState|null {
    ||!Array.isArray(s.harvestCounts)||s.harvestCounts.length!==PLANTS.length||s.harvestCounts.some(n=>!integer(n))||!integer(s.untrackedHarvests)||!Array.isArray(s.discovered)||s.discovered.some(id=>!integer(id)||!PLANTS[id])
    ||!unique(s.variants)||s.variants.some(k=>!/^\d+:1$/.test(k)||!variantFor(Number(k.split(':')[0])))||!s.weather||![0,1,2].includes(s.weather.kind)||!Number.isFinite(s.weather.started)||!finite(s.weather.next)||s.weather.next<=s.elapsed
    ||!s.stats||['manualGrowth','autoGrowth','manualCoins','autoCoins'].some(k=>!finite(s.stats[k as keyof GameState['stats']])))return null
-  for(const p of s.pots)if(!p||(p.seedCost!==undefined&&(!finite(p.seedCost)||!PLANTS.some(plant=>plant.cost===p.seedCost)))||(p.plant!==null&&(!integer(p.plant)||!PLANTS[p.plant]))||!finite(p.growth)||!Number.isFinite(p.wateredAt)||(p.variant!==undefined&&(![0,1].includes(p.variant)||p.variant===1&&(p.plant===null||!variantFor(p.plant))))||(p.germination!==undefined&&(!finite(p.germination)||p.germination>5))||(p.revealedAt!==undefined&&!finite(p.revealedAt))||(p.watering!==undefined&&(!finite(p.watering)||p.watering>WATER_DURATION||p.plant===null&&p.watering>0)))return null
+  for(const p of s.pots)if(!p||(p.seedCost!==undefined&&(!finite(p.seedCost)||!Number.isSafeInteger(p.seedCost)||p.seedCost>23000000000000))||(p.plant!==null&&(!integer(p.plant)||!PLANTS[p.plant]))||!finite(p.growth)||!Number.isFinite(p.wateredAt)||(p.variant!==undefined&&(![0,1].includes(p.variant)||p.variant===1&&(p.plant===null||!variantFor(p.plant))))||(p.germination!==undefined&&(!finite(p.germination)||p.germination>5))||(p.revealedAt!==undefined&&!finite(p.revealedAt))||(p.watering!==undefined&&(!finite(p.watering)||p.watering>WATER_DURATION||p.plant===null&&p.watering>0)))return null
   const workerValid=(w:Worker,page:number,player=false)=>w&&finite(w.x)&&w.x<=100&&finite(w.y)&&w.y<=100&&[-1,1].includes(w.facing)&&['idle','walk','act','return','service'].includes(w.phase)&&finite(w.clock)&&w.clock<=1.2&&integer(w.stock)&&w.stock<=1024&&finite(w.cargo)&&integer(w.count)&&w.count<=64&&(w.target===null||integer(w.target)&&w.target<s.pots.length&&(player||Math.floor(w.target/15)===page))&&(!['walk','act'].includes(w.phase)||w.target!==null)&&Array.isArray(w.path)&&w.path.length<=3&&w.path.every(p=>finite(p.x)&&p.x<=100&&finite(p.y)&&p.y<=100)
   if(!workerValid(s.player,0,true))return null
   for(let page=0;page<s.gardens.length;page++){

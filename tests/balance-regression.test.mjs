@@ -35,7 +35,7 @@ test('even a rich garden cannot buy a whole automation team instantly',()=>{
 
 test('all paid seed tiers have positive normal returns; temporary weather cannot unlock unsafe tiers',()=>{
  const s=expanded();s.coins=1e18
- for(let profit=0;profit<=10;profit+=.5){s.upgrades.profit=profit
+ for(let level=0;level<=4;level++){s.purchases=UPGRADES.filter(u=>!u.effects.profit||UPGRADES.filter(v=>v.page===u.page&&v.effects.profit).slice(0,level).includes(u)).map(u=>u.id)
   for(let page=0;page<5;page++)for(let tier=1;tier<7;tier++){
    const lock=seedLock(s,tier,page)
    s.weather={kind:1,started:s.elapsed,next:s.elapsed+600}
@@ -89,6 +89,6 @@ test('previous economy saves preserve owned fourfold rewards, money, plants and 
  const migrated=parseSave(JSON.stringify(old));assert.ok(migrated)
  assert.equal(migrated.upgrades.profit,2);assert.equal(migrated.purchases.length,4)
  assert.equal(migrated.coins,old.coins);assert.deepEqual(migrated.pots,old.pots)
- assert.equal(reward(migrated,PLANTS[13]),reward(old,PLANTS[13]))
+ assert.equal(reward(migrated,PLANTS[13]),PLANTS[13].reward*4)
  assert.deepEqual(parseSave(JSON.stringify(migrated)),migrated)
 })
