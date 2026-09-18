@@ -29,7 +29,7 @@ export function hireLock(s:GameState,option:HireOption,page=s.activeGarden):stri
 }
 export const expansionLock = (s: GameState) => teamFor(s,gardenCount(s)-1).potCount<15?'先将最新花园扩至15盆':UPGRADES.filter(u=>u.page===gardenCount(s)-1).some(u=>!s.purchases.includes(u.id)) ? '先完成最新花园解锁的研究' : null
 export const potPrice=(s:GameState,page=s.activeGarden)=>Math.round(8*[1,50,3000,300000,30000000][page]*1.55**(teamFor(s,page).potCount-4))
-export const plantedReward=(s:GameState,index:number,at=s.elapsed)=>{const p=s.pots[index];return p?.plant==null?0:Math.max(reward(s,PLANTS[p.plant],Math.floor(index/15),-Infinity),Math.ceil((p.seedCost??0)*1.05))*(p.variant&&variantFor(p.plant)?2:1)*(activeWeather(s,at)===1?7:1)}
+export const plantedReward=(s:GameState,index:number,at=s.elapsed)=>{const p=s.pots[index];return p?.plant==null?0:reward(s,PLANTS[p.plant],Math.floor(index/15),-Infinity)*(p.variant&&variantFor(p.plant)?2:1)*(activeWeather(s,at)===1?7:1)}
 export const WEATHER_DURATION = 15
 export const activeWeather = (s: GameState, at = s.elapsed) => at >= s.weather.started && at < s.weather.started + WEATHER_DURATION ? s.weather.kind : null
 export const infiniteWater = (s: GameState) => activeWeather(s) === 2
@@ -57,7 +57,8 @@ export function newGame():GameState {
 export function seedLock(s:GameState,tier:Tier,page=s.activeGarden):string|null {
  if(tier===0||tier===ULTIMATE_TIER)return null
  const cost=PLANTS[seedPlantId(tier)].cost, typical=PLANTS[TIER_PLANTS[tier][1]]
- return reward(s,typical,page,-Infinity)<cost*1.1?'先提升丰收研究或前往高收益花园':null
+ const normalGross=PLANTS.reduce((sum,p)=>sum+plantChance(tier,p.id)*reward(s,p,page,-Infinity),0)
+ return reward(s,typical,page,-Infinity)<cost*1.1||normalGross<=cost?'先提升丰收研究或前往高收益花园':null
 }
 export function unlocked(s: GameState, tier: Tier, page=s.activeGarden) {
   return !seedLock(s,tier,page) && s.coins >= PLANTS[seedPlantId(tier)].cost
@@ -72,7 +73,7 @@ export const upgradePrice = (_s: GameState, u: Upgrade) => u.cost
 export const reward = (s: GameState, p: Plant, page = s.activeGarden, at = s.elapsed) => Math.round(p.reward * 2 ** s.upgrades.profit * gardenReward(page)) * (activeWeather(s, at) === 1 ? 7 : 1)
 export function seedEconomyFor(s:GameState,tier:Tier,page=s.activeGarden){
  const cost=PLANTS[seedPlantId(tier)].cost
- const gross=PLANTS.reduce((sum,p)=>sum+plantChance(tier,p.id)*Math.max(reward(s,p,page,-Infinity),Math.ceil(cost*1.05))*(variantFor(p.id)?1.1:1),0)
+ const gross=PLANTS.reduce((sum,p)=>sum+plantChance(tier,p.id)*reward(s,p,page,-Infinity)*(variantFor(p.id)?1.1:1),0)
  const seconds=PLANTS.reduce((sum,p)=>sum+plantChance(tier,p.id)*p.seconds,0)
  return {cost,gross,net:gross-cost,seconds}
 }

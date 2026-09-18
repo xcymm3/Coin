@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {newGame,reducer,PLANTS,UPGRADES,TIER_PLANTS,SEED_PRICES,seedLock,unlocked,seedEconomyFor,plantedReward,seedPlantId,hireCatalog,hireLock,parseSave,teamFor,reward} from '../src/game.ts'
+import {newGame,reducer,PLANTS,UPGRADES,TIER_PLANTS,SEED_PRICES,seedLock,unlocked,seedEconomyFor,plantedReward,seedPlantId,hireCatalog,hireLock,parseSave,teamFor,reward,plantChance,SPECIES_ODDS,REWARD_DIVISORS} from '../src/game.ts'
 import {expanded,employ} from './helpers.mjs'
 
 test('rollback reads local-economy saves and preserves their paid receipts after saving again',()=>{
@@ -10,7 +10,7 @@ test('rollback reads local-economy saves and preserves their paid receipts after
  assert.equal(restored.balanceVersion,2)
  for(const key of ['coins','purchases','upgrades','gardens','pots'])assert.deepEqual(restored[key],s[key])
  assert.deepEqual(parseSave(JSON.stringify(restored)),restored)
- for(let i=0;i<4;i++)assert.ok(plantedReward(restored,i,-Infinity)>=Math.ceil(s.pots[i].seedCost*1.05))
+ for(let i=0;i<4;i++)assert.equal(plantedReward(restored,i,-Infinity),reward(restored,PLANTS[0],0,-Infinity))
 })
 
 test('harvest research starts affordably, requires local practice and advances one step at a time',()=>{
@@ -52,9 +52,11 @@ test('all paid seed tiers have positive normal returns; temporary weather cannot
    assert.equal(seedLock(s,tier,page),lock)
    if(!lock){
     assert.ok(seedEconomyFor(s,tier,page).net>0)
+    assert.ok(PLANTS.reduce((sum,p)=>sum+plantChance(tier,p.id)*reward(s,p,page,-Infinity),0)>SEED_PRICES[tier])
+    assert.ok(TIER_PLANTS[tier].reduce((sum,id,rank)=>sum+SPECIES_ODDS[rank]*reward(s,PLANTS[id],page,-Infinity),0)>SEED_PRICES[tier])
     for(const plant of PLANTS.filter(p=>p.id!==9)){
      s.pots[page*15]={plant:plant.id,growth:plant.seconds,wateredAt:-10,seedCost:SEED_PRICES[tier]}
-     assert.ok(plantedReward(s,page*15,-Infinity)>=Math.ceil(SEED_PRICES[tier]*1.05))
+     assert.equal(plantedReward(s,page*15,-Infinity),reward(s,plant,page,-Infinity))
     }
    }
   }
@@ -77,18 +79,18 @@ test('actual paid cost survives random downgrade, saving and moving, for manual 
   assert.equal(s.pots[60].seedCost,SEED_PRICES[6])
   s=reducer(s,{type:'move',from:60,to:0});s=parseSave(JSON.stringify(s));assert.ok(s)
   s.pots[0].growth=PLANTS[s.pots[0].plant].seconds;s.activeGarden=0
-  const expected=plantedReward(s,0);assert.ok(expected>=SEED_PRICES[6]*1.05)
+  const expected=plantedReward(s,0);assert.ok(expected<SEED_PRICES[6])
   if(automatic){s=employ(s,'harvest');const before=s.coins;s=reducer(s,{type:'tick',dt:60});assert.equal(s.coins-before,expected)}
   else {const before=s.coins;s=reducer(s,{type:'pot',index:0});assert.equal(s.coins-before,expected)}
  }
 })
 
-test('variant and fifteen-second harvest weather multiply the guaranteed return exactly once',()=>{
+test('variant and fifteen-second harvest weather multiply the species return exactly once',()=>{
  const s=newGame();s.elapsed=100;s.weather={kind:1,started:100,next:500}
  s.pots[0]={plant:TIER_PLANTS[0][3],growth:100,wateredAt:-10,variant:1,seedCost:10000}
- assert.equal(plantedReward(s,0,114.99),10500*2*7)
- assert.equal(plantedReward(s,0,115),10500*2)
- assert.equal(plantedReward(s,0,99),10500*2)
+ assert.equal(plantedReward(s,0,114.99),PLANTS[TIER_PLANTS[0][3]].reward*2*7)
+ assert.equal(plantedReward(s,0,115),PLANTS[TIER_PLANTS[0][3]].reward*2)
+ assert.equal(plantedReward(s,0,99),PLANTS[TIER_PLANTS[0][3]].reward*2)
 })
 
 test('previous economy saves preserve owned fourfold rewards, money, plants and assistants',()=>{
@@ -101,4 +103,30 @@ test('previous economy saves preserve owned fourfold rewards, money, plants and 
  assert.equal(migrated.coins,old.coins);assert.deepEqual(migrated.pots,old.pots)
  assert.equal(reward(migrated,PLANTS[13]),reward(old,PLANTS[13]))
  assert.deepEqual(parseSave(JSON.stringify(migrated)),migrated)
+})
+
+
+test('each paid regular tier has losses and gains at its baseline, with positive same-tier expectation',()=>{
+ for(let tier=1;tier<7;tier++){
+  const s=newGame();s.coins=SEED_PRICES[tier];s.upgrades.profit=Math.log2(REWARD_DIVISORS[tier])
+  assert.equal(seedLock(s,tier),null)
+  const values=TIER_PLANTS[tier].map(id=>reward(s,PLANTS[id],0,-Infinity))
+  assert.ok(values.some(value=>value<SEED_PRICES[tier]))
+  assert.ok(values.some(value=>value>SEED_PRICES[tier]))
+  assert.ok(values.reduce((sum,value,rank)=>sum+SPECIES_ODDS[rank]*value,0)>SEED_PRICES[tier])
+ }
+ const s=newGame(),values=TIER_PLANTS[1].map(id=>reward(s,PLANTS[id]))
+ assert.deepEqual(values,[40,60,90,200])
+ assert.equal(values.reduce((sum,value,rank)=>sum+SPECIES_ODDS[rank]*value,0)-50,20.5)
+})
+
+test('manual and automatic same-tier harvests settle an actual loss without a cost floor',()=>{
+ for(const automatic of [false,true]){
+  let s=reducer(newGame(),{type:'start'});s.coins=1000
+  if(automatic)s=employ(s,'harvest')
+  s.pots[0]={plant:3,growth:PLANTS[3].seconds,wateredAt:-10,seedCost:50}
+  const before=s.coins
+  s=automatic?reducer(s,{type:'tick',dt:60}):reducer(s,{type:'pot',index:0})
+  assert.equal(s.coins-before,40)
+ }
 })
