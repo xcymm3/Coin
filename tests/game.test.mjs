@@ -75,7 +75,7 @@ test('each garden has four gradual harvest researches and two other researches',
  assert.equal(UPGRADES.length,30)
  let s=expanded();const before=s
  for(let page=0;page<5;page++)assert.equal(UPGRADES.filter(u=>u.page===page).length,6)
- for(const u of UPGRADES.filter(u=>u.page===4&&u.effects.profit))s=reducer(s,{type:'buy',id:u.id});for(let page=0;page<5;page++)assert.equal(reward(s,PLANTS[0],page),reward(before,PLANTS[0],page)*(page===4?4:1))
+ for(const u of UPGRADES.filter(u=>u.page===4&&u.effects.profit))s=reducer(s,{type:'buy',id:u.id});for(let page=0;page<5;page++)assert.equal(reward(s,PLANTS[0],page),reward(before,PLANTS[0],page)*4)
  assert.deepEqual(reducer(s,{type:'buy',id:'g4-profit'}),s)
  const natural=s;s=reducer(s,{type:'buy',id:'g4-soil'});for(let page=0;page<5;page++)assert.equal(growthRate(s,page),growthRate(natural,page)*2)
  const n=newGame();n.coins=1e16;assert.equal(reducer(n,{type:'buy',id:'g1-profit'}).purchases.length,0)

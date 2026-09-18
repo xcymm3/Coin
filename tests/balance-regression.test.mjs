@@ -3,6 +3,16 @@ import assert from 'node:assert/strict'
 import {newGame,reducer,PLANTS,UPGRADES,TIER_PLANTS,SEED_PRICES,seedLock,unlocked,seedEconomyFor,plantedReward,seedPlantId,hireCatalog,hireLock,parseSave,teamFor,reward} from '../src/game.ts'
 import {expanded,employ} from './helpers.mjs'
 
+test('rollback reads local-economy saves and preserves their paid receipts after saving again',()=>{
+ const s=expanded();s.balanceVersion=3
+ for(const [i,cost] of [9000,200000,5000000,150000000,500000000000].entries())s.pots[i]={plant:i===4?9:0,growth:10,wateredAt:-10,seedCost:cost}
+ const restored=parseSave(JSON.stringify(s));assert.ok(restored)
+ assert.equal(restored.balanceVersion,2)
+ for(const key of ['coins','purchases','upgrades','gardens','pots'])assert.deepEqual(restored[key],s[key])
+ assert.deepEqual(parseSave(JSON.stringify(restored)),restored)
+ for(let i=0;i<4;i++)assert.ok(plantedReward(restored,i,-Infinity)>=Math.ceil(s.pots[i].seedCost*1.05))
+})
+
 test('harvest research starts affordably, requires local practice and advances one step at a time',()=>{
  let s=newGame();s.coins=10000
  assert.deepEqual(reducer(s,{type:'buy',id:'g0-profit'}),s)
@@ -35,7 +45,7 @@ test('even a rich garden cannot buy a whole automation team instantly',()=>{
 
 test('all paid seed tiers have positive normal returns; temporary weather cannot unlock unsafe tiers',()=>{
  const s=expanded();s.coins=1e18
- for(let level=0;level<=4;level++){s.purchases=UPGRADES.filter(u=>!u.effects.profit||UPGRADES.filter(v=>v.page===u.page&&v.effects.profit).slice(0,level).includes(u)).map(u=>u.id)
+ for(let profit=0;profit<=10;profit+=.5){s.upgrades.profit=profit
   for(let page=0;page<5;page++)for(let tier=1;tier<7;tier++){
    const lock=seedLock(s,tier,page)
    s.weather={kind:1,started:s.elapsed,next:s.elapsed+600}
@@ -89,6 +99,6 @@ test('previous economy saves preserve owned fourfold rewards, money, plants and 
  const migrated=parseSave(JSON.stringify(old));assert.ok(migrated)
  assert.equal(migrated.upgrades.profit,2);assert.equal(migrated.purchases.length,4)
  assert.equal(migrated.coins,old.coins);assert.deepEqual(migrated.pots,old.pots)
- assert.equal(reward(migrated,PLANTS[13]),PLANTS[13].reward*4)
+ assert.equal(reward(migrated,PLANTS[13]),reward(old,PLANTS[13]))
  assert.deepEqual(parseSave(JSON.stringify(migrated)),migrated)
 })
