@@ -5,7 +5,7 @@ export const ULTIMATE_TIER = 7
 export const INITIAL_POTS = 4
 export const TIERS = ['普通种子', '稀有种子', '珍贵种子', '超凡种子', '神话种子', '远古种子', '星界种子', '终极种子']
 export const TIER_PLANTS = [[0, 1, 2, 10], [3, 4, 5, 11], [6, 7, 8, 12], [13, 14, 15, 16], [17, 18, 19, 20], [21,22,23,24], [25,26,27,28], [9]]
-export const SEED_PRICES = [0, 50, 500, 10000, 500000, 50000000, 10000000000, 15000000000000]
+export const SEED_PRICES = [0, 50, 500, 10000, 500000, 50000000, 10000000000, 23000000000000]
 // Every regular seed can reveal every regular tier; distant jackpots have tiny odds.
 export const SEED_ODDS = Array.from({length:7},(_,tier)=>{
  const weights=Array.from({length:7},(_,j)=>j<tier?Math.pow(.15,tier-j-1):j>tier?Math.pow(Math.max(10,SEED_PRICES[tier])/SEED_PRICES[j],2):0)

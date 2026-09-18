@@ -16,7 +16,7 @@ test('fertilizer drops only on a real harvest, at five percent manually and neve
  let s=start();s.extraRandom=42
  for(let i=0;i<10000;i++){s.pots[0]=pot(0,30);s=reducer(s,{type:'pot',index:0})}
  assert.ok(s.fertilizer>=440&&s.fertilizer<=560,String(s.fertilizer))
- s=start();s.coins=90;s=reducer(s,{type:'hire',id:'recruit-harvest-1'});s.extraRandom=1972;s.pots[0]=pot(0,30);teamFor(s).workers.harvest[0]={...teamFor(s).workers.harvest[0],phase:'act',target:0,clock:0,x:12,y:33}
+ s=start();s.coins=90;teamFor(s).harvests=12;s=reducer(s,{type:'hire',id:'recruit-harvest-1'});s.extraRandom=1972;s.pots[0]=pot(0,30);teamFor(s).workers.harvest[0]={...teamFor(s).workers.harvest[0],phase:'act',target:0,clock:0,x:12,y:33}
  // Find a seed whose next independent draw is below 1%.
  for(let seed=0;seed<100000;seed++)if(((Math.imul(seed,1664525)+1013904223)>>>0)/4294967296<.01){s.extraRandom=seed;break}
  s=reducer(s,{type:'tick',dt:1});assert.equal(s.fertilizer,0);assert.equal(s.coins,0)
@@ -29,7 +29,7 @@ test('only each rarest species mutates at ten percent; variant harvest doubles f
  assert.ok(mutants/eligible>.075&&mutants/eligible<.13)
  for(let tier=0;tier<7;tier++){for(let rank=0;rank<4;rank++)assert.equal(!!variantFor(TIER_PLANTS[tier][rank]),rank===3)}
  a=start();a.pots[0]=pot(10,PLANTS[10].seconds-1,1);a=reducer(a,{type:'tick',dt:1});assert.deepEqual(a.variants,['10:1']);const value=reward(a,PLANTS[10])*2;assert.equal(plantedReward(a,0),value);a=reducer(a,{type:'pot',index:0});assert.equal(a.coins,value);assert.deepEqual(parseSave(JSON.stringify(a)),a)
- b=start();b.coins=90;b=reducer(b,{type:'hire',id:'recruit-harvest-1'});b.pots[0]=pot(10,PLANTS[10].seconds,1);b=reducer(b,{type:'tick',dt:30});assert.equal(b.coins,value);assert.equal(b.fertilizer,0)
+ b=start();b.coins=90;teamFor(b).harvests=12;b=reducer(b,{type:'hire',id:'recruit-harvest-1'});b.pots[0]=pot(10,PLANTS[10].seconds,1);b=reducer(b,{type:'tick',dt:30});assert.equal(b.coins,value);assert.equal(b.fertilizer,0)
 })
 
 test('decorations only spend money, toggle appearance and never count toward progression',()=>{

@@ -50,7 +50,7 @@ test('pots start at four, charge per slot, reject locked planting and stop at fi
   assert.equal(s.coins,before-cost)
  }
  assert.deepEqual(reducer(s,{type:'expand'}),s)
- for(const u of UPGRADES.filter(u=>u.page===0))s=reducer(s,{type:'buy',id:u.id})
+ teamFor(s).harvests=1000;for(const u of UPGRADES.filter(u=>u.page===0))s=reducer(s,{type:'buy',id:u.id})
  s=reducer(s,{type:'open-garden'})
  assert.equal(teamFor(s).potCount,4)
  assert.equal(teamFor(s,0).potCount,15)
@@ -71,11 +71,11 @@ test('previous campaign saves retain purchased pots and proportional growth',()=
  assert.deepEqual(migrated.legacyVariants,s.variants)
  assert.deepEqual(parseSave(JSON.stringify(migrated)),migrated)
 })
-test('each garden has exactly three one-time researches with global effects',()=>{
- assert.equal(UPGRADES.length,15)
+test('each garden has four gradual harvest researches and two other researches',()=>{
+ assert.equal(UPGRADES.length,30)
  let s=expanded();const before=s
- for(let page=0;page<5;page++)assert.equal(UPGRADES.filter(u=>u.page===page).length,3)
- s=reducer(s,{type:'buy',id:'g4-profit'});for(let page=0;page<5;page++)assert.equal(reward(s,PLANTS[0],page),reward(before,PLANTS[0],page)*4)
+ for(let page=0;page<5;page++)assert.equal(UPGRADES.filter(u=>u.page===page).length,6)
+ for(const u of UPGRADES.filter(u=>u.page===4&&u.effects.profit))s=reducer(s,{type:'buy',id:u.id});for(let page=0;page<5;page++)assert.equal(reward(s,PLANTS[0],page),reward(before,PLANTS[0],page)*4)
  assert.deepEqual(reducer(s,{type:'buy',id:'g4-profit'}),s)
  const natural=s;s=reducer(s,{type:'buy',id:'g4-soil'});for(let page=0;page<5;page++)assert.equal(growthRate(s,page),growthRate(natural,page)*2)
  const n=newGame();n.coins=1e16;assert.equal(reducer(n,{type:'buy',id:'g1-profit'}).purchases.length,0)
@@ -90,14 +90,14 @@ test('hiring is sequential, capped at five, and equipment affects only its local
  assert.equal(hireCatalog(4).filter(u=>hireAvailable(teamFor(s),u)).length,0)
  assert.equal(capacity(s,'harvest',4),16);assert.equal(capacity(s,'harvest',0),1)
  assert.equal(workerSpeed(s,'harvest',4),workerSpeed(s,'harvest',0)*4)
- assert.deepEqual(teamFor(s,0),original);assert.equal(s.purchases.length,12)
+ assert.deepEqual(teamFor(s,0),original);assert.equal(s.purchases.length,24)
  assert.deepEqual(reducer(s,{type:'hire',id:'recruit-harvest-5'}),s)
  assert.deepEqual(parseSave(JSON.stringify(s)),s)
 })
 test('new garden starts empty and decorations cost more locally without gameplay bonuses',()=>{
  let s=newGame();s.coins=1e16;s.earned=1e10;s=employ(s,'water',2,1);s=reducer(s,{type:'decorate',id:'bunting'});s=reducer(s,{type:'expand'})
  assert.equal(reducer(s,{type:'open-garden'}).gardens.length,1)
- for(const u of UPGRADES.filter(u=>u.page===0))s=reducer(s,{type:'buy',id:u.id})
+ teamFor(s).harvests=1000;for(const u of UPGRADES.filter(u=>u.page===0))s=reducer(s,{type:'buy',id:u.id})
  while(teamFor(s).potCount<15)s=reducer(s,{type:'expand'});s=reducer(s,{type:'open-garden'});assert.equal(s.activeGarden,1);assert.equal(teamFor(s).snails.length,0);assert.deepEqual(teamFor(s).decorations,[]);assert.deepEqual(teamFor(s).equipment,{water:0,harvest:0,sow:0})
  const before=s;s=reducer(s,{type:'decorate',id:'bunting'});assert.equal(before.coins-s.coins,decorationPrice(DECORATIONS[0].cost,1));assert.deepEqual(s.upgrades,before.upgrades)
  s=reducer(s,{type:'decoration-toggle',id:'bunting'});assert.deepEqual(teamFor(s,0).hiddenDecorations,[])
@@ -178,7 +178,7 @@ test('ultimate selection does not stop sowing and harvesting after planting or s
 
 test('opening second garden with ultimate selected keeps old crew working and new hires can sow',()=>{
  let s=reducer(newGame(),{type:'start'});s.coins=1e12
- s=reducer(s,{type:'expand'});for(const u of UPGRADES.filter(u=>u.page===0))s=reducer(s,{type:'buy',id:u.id})
+ s=reducer(s,{type:'expand'});teamFor(s).harvests=1000;for(const u of UPGRADES.filter(u=>u.page===0))s=reducer(s,{type:'buy',id:u.id})
  s=employ(s,'sow');s=employ(s,'harvest');s=reducer(s,{type:'select',id:9})
  while(teamFor(s).potCount<15)s=reducer(s,{type:'expand'});s=reducer(s,{type:'open-garden'});assert.equal(s.activeGarden,1);assert.equal(teamFor(s).workers.sow.length,0)
  s=employ(s,'sow');s=employ(s,'harvest');s.coins=0

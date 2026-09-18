@@ -1,10 +1,10 @@
 import {pathToFileURL} from 'node:url';
-import {newGame,reducer,PLANTS,UPGRADES,seedPlantId,teamFor,hireCatalog,hireAvailable,expansionLock,GARDEN_PRICES,potPrice,seedEconomy,reward,infiniteWater,SEED_PRICES} from '../src/game.ts';
-export function runCampaign(seed=42,interval=2,{noExpand=false,limit=9000,fertilizer=true}={}){
+import {newGame,reducer,PLANTS,UPGRADES,seedPlantId,teamFor,hireCatalog,hireAvailable,expansionLock,GARDEN_PRICES,potPrice,seedEconomyFor,unlocked,upgradeLock,hireLock,infiniteWater,SEED_PRICES} from '../src/game.ts';
+export function runCampaign(seed=42,interval=2,{noExpand=false,limit=9000,fertilizer=true,strategy='yield'}={}){
  let s=reducer(newGame(),{type:'start'});s.randomState=seed;s.extraRandom=seed;s.weather={kind:0,started:-20,next:450};
  const pages=[],purchases=[],progress=[];let starAt=null,lastBuy=0,maxGap=0,actions=0,idle=0,earlyActions=0,earlyIdle=0;
- function buy(action,cost,name){s=reducer(s,action);purchases.push({t:s.elapsed/60,page:s.activeGarden,name,cost});maxGap=Math.max(maxGap,s.elapsed-lastBuy);lastBuy=s.elapsed;}
- function bestSeed(page){let best=0,score=0;for(let t=0;t<7;t++){if(s.coins<SEED_PRICES[t]*2)continue;const e=seedEconomy(t);const net=e.gross*(reward(s,PLANTS[0],page,-Infinity)/PLANTS[0].reward)-SEED_PRICES[t];const rate=net/e.seconds;if(rate>score){score=rate;best=t;}}return best;}
+ function buy(action,cost,name){const before=s.coins;s=reducer(s,action);if(Math.abs(before-s.coins-cost)>Math.max(.01,cost*1e-12))throw new Error(`Rejected purchase: ${name}`);purchases.push({t:s.elapsed/60,page:s.activeGarden,name,cost});maxGap=Math.max(maxGap,s.elapsed-lastBuy);lastBuy=s.elapsed;}
+ function bestSeed(page){let best=0,score=0;for(let t=0;t<7;t++){if(!unlocked(s,t,page)||s.coins<SEED_PRICES[t]*2)continue;const e=seedEconomyFor(s,t,page);const rate=e.net/e.seconds;if(strategy==='highest'||rate>score){score=rate;best=t;}}return best;}
  for(let t=0;t<limit&&s.wonAt===null;t++){
   if(t%interval===0){actions++;if(t<300)earlyActions++;let acted=false;const page=s.activeGarden,team=teamFor(s),indices=Array.from({length:team.potCount},(_,i)=>page*15+i),star=indices.find(i=>s.pots[i].plant===9),tier=bestSeed(page);
    // Setting a local seed plan consumes an action; completed gardens keep their plan.
@@ -14,8 +14,8 @@ export function runCampaign(seed=42,interval=2,{noExpand=false,limit=9000,fertil
    else{
     const reserve=SEED_PRICES[tier]*Math.min(3,team.potCount),choices=[];
     if(team.potCount<15)choices.push({cost:potPrice(s),name:'pot',action:{type:'expand'}});
-    for(const u of UPGRADES.filter(u=>u.page===page&&!s.purchases.includes(u.id)))choices.push({cost:u.cost,name:u.id,action:{type:'buy',id:u.id}});
-    for(const u of hireCatalog(page).filter(u=>hireAvailable(team,u))){if(u.type==='recruit'&&u.level>Math.min(5,page+1))continue;choices.push({cost:u.cost,name:u.id,action:{type:'hire',id:u.id}});}
+    for(const u of UPGRADES.filter(u=>u.page===page&&!s.purchases.includes(u.id)&&!upgradeLock(s,u.id)))choices.push({cost:u.cost,name:u.id,action:{type:'buy',id:u.id}});
+    for(const u of hireCatalog(page).filter(u=>hireAvailable(team,u)&&!hireLock(s,u))){if(u.type==='recruit'&&u.level>Math.min(5,page+1))continue;choices.push({cost:u.cost,name:u.id,action:{type:'hire',id:u.id}});}
     if(!noExpand&&s.gardens.length<5&&!expansionLock(s))choices.push({cost:GARDEN_PRICES[s.gardens.length],name:'garden',action:{type:'open-garden'}});
     choices.sort((a,b)=>a.cost-b.cost);const candidate=choices.find(x=>s.coins>=x.cost+reserve);
     if(candidate){buy(candidate.action,candidate.cost,candidate.name);if(candidate.name==='garden')pages.push(s.elapsed/60);acted=true;}
@@ -31,6 +31,6 @@ export function runCampaign(seed=42,interval=2,{noExpand=false,limit=9000,fertil
  const win=s.wonAt===null?null:s.wonAt/60;
  const milestones=[0,...pages,starAt,win];
  const stages=milestones.slice(1).map((value,i)=>value===null||milestones[i]===null?null:value-milestones[i]);
- return {stages,earlyIdleRatio:earlyIdle/earlyActions,firstPurchase:purchases[0]?.t??null,seed,interval,win:s.wonAt===null?null:s.wonAt/60,pages,starAt,starMinutes:starAt===null||win===null?null:win-starAt,maxGap:maxGap/60,idleRatio:idle/actions,coins:s.coins,progress,purchases,stats:s.stats};
+ return {stages,earlyIdleRatio:earlyIdle/earlyActions,firstPurchase:purchases[0]?.t??null,seed,interval,strategy,win:s.wonAt===null?null:s.wonAt/60,pages,starAt,starMinutes:starAt===null||win===null?null:win-starAt,maxGap:maxGap/60,idleRatio:idle/actions,coins:s.coins,progress,purchases,stats:s.stats};
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)console.log(JSON.stringify(runCampaign(Number(process.argv[2]??42)),null,2));

@@ -221,9 +221,11 @@
 .scene-arrow:not(:disabled):active{transform:translateY(-50%)}
 @media(max-width:620px){.garden-scene-caption small{display:none}.garden-scene-caption{bottom:5px;line-height:1.3}}
 /* Unaffordable stock reads as inactive across seeds, research, hiring and decor. */
-.seed-panel .tier-card:disabled,.upgrade-panel .upgrade-card:disabled{filter:brightness(.43) saturate(.12);opacity:1;cursor:not-allowed;box-shadow:inset 0 2px #263b3d;border-color:#344546}
+.seed-panel .tier-card:disabled,.upgrade-panel .upgrade-card:disabled{filter:none;background:#172d34;opacity:1;cursor:not-allowed;box-shadow:inset 0 2px #263b3d;border-color:#344546}
 .seed-panel .tier-card.selected:disabled{border-color:#677060;box-shadow:inset 0 0 0 1px #414e40}
-.seed-panel .tier-card:disabled:hover,.upgrade-panel .upgrade-card:disabled:hover{filter:brightness(.43) saturate(.12)}
+.seed-panel .tier-card:disabled:hover,.upgrade-panel .upgrade-card:disabled:hover{filter:none}
+.upgrade-card:disabled .upgrade-description,.tier-card:disabled .tier-copy small{color:#bfcbc6}
+.upgrade-card:disabled .upgrade-art,.tier-card:disabled .seed-bag{filter:grayscale(1);opacity:.6}
 /* Living garden: quieter ground textures, expressive bodies, no floating meters. */
 .garden-habitat{position:absolute;inset:0;width:100%;height:100%;z-index:-2;pointer-events:none}.garden-floor{background:none}.garden-habitat~.floor-details{opacity:.3}
 .garden-floor .pot::after{border-radius:50%;clip-path:none;filter:blur(1px);opacity:.45}

@@ -12,6 +12,10 @@ for (let seed = 1001; seed <= 1015; seed++) {
   assert.ok(r.firstPurchase <= .6, `seed ${seed}: first purchase within 36 seconds`)
   assert.ok(r.earlyIdleRatio <= .1, `seed ${seed}: first five minutes need activities`)
   assert.ok(r.starMinutes >= 4.5 && r.starMinutes <= 5.6)
+  for(let page=0;page<5;page++){
+    const hires=r.purchases.filter(p=>p.page===page&&/^(recruit|equipment)-/.test(p.name))
+    for(let i=1;i<hires.length;i++)assert.ok(hires[i].t-hires[i-1].t>=.75-1e-9, `seed ${seed}, garden ${page}: team purchases must be spaced out`)
+  }
   runs.push(r)
   console.log(`${seed}: ${r.stages.map(n => n.toFixed(2)).join(' / ')} minutes`)
 }
