@@ -36,8 +36,8 @@ export function hireCatalog(page:number):HireOption[]{
  return (['water','harvest','sow'] as CrewKind[]).flatMap(kind=>{
   const base=HIRE_BASES[page]*({water:1,harvest:1.5,sow:2}[kind])
   return [
-   ...Array.from({length:5},(_,i)=>({id:`recruit-${kind}-${i+1}`,kind,type:'recruit' as const,level:i+1,cost:Math.round(base*4**i),name:`雇佣第 ${i+1} 只${CREW_NAMES[kind]}`,detail:'仅本园增加一只独立作业的助手'})),
-   ...Array.from({length:4},(_,i)=>({id:`equipment-${kind}-${i+1}`,kind,type:'equipment' as const,level:i+1,cost:Math.round(base*3*4**i),name:`${MATERIALS[i+1].name}${kind==='water'?'水箱':kind==='harvest'?'背筐':'种子袋'}`,detail:`本园${CREW_NAMES[kind]}${kind==='water'?'浇水效果 ×2、':''}容量 ×2，移速与作业效率提升`}))
+   ...Array.from({length:5},(_,i)=>({id:`recruit-${kind}-${i+1}`,kind,type:'recruit' as const,level:i+1,cost:Math.round(base*4**i),name:`雇佣第 ${i+1} 只${CREW_NAMES[kind]}`,detail:'本园新增 1 名助手'})),
+   ...Array.from({length:4},(_,i)=>({id:`equipment-${kind}-${i+1}`,kind,type:'equipment' as const,level:i+1,cost:Math.round(base*3*4**i),name:`${MATERIALS[i+1].name}${kind==='water'?'水箱':kind==='harvest'?'背筐':'种子袋'}`,detail:kind==='water'?'浇水、容量 ×2，速度提升':'容量 ×2，速度提升'}))
   ]
  })
 }
