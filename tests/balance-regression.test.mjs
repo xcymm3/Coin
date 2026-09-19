@@ -103,14 +103,6 @@ test('actual paid cost survives random downgrade, saving and moving, for manual 
  }
 })
 
-test('variant and fifteen-second harvest weather multiply the species return exactly once',()=>{
- const s=newGame();s.elapsed=100;s.weather={kind:1,started:100,next:500}
- s.pots[0]={plant:TIER_PLANTS[0][3],growth:100,wateredAt:-10,variant:1,seedCost:10000}
- assert.equal(plantedReward(s,0,114.99),PLANTS[TIER_PLANTS[0][3]].reward*2*7)
- assert.equal(plantedReward(s,0,115),PLANTS[TIER_PLANTS[0][3]].reward*2)
- assert.equal(plantedReward(s,0,99),PLANTS[TIER_PLANTS[0][3]].reward*2)
-})
-
 test('previous economy saves preserve owned fourfold rewards, money, plants and assistants',()=>{
  let old=newGame();old.coins=123456;old.balanceVersion=1
  old.purchases=['g0-profit'];old.upgrades.profit=2

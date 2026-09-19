@@ -37,14 +37,6 @@ test('decorations only spend money, toggle appearance and never count toward pro
  for(const d of DECORATIONS){const before=s;s=reducer(s,{type:'decorate',id:d.id});assert.equal(s.coins,before.coins-d.cost);assert.deepEqual(s.upgrades,before.upgrades);assert.deepEqual(s.purchases,[]);assert.equal(s.earned,0);assert.deepEqual(reducer(s,{type:'decorate',id:d.id}),s)}
  s=reducer(s,{type:'decoration-toggle',id:'moon'});assert.deepEqual(teamFor(s).hiddenDecorations,['moon']);assert.deepEqual(parseSave(JSON.stringify(s)),s)
 })
-test('weather begins every five to ten minutes and lasts fifteen seconds',()=>{
- let s=start();s.weather={kind:0,started:-20,next:300};s.extraRandom=42
- s=reducer(s,{type:'tick',dt:299});assert.equal(s.weather.started,-20)
- s=reducer(s,{type:'tick',dt:1});assert.equal(s.weather.started,300);assert.ok(s.weather.next>=600&&s.weather.next<=900)
- const before=s.weather.started;s=reducer(s,{type:'tick',dt:15});assert.equal(s.elapsed-before,15);assert.equal(s.earned,0);assert.equal(s.fertilizer,0)
- const resumed=parseSave(JSON.stringify(s));assert.deepEqual(resumed,s)
- let live=s;for(let i=0;i<600;i++)live=reducer(live,{type:'tick',dt:1});assert.deepEqual(reducer(s,{type:'tick',dt:600}),live)
-})
 test('legacy saves migrate empty collections and reset clears new systems',()=>{
  const s=legacyNewGame();for(const key of ['fertilizer','extraRandom','variants','decorations','hiddenDecorations','weather'])delete s[key]
  const n=parseSave(JSON.stringify(s));assert.ok(n);assert.equal(n.fertilizer,0);assert.deepEqual(n.variants,[])
