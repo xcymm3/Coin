@@ -23,9 +23,6 @@
 .garden-floor .pot:not(:disabled):active { transform: translate(-50%,-86%); }
 .garden-floor .pot::after { content: ''; position: absolute; left: 21%; right: 13%; height: 12%; bottom: 6%; z-index: -1; background: var(--color-shade); clip-path: polygon(15% 0,85% 0,85% 20%,100% 20%,100% 80%,85% 80%,85% 100%,15% 100%,15% 80%,0 80%,0 20%,15% 20%); }
 .garden-floor .pot-art { width: 100%; height: auto; margin: 0; display: block; }
-.garden-floor .pot.growing-adult .pot-art { transform:none; transform-origin:50% 88%; clip-path:inset(16% 0 0); animation:immature-sway 4s steps(8) var(--sway-delay) infinite; filter:saturate(.42) brightness(.76); }
-.garden-floor .pot.growing-adult:hover .pot-art,.garden-floor .pot.growing-adult:focus-visible .pot-art { transform:translateY(-2px); }
-@keyframes immature-sway { 0%,100%{rotate:-1deg}50%{rotate:1deg} }
 .garden-floor .pot.ready::before { display: none; }
 .garden-floor .pot:focus-visible { outline: 2px dashed var(--color-gold-light); outline-offset: 0; }
 .garden-floor .plant-name { top: -7px; left: 50%; translate: -50% 0; display: none; padding: 2px 5px; background: var(--color-blue-dark); color: var(--color-gold-light); font-size: 10px; }
@@ -122,7 +119,7 @@
 @keyframes digging { 0% { rotate: -35deg; translate: 0 -12px; } 45% { rotate: 15deg; translate: 0 12px; } 100% { rotate: -30deg; translate: 5px -10px; opacity: 0; } }
 @keyframes dirt-scatter { to { translate: -12px 15px; opacity: 0; } }
 .burst-dig i { background: #956b43; box-shadow: 1px 1px #493624; }
-.species-sprout { position: absolute; width: 64%; height: 72%; left: 18%; top: -9%; z-index: 2; transform-origin: 50% 90%; pointer-events: none; filter: drop-shadow(2px 2px #183a2533); }.tiny-sprout { transform: scale(.8); }.garden-floor .watering-cooldown:hover { z-index: 111 !important; }.watering-timer { position: absolute; left: 28%; bottom: 1%; width: 44%; z-index: 9; pointer-events: none; }.watering-timer .progress { height: 5px; border-color: #174455; }.watering-timer .progress span { background: #75dceb; }.upgrade-requirement { display: block; color: #e4c68c; font-size: 9px; line-height: 1.5; margin-top: 5px; }.upgrade-card.upgrade-locked { opacity: .7; }.upgrade-locked .upgrade-art { filter: grayscale(.7); }
+.species-sprout { position: absolute; width: 64%; height: 72%; left: 18%; top: -9%; z-index: 2; transform-origin: 50% 90%; pointer-events: none; filter: drop-shadow(2px 2px #183a2533); }.tiny-sprout { transform: scale(.8); }.maturing-sprout { animation: maturing-sprout-sway 3.6s steps(6) var(--sway-delay) infinite; }@keyframes maturing-sprout-sway { 0%,100% { transform: scale(1.18) rotate(-1deg); } 50% { transform: scale(1.22) rotate(1deg); } }.garden-floor .watering-cooldown:hover { z-index: 111 !important; }.watering-timer { position: absolute; left: 28%; bottom: 1%; width: 44%; z-index: 9; pointer-events: none; }.watering-timer .progress { height: 5px; border-color: #174455; }.watering-timer .progress span { background: #75dceb; }.upgrade-requirement { display: block; color: #e4c68c; font-size: 9px; line-height: 1.5; margin-top: 5px; }.upgrade-card.upgrade-locked { opacity: .7; }.upgrade-locked .upgrade-art { filter: grayscale(.7); }
 
 .mystery-seed { position:absolute; width:28%; height:35%; left:36%; top:26%; z-index:3; pointer-events:none; }
 .rare-reveal { position:absolute; left:50%; top:20%; z-index:8; color:#ffedac; text-shadow:0 0 12px #bba5ff; pointer-events:none; animation:reveal-flash 1s ease-out both; }

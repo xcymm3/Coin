@@ -347,14 +347,14 @@ export default function Garden({ initialState, persist = true }: { initialState?
             const ready = p !== null && pot.growth >= p.seconds
             const seed = p !== null && pot.growth < p.seconds * .15
             const young = p !== null && pot.growth < p.seconds * .5
-            const sprite = p === null || young ? null : p.id
-            return <button key={i} data-testid={`pot-${i}`} aria-label={t('pot.aria',{pot:i+1,plant:p?plantName(p.id):t('pot.empty'),action:t(!p&&!(tool==='cart'&&moveFrom!==null)?'pot.sow':tool==='fertilizer'?'pot.fertilize':tool==='shovel'?'pot.remove':tool==='cart'?moveFrom===null?'pot.selectMove':'pot.moveHere':ready?'pot.harvest':tool==='water'?'pot.useCan':'pot.growing')})} className={`pot ${inspectedPot === i ? 'inspected' : ''} ${moveFrom === i ? 'move-source' : ''} ${tool === 'cart' && moveFrom !== null ? 'move-destination' : ''} ${(pot.watering ?? 0) > 0 ? 'watering-cooldown' : ''} ${ready ? 'ready' : ''} ${p && !ready && !young ? 'growing-adult' : ''} ${p === null ? 'empty-pot' : ''} ${p?.tier === ULTIMATE_TIER ? 'ultimate' : ''} ${p && !seed ? 'alive' : ''} plant-${p?.id ?? 'empty'}`} style={placement} onClick={() => potClick(i)}>
+            const sprite = p === null || !ready ? null : p.id
+            return <button key={i} data-testid={`pot-${i}`} aria-label={t('pot.aria',{pot:i+1,plant:p?plantName(p.id):t('pot.empty'),action:t(!p&&!(tool==='cart'&&moveFrom!==null)?'pot.sow':tool==='fertilizer'?'pot.fertilize':tool==='shovel'?'pot.remove':tool==='cart'?moveFrom===null?'pot.selectMove':'pot.moveHere':ready?'pot.harvest':tool==='water'?'pot.useCan':'pot.growing')})} className={`pot ${inspectedPot === i ? 'inspected' : ''} ${moveFrom === i ? 'move-source' : ''} ${tool === 'cart' && moveFrom !== null ? 'move-destination' : ''} ${(pot.watering ?? 0) > 0 ? 'watering-cooldown' : ''} ${ready ? 'ready' : ''} ${p === null ? 'empty-pot' : ''} ${p?.tier === ULTIMATE_TIER ? 'ultimate' : ''} ${p && !seed ? 'alive' : ''} plant-${p?.id ?? 'empty'}`} style={placement} onClick={() => potClick(i)}>
 
               {p && <span className="plant-name">{`${pot.variant ? variantName(p.id) + ' · ' : ''}${plantName(p.id)}`}</span>}
-              {p && !young && p.tier > 0 && <span className={`plant-aura aura-${p.tier}`} aria-hidden="true"><i /><i /><i /></span>}
+              {p && ready && p.tier > 0 && <span className={`plant-aura aura-${p.tier}`} aria-hidden="true"><i /><i /><i /></span>}
               <span key={`${sprite}-${ready}`} className="plant-art-slot">{sprite === null ? <Sprite id={10} className="pot-art" /> : <PlantSprite id={sprite} className="pot-art" variant={!!pot.variant} />}</span>
               {pot.revealedAt !== undefined && s.elapsed - pot.revealedAt < 1 && <span key={`reveal-${pot.revealedAt}`} className="rare-reveal" aria-hidden="true">✦<PixelBurst kind="star" /></span>}
-              {p && young && <Sprout id={p.id} tiny={seed} />}
+              {p && !ready && <Sprout id={p.id} tiny={seed} maturing={!young} />}
               {(pot.watering ?? 0) > 0 && <span className="tool-pour" style={{ animationDuration: `${WATER_DURATION}s` }} aria-hidden="true"><ToolArt kind="water" waterLevel={waterLevel}/><span className="tool-water-stream">▪<i>▪</i><b>▪</b></span></span>}
               {(pot.watering ?? 0) > 0 && <span className="watering-timer" data-testid={`watering-${i}`} aria-label={t('本株浇水冷却中')}><Progress value={(pot.watering ?? 0) / WATER_DURATION} /></span>}
               {floats.some(f => f.pot === i && f.kind === 'move') && <span className="tool-cart-animation" aria-hidden="true"><ToolArt kind="cart" /></span>}
