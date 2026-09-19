@@ -46,10 +46,13 @@ test('carriers lock the multiplier at picking time, not delivery time or the end
 })
 test('rainbow doubles watering growth while the watering can remains unlimited',()=>{
  let rainbow=setup(2);rainbow.player.stock=0
- rainbow=reducer(rainbow,{type:'water',index:0});assert.equal(rainbow.player.stock,0);assert.equal(rainbow.pots[0].growth,4);assert.equal(rainbow.pots[0].watering,1.2)
+ rainbow=reducer(rainbow,{type:'water',index:0});assert.equal(rainbow.player.stock,0);assert.equal(rainbow.pots[0].growth,0);assert.equal(rainbow.pots[0].watering,1.2)
  assert.deepEqual(reducer(rainbow,{type:'water',index:0}),rainbow)
+ rainbow=reducer(rainbow,{type:'tick',dt:.6});assert.ok(Math.abs(rainbow.pots[0].growth-2.6)<1e-8);assert.equal(rainbow.pots[0].watering,.6)
+ rainbow=reducer(rainbow,{type:'tick',dt:.6});assert.ok(Math.abs(rainbow.pots[0].growth-5.2)<1e-8);assert.equal(rainbow.pots[0].watering,0)
  let normal=setup(2,115);normal.player.stock=0
- normal=reducer(normal,{type:'water',index:0});assert.equal(activeWeather(normal),null);assert.equal(normal.pots[0].growth,2);assert.equal(normal.pots[0].watering,1.2)
+ normal=reducer(normal,{type:'water',index:0});assert.equal(activeWeather(normal),null);assert.equal(normal.pots[0].growth,0);assert.equal(normal.pots[0].watering,1.2)
+ normal=reducer(normal,{type:'tick',dt:1.2});assert.ok(Math.abs(normal.pots[0].growth-3.2)<1e-8);assert.equal(normal.pots[0].watering,0)
 })
 test('weather survives save/resume and offline growth matches live ticks across expiry',()=>{
  for(const kind of [0,1,2]){

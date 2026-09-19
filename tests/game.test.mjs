@@ -106,11 +106,12 @@ test('new garden starts empty and decorations cost more locally without gameplay
  s=reducer(s,{type:'toggle',key:'autoSow'});assert.equal(teamFor(s).autoSow,false);assert.equal(teamFor(s,0).autoSow,true)
  assert.deepEqual(parseSave(JSON.stringify(s)),s)
 })
-test('unlimited watering applies growth immediately while preserving per-plant cooldown, moving and digging',()=>{
+test('unlimited watering adds growth throughout its animation while preserving per-plant cooldown, moving and digging',()=>{
  let s=reducer(newGame(),{type:'start'});s.pots[0]=pot(6);s.pots[1]=pot(7);s.player.stock=0;s.player.phase='service'
- s=reducer(s,{type:'water',index:0});s=reducer(s,{type:'water',index:0});s=reducer(s,{type:'water',index:1});assert.equal(s.player.stock,0);assert.equal(s.pots[0].growth,2);assert.equal(s.pots[1].growth,2)
+ s=reducer(s,{type:'water',index:0});s=reducer(s,{type:'water',index:0});s=reducer(s,{type:'water',index:1});assert.equal(s.player.stock,0);assert.equal(s.pots[0].growth,0);assert.equal(s.pots[1].growth,0);assert.equal(s.clicks,2)
  s=reducer(s,{type:'move',from:0,to:2});assert.equal(s.pots[2].watering,1.2)
- s=reducer(s,{type:'tick',dt:1.2});assert.ok(s.pots[2].growth>=3.2);assert.equal(s.clicks,2)
+ s=reducer(s,{type:'tick',dt:.6});assert.ok(Math.abs(s.pots[2].growth-1.6)<1e-8);assert.equal(s.pots[2].watering,.6)
+ s=reducer(s,{type:'tick',dt:.6});assert.ok(Math.abs(s.pots[2].growth-3.2)<1e-8);assert.equal(s.pots[2].watering,0);assert.equal(s.clicks,2)
  const before=s.harvests;s=reducer(s,{type:'dig',index:2});assert.equal(s.pots[2].plant,null);assert.equal(s.harvests,before);assert.equal(s.coins,0)
 })
 test('multiple offscreen carriers pick and deliver each plant exactly once using its garden value',()=>{
@@ -147,7 +148,7 @@ test('save rejects invalid local workers, equipment, purchases and duplicate dec
 
 test('cross-garden cart preserves the entire plant and clears reservations on both gardens',()=>{
  let s=expanded();s.activeGarden=0;s=employ(s,'water');s.activeGarden=1;s=employ(s,'harvest')
- const source={plant:12,growth:27,germination:5,variant:1,watering:0.8,wateredAt:12,revealedAt:9}
+ const source={plant:12,growth:27,germination:5,variant:1,watering:0.8,wateringPower:4,wateredAt:12,revealedAt:9}
  const target={plant:6,growth:18,germination:5,variant:0,wateredAt:8}
  s.pots[0]=source;s.pots[15]=target
  for(const [w,index] of [[teamFor(s,0).snails[0],0],[teamFor(s,1).workers.harvest[0],15]]){w.phase='walk';w.target=index;w.path=[{x:20,y:30}];w.clock=0.2}

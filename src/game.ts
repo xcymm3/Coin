@@ -36,7 +36,7 @@ export const WEATHER_DURATION = 15
 export const activeWeather = (s: GameState, at = s.elapsed) => at >= s.weather.started && at < s.weather.started + WEATHER_DURATION ? s.weather.kind : null
 export const WATER_DURATION = 1.2
 // germination is retained only to round-trip old saves; it no longer gates growth or visibility.
-export type Pot = { seedCost?:number; variant?: number; germination?: number; revealedAt?: number; watering?: number; plant: number | null; growth: number; wateredAt: number }
+export type Pot = { seedCost?:number; variant?: number; germination?: number; revealedAt?: number; watering?: number; wateringPower?:number; plant: number | null; growth: number; wateredAt: number }
 export type Team = { harvests:number;hireReadyAt:number; potCount:number; sowTier: Exclude<Tier,7>; snails: Worker[]; workers: Record<WorkerKind,Worker[]>; cursor: number; equipment:Record<CrewKind,number>; decorations:string[];hiddenDecorations:string[];autoHarvest:boolean;autoSow:boolean }
 export type GameState = {
   fertilizer:number;extraRandom:number;variants:string[];legacyVariants?:string[];weather:{kind:number;started:number;next:number};
@@ -240,10 +240,12 @@ function advance(s: GameState, dt: number) {
   s.elapsed += dt
   while (s.elapsed >= s.weather.next) { const started=s.weather.next; s.weather={kind:Math.floor(extraRandom(s)*3),started,next:started+300+extraRandom(s)*300}; rainSeconds += rainOverlap() }
   s.pots.forEach((_, i) => grow(s, i, (dt + rainSeconds) * baseGrowthRate(s, Math.floor(i/15))))
-  s.pots.forEach(p => {
+  s.pots.forEach((p,i) => {
     if ((p.watering ?? 0) > 0) {
-      p.watering = Math.max(0, p.watering! - dt)
-      if (p.watering <= .000001) p.watering = 0
+      const spent=Math.min(dt,p.watering!),plant=p.plant===null?null:PLANTS[p.plant]
+      if(plant&&p.growth<plant.seconds){const amount=(p.wateringPower??clickPower(s))*spent/WATER_DURATION;s.stats.manualGrowth+=Math.min(amount,plant.seconds-p.growth);grow(s,i,amount)}
+      p.watering=Math.max(0,p.watering!-spent)
+      if(p.watering<=.000001){p.watering=0;delete p.wateringPower;p.wateredAt=s.elapsed-(dt-spent)}
     }
   })
   if (s.player.phase === 'service') advanceWorker(s, 'player', s.player, dt)
@@ -287,7 +289,7 @@ export function reducer(state: GameState, action: Action): GameState {
   if (action.type === 'fertilize') {
     const p=s.pots[action.index]
     if(s.fertilizer>0 && p?.plant != null && p.plant!==ULTIMATE_ID && p.growth<PLANTS[p.plant].seconds) {
-      s.fertilizer--;p.watering=0;grow(s,action.index,PLANTS[p.plant].seconds)
+      s.fertilizer--;p.watering=0;delete p.wateringPower;grow(s,action.index,PLANTS[p.plant].seconds)
     }
   }
   if(action.type==='decorate') {
@@ -304,8 +306,8 @@ export function reducer(state: GameState, action: Action): GameState {
 
   }
   if (action.type === 'water' && validTarget(s, 'player', action.index) && !(s.pots[action.index].watering! > 0)) {
-    s.pots[action.index].watering = WATER_DURATION
-    water(s, action.index)
+    const p=s.pots[action.index]
+    p.watering=WATER_DURATION;p.wateringPower=clickPower(s)*(activeWeather(s)===2?2:1);s.clicks++
   }
   if (action.type === 'dig' && s.pots[action.index]?.plant != null) {
     // Discarding is not harvesting: no coins, count, discoveries or plant effects.
@@ -391,7 +393,7 @@ export function parseSave(raw:string|null):GameState|null {
    ||!Array.isArray(s.harvestCounts)||s.harvestCounts.length!==PLANTS.length||s.harvestCounts.some(n=>!integer(n))||!integer(s.untrackedHarvests)||!Array.isArray(s.discovered)||s.discovered.some(id=>!integer(id)||!PLANTS[id])
    ||!unique(s.variants)||s.variants.some(k=>!/^\d+:1$/.test(k)||!variantFor(Number(k.split(':')[0])))||!s.weather||![0,1,2].includes(s.weather.kind)||!Number.isFinite(s.weather.started)||!finite(s.weather.next)||s.weather.next<=s.elapsed
    ||!s.stats||['manualGrowth','autoGrowth','manualCoins','autoCoins'].some(k=>!finite(s.stats[k as keyof GameState['stats']])))return null
-  for(const p of s.pots)if(!p||(p.seedCost!==undefined&&(!finite(p.seedCost)||!(PLANTS.some(plant=>plant.cost===p.seedCost)||[9000,200000,5000000,150000000,500000000000].includes(p.seedCost))))||(p.plant!==null&&(!integer(p.plant)||!PLANTS[p.plant]))||!finite(p.growth)||!Number.isFinite(p.wateredAt)||(p.variant!==undefined&&(![0,1].includes(p.variant)||p.variant===1&&(p.plant===null||!variantFor(p.plant))))||(p.germination!==undefined&&(!finite(p.germination)||p.germination>5))||(p.revealedAt!==undefined&&!finite(p.revealedAt))||(p.watering!==undefined&&(!finite(p.watering)||p.watering>WATER_DURATION||p.plant===null&&p.watering>0)))return null
+  for(const p of s.pots)if(!p||(p.seedCost!==undefined&&(!finite(p.seedCost)||!(PLANTS.some(plant=>plant.cost===p.seedCost)||[9000,200000,5000000,150000000,500000000000].includes(p.seedCost))))||(p.plant!==null&&(!integer(p.plant)||!PLANTS[p.plant]))||!finite(p.growth)||!Number.isFinite(p.wateredAt)||(p.variant!==undefined&&(![0,1].includes(p.variant)||p.variant===1&&(p.plant===null||!variantFor(p.plant))))||(p.germination!==undefined&&(!finite(p.germination)||p.germination>5))||(p.revealedAt!==undefined&&!finite(p.revealedAt))||(p.watering!==undefined&&(!finite(p.watering)||p.watering>WATER_DURATION||p.plant===null&&p.watering>0))||(p.wateringPower!==undefined&&(!finite(p.wateringPower)||p.wateringPower<=0)))return null
   const workerValid=(w:Worker,page:number,player=false)=>w&&finite(w.x)&&w.x<=100&&finite(w.y)&&w.y<=100&&[-1,1].includes(w.facing)&&['idle','walk','act','return','service'].includes(w.phase)&&finite(w.clock)&&w.clock<=1.2&&integer(w.stock)&&w.stock<=1024&&finite(w.cargo)&&integer(w.count)&&w.count<=64&&(w.target===null||integer(w.target)&&w.target<s.pots.length&&(player||Math.floor(w.target/15)===page))&&(!['walk','act'].includes(w.phase)||w.target!==null)&&Array.isArray(w.path)&&w.path.length<=3&&w.path.every(p=>finite(p.x)&&p.x<=100&&finite(p.y)&&p.y<=100)
   if(!workerValid(s.player,0,true))return null
   for(let page=0;page<s.gardens.length;page++){
