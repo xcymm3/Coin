@@ -1,5 +1,5 @@
 import {pathToFileURL} from 'node:url';
-import {newGame,reducer,PLANTS,UPGRADES,seedPlantId,teamFor,hireCatalog,hireAvailable,expansionLock,GARDEN_PRICES,potPrice,seedEconomyFor,unlocked,upgradeLock,hireLock,infiniteWater,SEED_PRICES} from '../src/game.ts';
+import {newGame,reducer,PLANTS,UPGRADES,seedPlantId,teamFor,hireCatalog,hireAvailable,expansionLock,GARDEN_PRICES,potPrice,seedEconomyFor,unlocked,upgradeLock,hireLock,SEED_PRICES} from '../src/game.ts';
 export function runCampaign(seed=42,interval=2,{noExpand=false,limit=9000,fertilizer=true,strategy='yield'}={}){
  let s=reducer(newGame(),{type:'start'});s.randomState=seed;s.extraRandom=seed;s.weather={kind:0,started:-20,next:450};
  const pages=[],purchases=[],progress=[];let starAt=null,lastBuy=0,maxGap=0,actions=0,idle=0,earlyActions=0,earlyIdle=0;
@@ -9,7 +9,7 @@ export function runCampaign(seed=42,interval=2,{noExpand=false,limit=9000,fertil
   if(t%interval===0){actions++;if(t<300)earlyActions++;let acted=false;const page=s.activeGarden,team=teamFor(s),indices=Array.from({length:team.potCount},(_,i)=>page*15+i),star=indices.find(i=>s.pots[i].plant===9),tier=bestSeed(page);
    // Setting a local seed plan consumes an action; completed gardens keep their plan.
    if(team.workers.sow.length && tier>team.sowTier){s=reducer(s,{type:'sow-tier',tier});s=reducer(s,{type:'tick',dt:1});continue;}
-   if(star!==undefined){if(s.player.phase==='idle' && s.elapsed-s.pots[star].wateredAt>=5 && !s.pots[star].watering){s=reducer(s,s.player.stock===0&&!infiniteWater(s)?{type:'refill'}:{type:'water',index:star});acted=true;}}
+   if(star!==undefined){if(s.elapsed-s.pots[star].wateredAt>=5 && !s.pots[star].watering){s=reducer(s,{type:'water',index:star});acted=true;}}
    else if(s.coins>=SEED_PRICES[7]){let i=indices.find(i=>s.pots[i].plant===null);if(i===undefined){i=indices[0];s=reducer(s,{type:'dig',index:i});}s=reducer(s,{type:'select',id:9});s=reducer(s,{type:'pot',index:i});starAt=s.elapsed/60;acted=true;}
    else{
     const reserve=SEED_PRICES[tier]*Math.min(3,team.potCount),choices=[];
@@ -22,7 +22,7 @@ export function runCampaign(seed=42,interval=2,{noExpand=false,limit=9000,fertil
     else{const ripe=indices.find(i=>s.pots[i].plant!==null&&s.pots[i].plant!==9&&s.pots[i].growth>=PLANTS[s.pots[i].plant].seconds);const empty=indices.find(i=>s.pots[i].plant===null);const growing=indices.filter(i=>s.pots[i].plant!==null&&s.pots[i].growth<PLANTS[s.pots[i].plant].seconds&&!s.pots[i].watering);
      if(ripe!==undefined){s=reducer(s,{type:'pot',index:ripe});acted=true;}
      else if(empty!==undefined){s=reducer(s,{type:'select',id:seedPlantId(tier)});s=reducer(s,{type:'pot',index:empty});acted=true;}
-     else if(growing.length && (s.player.phase==='idle' || fertilizer&&s.fertilizer>0)){const i=growing.sort((a,b)=>s.pots[b].growth/PLANTS[s.pots[b].plant].seconds-s.pots[a].growth/PLANTS[s.pots[a].plant].seconds)[0];s=reducer(s,fertilizer&&s.fertilizer>0?{type:'fertilize',index:i}:s.player.stock===0&&!infiniteWater(s)?{type:'refill'}:{type:'water',index:i});acted=true;}
+     else if(growing.length){const i=growing.sort((a,b)=>s.pots[b].growth/PLANTS[s.pots[b].plant].seconds-s.pots[a].growth/PLANTS[s.pots[a].plant].seconds)[0];s=reducer(s,fertilizer&&s.fertilizer>0?{type:'fertilize',index:i}:{type:'water',index:i});acted=true;}
     }
    }if(!acted){idle++;if(t<300)earlyIdle++;}
   }

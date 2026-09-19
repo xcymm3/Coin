@@ -6,7 +6,7 @@ import { ToolArt } from './ToolArt'
 import { DecorationArt } from './DecorationArt'
 import { useEffect, useReducer, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { PLANTS, TIERS, UPGRADES, SAVE_KEY, newGame, parseSave, reducer, unlocked, price, upgradePrice, growthRate, formatTime, capacity, STATIONS, WATER_DURATION, upgradeLock, nextResearch, ULTIMATE_ID, ULTIMATE_TIER, TIER_PLANTS, seedPlantId, seedVisible, GARDENS, gardenCount, teamFor, hireCatalog, hireAvailable, hireLock, seedLock, MATERIALS, decorationPrice, GARDEN_PRICES, potPrice, expansionLock, variantFor, plantedReward, DECORATIONS, WEATHER_DURATION, activeWeather, infiniteWater, type Tier, type GameState } from './game'
+import { PLANTS, TIERS, UPGRADES, SAVE_KEY, newGame, parseSave, reducer, unlocked, price, upgradePrice, growthRate, formatTime, STATIONS, WATER_DURATION, upgradeLock, nextResearch, ULTIMATE_ID, ULTIMATE_TIER, TIER_PLANTS, seedPlantId, seedVisible, GARDENS, gardenCount, teamFor, hireCatalog, hireAvailable, hireLock, seedLock, MATERIALS, decorationPrice, GARDEN_PRICES, potPrice, expansionLock, variantFor, plantedReward, DECORATIONS, WEATHER_DURATION, activeWeather, type Tier, type GameState } from './game'
 import { configureAudio, sound, unlockAudio } from './audio'
 import { ExtraPlant } from './ExtraPlant'
 import { Sprout } from './Sprout'
@@ -131,12 +131,9 @@ export default function Garden({ initialState, persist = true }: { initialState?
   const harvestedKinds = s.harvestCounts.filter(count => count > 0).length
   const selected = PLANTS[s.selected]
   const research = nextResearch(s)
-  const rainbow = infiniteWater(s)
   const weather = activeWeather(s)
   const currentHarvestMultiplier = 2 ** s.upgrades.profit * garden.reward * (weather === 1 ? 7 : 1)
   const currentGrowthMultiplier = 2 ** s.upgrades.soil * garden.growth * (weather === 0 ? 2 : 1)
-  const waterLevel = rainbow?3: s.player.stock===0?0:s.player.stock/capacity(s,'player')<=.25?1:s.player.stock/capacity(s,'player')<=.65?2:3
-  const waterState = rainbow?t('无限水量'):s.player.phase==='service'?t('补水中'):t(`data.waterStates.${waterLevel}`)
   const openGardenIndex = gardenCount(s)
   const canVisitNextGarden = s.activeGarden < openGardenIndex - 1
   const canOpenNextGarden = s.activeGarden === openGardenIndex - 1 && openGardenIndex < GARDENS.length
@@ -228,8 +225,6 @@ export default function Garden({ initialState, persist = true }: { initialState?
     if (tool === 'water' && p.plant !== null && p.growth < PLANTS[p.plant].seconds) {
       if ((p.watering ?? 0) > 0) return
       if(p.plant===ULTIMATE_ID && s.elapsed-p.wateredAt<5){setToast(t('星之花正在吸收水分，每5秒可浇水一次。'));return}
-      if (!rainbow && s.player.phase !== 'idle') { setToast(t('水壶正在装填，请稍等。')); return }
-      if (!rainbow && s.player.stock === 0) { setToast(t('水壶空了，请点击花园左下角的水池打水。')); return }
       dispatch({ type: 'water', index }); return
     }
     let rewardText = ''
@@ -301,7 +296,7 @@ export default function Garden({ initialState, persist = true }: { initialState?
         <div className="garden-tools" role="group" aria-label={t('园艺工具')}>
           <div className="tool-slots">
             <div className="watering-cubby">
-              <button className={`tool-button water-tool ${tool === 'water' ? 'selected' : ''} ${s.player.phase==='service'?'is-refilling':''}`} data-water-state={waterState} title={t('dynamic.waterToolTitle',{state:waterState})} aria-label={t('dynamic.waterToolLabel',{state:waterState})} aria-pressed={tool === 'water'} onClick={() => { setTool(tool==='water'?null:'water');setMoveFrom(null) }}><ToolArt kind="water" waterLevel={waterLevel}/>{rainbow && <b className="tool-quantity">∞</b>}<span>{t('水壶')}</span></button>
+              <button className={`tool-button water-tool ${tool === 'water' ? 'selected' : ''}`} title={t('dynamic.waterToolTitle')} aria-label={t('dynamic.waterToolLabel')} aria-pressed={tool === 'water'} onClick={() => { setTool(tool==='water'?null:'water');setMoveFrom(null) }}><ToolArt kind="water"/><b className="tool-quantity">∞</b><span>{t('水壶')}</span></button>
             </div>
             <button className={`tool-button ${tool === 'fertilizer' ? 'selected' : ''}`} title={t('肥料 · 使非终极植物立即成熟')} aria-label={t('肥料工具')} aria-pressed={tool === 'fertilizer'} onClick={()=>{setTool(tool === 'fertilizer' ? null : 'fertilizer');setMoveFrom(null)}}><ToolArt kind="fertilizer"/><b className="tool-quantity">×{s.fertilizer}</b><span>{t('肥料')}</span></button>
             <button className={`tool-button ${tool === 'cart' ? 'selected' : ''}`} title={t('小推车 · 选择植物，切换花园后点击花盆搬运或交换')} aria-label={t('小推车工具')} aria-pressed={tool === 'cart'} onClick={() => { setTool(tool === 'cart' ? null : 'cart'); setMoveFrom(null) }}><ToolArt kind="cart"/>{moveFrom !== null && s.pots[moveFrom]?.plant != null && <span className="cart-passenger" aria-hidden="true"><PlantSprite id={s.pots[moveFrom].plant!} variant={!!s.pots[moveFrom].variant}/></span>}<span>{t('小推车')}</span></button>
@@ -319,7 +314,7 @@ export default function Garden({ initialState, persist = true }: { initialState?
               </button>
             })}
           </div>
-          <p className="tool-hint">{tool === 'fertilizer' ? t('点击植物施肥 · 点击空盆仍播种当前种子') : tool === 'shovel' ? t('点击植物挖除 · 点击空盆仍播种当前种子 · 再点铲子取消') : tool === 'cart' ? moveFrom === null ? t('选择植物搬运 · 点击空盆仍播种当前种子') : t('dynamic.cartSelected',{garden:gardenName(Math.floor(moveFrom/15)),pot:moveFrom%15+1}) : tool === 'water' ? t('点击植物浇水 · 点击空盆仍播种当前种子 · 点击左下角水池打水') : t('点击空盆播种，点击成熟植物收获')}</p>
+          <p className="tool-hint">{tool === 'fertilizer' ? t('点击植物施肥 · 点击空盆仍播种当前种子') : tool === 'shovel' ? t('点击植物挖除 · 点击空盆仍播种当前种子 · 再点铲子取消') : tool === 'cart' ? moveFrom === null ? t('选择植物搬运 · 点击空盆仍播种当前种子') : t('dynamic.cartSelected',{garden:gardenName(Math.floor(moveFrom/15)),pot:moveFrom%15+1}) : tool === 'water' ? t('点击植物浇水 · 点击空盆仍播种当前种子') : t('点击空盆播种，点击成熟植物收获')}</p>
         </div>
           <h2 className="scene-garden-name" aria-live="polite">
             <span className="scene-garden-title">{gardenName(s.activeGarden)}</span>
@@ -355,8 +350,7 @@ export default function Garden({ initialState, persist = true }: { initialState?
               <span key={`${sprite}-${ready}`} className="plant-art-slot">{sprite === null ? <Sprite id={10} className="pot-art" /> : <PlantSprite id={sprite} className="pot-art" variant={!!pot.variant} />}</span>
               {pot.revealedAt !== undefined && s.elapsed - pot.revealedAt < 1 && <span key={`reveal-${pot.revealedAt}`} className="rare-reveal" aria-hidden="true">✦<PixelBurst kind="star" /></span>}
               {p && !ready && <Sprout id={p.id} tiny={seed} maturing={!young} />}
-              {(pot.watering ?? 0) > 0 && <span className="tool-pour" style={{ animationDuration: `${WATER_DURATION}s` }} aria-hidden="true"><ToolArt kind="water" waterLevel={waterLevel}/><span className="tool-water-stream">▪<i>▪</i><b>▪</b></span></span>}
-              {(pot.watering ?? 0) > 0 && <span className="watering-timer" data-testid={`watering-${i}`} aria-label={t('本株浇水冷却中')}><Progress value={(pot.watering ?? 0) / WATER_DURATION} /></span>}
+              {(pot.watering ?? 0) > 0 && <span className="tool-pour" style={{ animationDuration: `${WATER_DURATION}s` }} aria-hidden="true"><ToolArt kind="water"/><span className="tool-water-stream">▪<i>▪</i><b>▪</b></span></span>}
               {floats.some(f => f.pot === i && f.kind === 'move') && <span className="tool-cart-animation" aria-hidden="true"><ToolArt kind="cart" /></span>}
               {floats.some(f => f.pot === i && f.kind === 'dig') && <span className="tool-dig-animation" aria-hidden="true"><Icon name="shovel" /><i /><i /><i /></span>}
               {ready && <span className="ripe-sparkles" aria-hidden="true">✦<i>✧</i><b>✦</b></span>}
@@ -365,12 +359,11 @@ export default function Garden({ initialState, persist = true }: { initialState?
               {floats.filter(f => f.pot === i).map(f => <span className={`pot-feedback feedback-${f.kind}`} key={f.id}><span className="float-label">{f.text}</span>{f.kind !== 'water' && <PixelBurst kind={f.kind} />}</span>)}
             </button>
           })}
-            <div className={`supply-station water-station ${s.player.phase==='service'?'pool-refilling':''}`} style={{ left: `${STATIONS.water.x}%` }}>
-              <button className="pool-refill-button" aria-label={rainbow?t('彩虹期间无需补水'):s.player.phase==='service'?t('水池 · 打水中'):s.player.stock===capacity(s,'player')?t('水池 · 水壶已满'):t('水池 · 给水壶打水')} title={t('点击水池给水壶打水，蜗牛也在这里补水')} disabled={paused||rainbow||s.player.phase!=='idle'||s.player.stock===capacity(s,'player')} onClick={()=>{setTool('water');setMoveFrom(null);dispatch({type:'refill'});sound('tap')}}>
+            <div className="supply-station water-station" style={{ left: `${STATIONS.water.x}%` }} aria-hidden="true">
+              <div className="pool-refill-button">
                 <span className="pixel-pool" aria-hidden="true"/>
-                {s.player.phase==='service'&&<span className="pool-dipping-can" aria-hidden="true"><ToolArt kind="water" waterLevel={waterLevel}/><i/><i/></span>}
-                <b>{rainbow?t('彩虹 · 无限水量'):s.player.phase==='service'?t('打水中…'):s.player.stock===capacity(s,'player')?t('水池 · 壶已满'):t('水池 · 点击打水')}</b>
-              </button>
+                <b>{t('水池')}</b>
+              </div>
             </div>
             <div className="supply-station seed-station" style={{ left: `${STATIONS.sow.x}%` }}><span className="pixel-crate"><Sprite id={13} /></span><b>{t('种子箱')}</b></div>
             <div className="supply-station harvest-station" style={{ left: `${STATIONS.harvest.x}%` }}><span className="pixel-crate" /><b>{t('收获站')}</b></div>

@@ -74,6 +74,7 @@ test('previous campaign saves retain purchased pots and proportional growth',()=
 test('harvest research uses twenty continuous levels while each garden has two other researches',()=>{
  assert.equal(UPGRADES.length,30)
  assert.deepEqual(UPGRADES.filter(u=>u.effects.profit).map(u=>u.name),Array.from({length:20},(_,i)=>`丰收研究 ${i+1}级`))
+ for(const u of UPGRADES.filter(u=>u.effects.click)){assert.equal(u.effects.click,1);assert.equal(u.effects.splash,undefined)}
  let s=expanded();const before=s
  for(let page=0;page<5;page++)assert.equal(UPGRADES.filter(u=>u.page===page).length,6)
  for(const u of UPGRADES.filter(u=>u.page===4&&u.effects.profit))s=reducer(s,{type:'buy',id:u.id});for(let page=0;page<5;page++)assert.equal(reward(s,PLANTS[0],page),reward(before,PLANTS[0],page)*4)
@@ -105,12 +106,11 @@ test('new garden starts empty and decorations cost more locally without gameplay
  s=reducer(s,{type:'toggle',key:'autoSow'});assert.equal(teamFor(s).autoSow,false);assert.equal(teamFor(s,0).autoSow,true)
  assert.deepEqual(parseSave(JSON.stringify(s)),s)
 })
-test('per-plant watering cooldown, refilling, moving and digging preserve their contracts',()=>{
- let s=reducer(newGame(),{type:'start'});s.pots[0]=pot(6);s.pots[1]=pot(7)
- s=reducer(s,{type:'water',index:0});s=reducer(s,{type:'water',index:0});s=reducer(s,{type:'water',index:1});assert.equal(s.player.stock,2)
+test('unlimited watering applies growth immediately while preserving per-plant cooldown, moving and digging',()=>{
+ let s=reducer(newGame(),{type:'start'});s.pots[0]=pot(6);s.pots[1]=pot(7);s.player.stock=0;s.player.phase='service'
+ s=reducer(s,{type:'water',index:0});s=reducer(s,{type:'water',index:0});s=reducer(s,{type:'water',index:1});assert.equal(s.player.stock,0);assert.equal(s.pots[0].growth,2);assert.equal(s.pots[1].growth,2)
  s=reducer(s,{type:'move',from:0,to:2});assert.equal(s.pots[2].watering,1.2)
  s=reducer(s,{type:'tick',dt:1.2});assert.ok(s.pots[2].growth>=3.2);assert.equal(s.clicks,2)
- s=reducer(s,{type:'refill'});s=reducer(s,{type:'tick',dt:1.2});assert.equal(s.player.stock,capacity(s,'player'))
  const before=s.harvests;s=reducer(s,{type:'dig',index:2});assert.equal(s.pots[2].plant,null);assert.equal(s.harvests,before);assert.equal(s.coins,0)
 })
 test('multiple offscreen carriers pick and deliver each plant exactly once using its garden value',()=>{

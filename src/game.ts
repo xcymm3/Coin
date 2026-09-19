@@ -34,7 +34,6 @@ export const potPrice=(s:GameState,page=s.activeGarden)=>Math.round(8*[1,50,3000
 export const plantedReward=(s:GameState,index:number,at=s.elapsed)=>{const p=s.pots[index];return p?.plant==null?0:reward(s,PLANTS[p.plant],Math.floor(index/15),-Infinity)*(p.variant&&variantFor(p.plant)?2:1)*(activeWeather(s,at)===1?7:1)}
 export const WEATHER_DURATION = 15
 export const activeWeather = (s: GameState, at = s.elapsed) => at >= s.weather.started && at < s.weather.started + WEATHER_DURATION ? s.weather.kind : null
-export const infiniteWater = (s: GameState) => activeWeather(s) === 2
 export const WATER_DURATION = 1.2
 // germination is retained only to round-trip old saves; it no longer gates growth or visibility.
 export type Pot = { seedCost?:number; variant?: number; germination?: number; revealedAt?: number; watering?: number; plant: number | null; growth: number; wateredAt: number }
@@ -158,7 +157,7 @@ function harvest(s: GameState, i: number, carrier?: Worker, at = s.elapsed) {
 function water(s: GameState, i: number, auto = false) {
   const p = s.pots[i]
   if (p.plant === null || p.growth >= PLANTS[p.plant].seconds) return
-  const amount = auto ? 3 * 2 ** equipmentLevel(s,'water',Math.floor(i/15)) : clickPower(s)
+  const amount = (auto ? 3 * 2 ** equipmentLevel(s,'water',Math.floor(i/15)) : clickPower(s)) * (activeWeather(s) === 2 ? 2 : 1)
   s.stats[auto ? "autoGrowth" : "manualGrowth"] += Math.min(amount, PLANTS[p.plant].seconds-p.growth)
   grow(s, i, amount)
   p.wateredAt = s.elapsed
@@ -241,10 +240,10 @@ function advance(s: GameState, dt: number) {
   s.elapsed += dt
   while (s.elapsed >= s.weather.next) { const started=s.weather.next; s.weather={kind:Math.floor(extraRandom(s)*3),started,next:started+300+extraRandom(s)*300}; rainSeconds += rainOverlap() }
   s.pots.forEach((_, i) => grow(s, i, (dt + rainSeconds) * baseGrowthRate(s, Math.floor(i/15))))
-  s.pots.forEach((p, i) => {
+  s.pots.forEach(p => {
     if ((p.watering ?? 0) > 0) {
       p.watering = Math.max(0, p.watering! - dt)
-      if (p.watering <= .000001) { p.watering = 0; water(s, i) }
+      if (p.watering <= .000001) p.watering = 0
     }
   })
   if (s.player.phase === 'service') advanceWorker(s, 'player', s.player, dt)
@@ -255,7 +254,7 @@ function advance(s: GameState, dt: number) {
     if(team.autoSow) team.workers.sow.forEach(w=>advanceWorker(s,'sow',w,dt,page))
   }
 }
-export type Action = {type:'sow-tier';tier:number} | {type:'hire';id:string} | {type:'expand'} | {type:'open-garden'} | {type:'fertilize';index:number} | {type:'decorate';id:string} | {type:'decoration-toggle';id:string} | { type: 'garden'; index: number } | { type: 'dig'; index: number } | { type: 'water'; index: number } | { type: 'move'; from: number; to: number } | { type: 'refill' } | { type: 'tick'; dt: number } | { type: 'pot'; index: number } | { type: 'select'; id: number }
+export type Action = {type:'sow-tier';tier:number} | {type:'hire';id:string} | {type:'expand'} | {type:'open-garden'} | {type:'fertilize';index:number} | {type:'decorate';id:string} | {type:'decoration-toggle';id:string} | { type: 'garden'; index: number } | { type: 'dig'; index: number } | { type: 'water'; index: number } | { type: 'move'; from: number; to: number } | { type: 'tick'; dt: number } | { type: 'pot'; index: number } | { type: 'select'; id: number }
   | { type: 'buy'; id: UpgradeId } | { type: 'toggle'; key: 'autoHarvest' | 'autoSow' } | { type: 'start' } | { type: 'reset' }
 export function reducer(state: GameState, action: Action): GameState {
   if (action.type === 'reset') return { ...newGame(), started: true }
@@ -304,11 +303,9 @@ export function reducer(state: GameState, action: Action): GameState {
     else if (p.growth >= PLANTS[p.plant].seconds) harvest(s, action.index)
 
   }
-  if (action.type === 'water' && validTarget(s, 'player', action.index) && (infiniteWater(s) || s.player.phase === 'idle' && s.player.stock > 0) && !(s.pots[action.index].watering! > 0)) {
-    s.pots[action.index].watering = WATER_DURATION; if (!infiniteWater(s)) s.player.stock--
-  }
-  if (action.type === 'refill' && !infiniteWater(s) && s.player.phase === 'idle' && s.player.stock < capacity(s, 'player')) {
-    s.player.phase = 'service'; s.player.target = null; s.player.clock = 0; s.player.path = []
+  if (action.type === 'water' && validTarget(s, 'player', action.index) && !(s.pots[action.index].watering! > 0)) {
+    s.pots[action.index].watering = WATER_DURATION
+    water(s, action.index)
   }
   if (action.type === 'dig' && s.pots[action.index]?.plant != null) {
     // Discarding is not harvesting: no coins, count, discoveries or plant effects.

@@ -25,7 +25,7 @@ export const UPGRADE_BASES = [270,500000,9600000,1500000000,150000000000]
 export const UPGRADES: Upgrade[] = GARDENS.flatMap((_,page)=>[
  ...[.15,.25,.35,.5].map((ratio,level)=>({id:level===3?`g${page}-profit`:`g${page}-profit-${level+1}`,page,name:`丰收研究 ${page*4+level+1}级`,cost:page===0?[40,65,85,110][level]:Math.round(UPGRADE_BASES[page]*ratio),icon:'coin',detail:'全园收获价值提升约 41%',effects:{profit:.5},requires:level?`g${page}-profit-${level}`:undefined,harvests:[0,12,30,60][level]})),
  {id:`g${page}-soil`,page,name:`沃土研究 ${page+1}级`,cost:Math.round(UPGRADE_BASES[page]*1.4),icon:'leaf',detail:'全园自然生长速度 ×2',effects:{soil:1}},
- {id:`g${page}-click`,page,name:`灌注研究 ${page+1}级`,cost:Math.round(UPGRADE_BASES[page]*1.9),icon:'hand',detail:'手动浇水成长 ×2，水壶容量 ×2',effects:{click:1,splash:1}},
+ {id:`g${page}-click`,page,name:`灌注研究 ${page+1}级`,cost:Math.round(UPGRADE_BASES[page]*1.9),icon:'hand',detail:'手动浇水成长 ×2',effects:{click:1}},
 ])
 export const ULTIMATE_PURCHASES=30
 export const EXPANSION_PRICE=1800

@@ -119,7 +119,7 @@
 @keyframes digging { 0% { rotate: -35deg; translate: 0 -12px; } 45% { rotate: 15deg; translate: 0 12px; } 100% { rotate: -30deg; translate: 5px -10px; opacity: 0; } }
 @keyframes dirt-scatter { to { translate: -12px 15px; opacity: 0; } }
 .burst-dig i { background: #956b43; box-shadow: 1px 1px #493624; }
-.species-sprout { position: absolute; width: 64%; height: 72%; left: 18%; top: -9%; z-index: 2; transform-origin: 50% 90%; pointer-events: none; filter: drop-shadow(2px 2px #183a2533); }.tiny-sprout { transform: scale(.8); }.maturing-sprout { animation: maturing-sprout-sway 3.6s steps(6) var(--sway-delay) infinite; }@keyframes maturing-sprout-sway { 0%,100% { transform: scale(1.18) rotate(-1deg); } 50% { transform: scale(1.22) rotate(1deg); } }.garden-floor .watering-cooldown:hover { z-index: 111 !important; }.watering-timer { position: absolute; left: 28%; bottom: 1%; width: 44%; z-index: 9; pointer-events: none; }.watering-timer .progress { height: 5px; border-color: #174455; }.watering-timer .progress span { background: #75dceb; }.upgrade-requirement { display: block; color: #e4c68c; font-size: 9px; line-height: 1.5; margin-top: 5px; }.upgrade-card.upgrade-locked { opacity: .7; }.upgrade-locked .upgrade-art { filter: grayscale(.7); }
+.species-sprout { position: absolute; width: 64%; height: 72%; left: 18%; top: -9%; z-index: 2; transform-origin: 50% 90%; pointer-events: none; filter: drop-shadow(2px 2px #183a2533); }.tiny-sprout { transform: scale(.8); }.maturing-sprout { animation: maturing-sprout-sway 3.6s steps(6) var(--sway-delay) infinite; }@keyframes maturing-sprout-sway { 0%,100% { transform: scale(1.18) rotate(-1deg); } 50% { transform: scale(1.22) rotate(1deg); } }.garden-floor .watering-cooldown:hover { z-index: 111 !important; }.garden-floor .watering-cooldown .pot-sign .progress { border-color:#327a86;box-shadow:0 0 0 1px #b8f7f2,0 0 7px #75dceb99 }.garden-floor .watering-cooldown .pot-sign .progress>span { background:#54bdb7;box-shadow:inset 0 2px #b8f7f2 }.upgrade-requirement { display: block; color: #e4c68c; font-size: 9px; line-height: 1.5; margin-top: 5px; }.upgrade-card.upgrade-locked { opacity: .7; }.upgrade-locked .upgrade-art { filter: grayscale(.7); }
 
 .mystery-seed { position:absolute; width:28%; height:35%; left:36%; top:26%; z-index:3; pointer-events:none; }
 .rare-reveal { position:absolute; left:50%; top:20%; z-index:8; color:#ffedac; text-shadow:0 0 12px #bba5ff; pointer-events:none; animation:reveal-flash 1s ease-out both; }
@@ -332,27 +332,15 @@
 .zen-garden .garden-scene-caption{z-index:2}
 @media(max-width:620px){.zen-garden .tool-slots{gap:8px}.zen-garden .tool-button{border-width:2px}.zen-garden .garden-tools{top:36px}.zen-garden .tool-hint{margin-top:5px}.zen-garden .refill-can{bottom:10px}}
 @media(max-width:350px){.zen-garden{--tool-size:54px}.zen-garden .tool-slots{gap:7px}}
-/* Shared pixel pool: direct refilling at the water, with an in-world dip animation. */
+/* Shared pixel pool remains the watering snails' in-world supply station. */
 .supply-station.water-station{width:110px}
 .water-station .pool-refill-button{position:relative;display:block;width:100%;padding:0 4px 3px;min-height:60px}
 .water-station .pixel-pool{width:96px;height:44px;margin:3px auto 4px;border-width:6px;box-shadow:3px 3px #394f45,inset 3px 3px #367f89}
-.water-station .pool-refill-button:disabled{opacity:1}
-.water-station .pool-refill-button:not(:disabled):hover .pixel-pool{border-color:var(--color-gold-light)}
-.water-station .pool-refill-button:focus-visible{outline:2px dashed var(--color-gold-light);outline-offset:2px}
 .supply-station{z-index:0;top:98%;transform:translate(-50%,-52%)}
 .supply-station .pixel-crate{height:17px;margin:15px auto 3px;transform:skewX(-8deg) scaleY(.72);transform-origin:50% 100%;box-shadow:inset 3px 0 #d39c59,3px 4px #34483b55}
 .seed-station .pixel-crate .sprite{transform:translateY(-13px) scaleY(.72);transform-origin:50% 100%}
 .water-station .pixel-pool{height:27px;clip-path:polygon(10% 0,90% 0,90% 12%,100% 12%,100% 80%,90% 80%,90% 100%,10% 100%,10% 80%,0 80%,0 12%,10% 12%)}
-.pool-dipping-can{position:absolute;left:30%;top:-14px;width:48px;height:48px;pointer-events:none;animation:pool-dip 1.2s steps(4) both}
-.pool-dipping-can .garden-tool-art{width:100%;height:100%;max-height:none}
-.pool-dipping-can i{position:absolute;left:8px;bottom:0;width:3px;height:4px;background:#b5e6de;box-shadow:24px -3px #b5e6de;animation:pool-splash .4s steps(3) infinite}
-.pool-dipping-can i:last-child{left:15px;animation-delay:-.2s}
-@keyframes pool-dip{0%{transform:translate(7px,-8px)}35%,70%{transform:translate(0,10px) rotate(-12deg)}100%{transform:translate(7px,-8px)}}
-@keyframes pool-splash{to{translate:0 -8px;opacity:0}}
-.is-paused .pool-dipping-can,.is-paused .pool-dipping-can i{animation-play-state:paused}
-.reduce-motion .pool-dipping-can,.reduce-motion .pool-dipping-can i{animation:none}
-@media(prefers-reduced-motion:reduce){.pool-dipping-can,.pool-dipping-can i{animation:none}}
-@media(max-width:620px){.supply-station.water-station{width:80px}.water-station .pixel-pool{width:70px;height:34px;border-width:5px}.water-station .pool-refill-button{min-height:48px}.water-station b{font-size:8px}.pool-dipping-can{width:36px;height:36px;top:-10px}}
+@media(max-width:620px){.supply-station.water-station{width:80px}.water-station .pixel-pool{width:70px;height:34px;border-width:5px}.water-station .pool-refill-button{min-height:48px}.water-station b{font-size:8px}}
 /* Local sowing choice belongs beside the garden tools, only after hiring. */
 .zen-garden .squirrel-seed-picker{display:flex;flex:0 0 176px;min-width:0;flex-direction:column;gap:5px;padding:6px 8px;background:var(--color-wood-dark);border:2px solid var(--color-wood-light);box-shadow:2px 3px var(--color-shade);color:var(--color-paper);font-size:11px;text-shadow:1px 1px var(--color-wood-deep)}
 .squirrel-seed-picker select{width:100%;min-width:0;font:inherit;border:2px solid var(--color-wood-light);border-radius:0;padding:5px 2px;color:var(--color-gold-light);background:var(--color-wood-deep);cursor:pointer}

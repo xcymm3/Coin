@@ -19,4 +19,4 @@ export const DECORATIONS = [
 ]
 export const WEATHER = ['细雨','萤火虫之夜','彩虹']
 
-export const WEATHER_EFFECTS = ['自然成长 ×2', '收获收益 ×7', '水壶无限水量']
+export const WEATHER_EFFECTS = ['自然成长 ×2', '收获收益 ×7', '浇水成长 ×2']

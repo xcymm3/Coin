@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {newGame,reducer,PLANTS,activeWeather,infiniteWater,growthRate,reward,parseSave,teamFor} from '../src/game.ts'
+import {newGame,reducer,PLANTS,activeWeather,growthRate,reward,parseSave,teamFor} from '../src/game.ts'
 import {expanded,employ} from './helpers.mjs'
 
 const setup=(kind,elapsed=100)=>{
@@ -44,17 +44,12 @@ test('carriers lock the multiplier at picking time, not delivery time or the end
  Object.assign(teamFor(s).workers.harvest[0],{phase:'service',clock:1,cargo:19,count:1})
  s=reducer(s,{type:'tick',dt:.5});assert.equal(s.coins,19)
 })
-test('rainbow permits empty-can watering without consuming or permanently filling stock',()=>{
- for(const stock of [0,2]){
-  let s=setup(2);s.player.stock=stock
-  assert.equal(infiniteWater(s),true)
-  s=reducer(s,{type:'water',index:0});assert.equal(s.player.stock,stock);assert.equal(s.pots[0].watering,1.2)
-  assert.deepEqual(reducer(s,{type:'water',index:0}),s)
-  assert.deepEqual(reducer(s,{type:'refill'}),s)
-  s=reducer(s,{type:'tick',dt:15});assert.equal(infiniteWater(s),false);assert.equal(s.player.stock,stock)
-  s=reducer(s,{type:'water',index:0});assert.equal(s.player.stock,Math.max(0,stock-1))
-  assert.equal(s.pots[0].watering,stock?1.2:0)
- }
+test('rainbow doubles watering growth while the watering can remains unlimited',()=>{
+ let rainbow=setup(2);rainbow.player.stock=0
+ rainbow=reducer(rainbow,{type:'water',index:0});assert.equal(rainbow.player.stock,0);assert.equal(rainbow.pots[0].growth,4);assert.equal(rainbow.pots[0].watering,1.2)
+ assert.deepEqual(reducer(rainbow,{type:'water',index:0}),rainbow)
+ let normal=setup(2,115);normal.player.stock=0
+ normal=reducer(normal,{type:'water',index:0});assert.equal(activeWeather(normal),null);assert.equal(normal.pots[0].growth,2);assert.equal(normal.pots[0].watering,1.2)
 })
 test('weather survives save/resume and offline growth matches live ticks across expiry',()=>{
  for(const kind of [0,1,2]){
@@ -63,7 +58,7 @@ test('weather survives save/resume and offline growth matches live ticks across 
   let live=s;for(let i=0;i<80;i++)live=reducer(live,{type:'tick',dt:.25})
   const offline=reducer(saved,{type:'tick',dt:20})
   assert.equal(offline.pots[0].growth,live.pots[0].growth)
-  assert.equal(activeWeather(offline),null);assert.equal(infiniteWater(offline),false)
+  assert.equal(activeWeather(offline),null)
   assert.equal(reward(offline,PLANTS[0]),PLANTS[0].reward)
   assert.deepEqual(parseSave(JSON.stringify(offline)),offline)
  }
