@@ -89,7 +89,7 @@ export default function Garden({ initialState, persist = true }: { initialState?
   const garden = GARDENS[s.activeGarden], team = teamFor(s, s.activeGarden)
   const [inspectedPot, setInspectedPot] = useState<number | null>(null)
   const [landscapeShopOpen, setLandscapeShopOpen] = useState(true)
-  const [mobilePanel, setMobilePanel] = useState<'garden' | 'seeds' | 'upgrades'>('garden')
+  const [mobilePanel, setMobilePanel] = useState<'garden' | 'upgrades'>('garden')
   const [settings, setSettings] = useState(loadSettings)
   const [settingsSection, setSettingsSection] = useState<SettingsSection>('audio')
   const english = settings.language === 'en'
@@ -189,7 +189,7 @@ export default function Garden({ initialState, persist = true }: { initialState?
   }
   const landscapeLayout = () => window.matchMedia('(orientation: landscape) and (max-height: 600px) and (max-width: 1200px)').matches
   const compactLayout = () => landscapeLayout() || window.matchMedia('(max-width: 620px), (max-width: 980px) and (orientation: portrait), (pointer: coarse) and (max-width: 980px)').matches
-  function showMobilePanel(next: 'garden' | 'seeds' | 'upgrades') {
+  function showMobilePanel(next: 'garden' | 'upgrades') {
     setMobilePanel(next)
     if (next === 'upgrades') setLandscapeShopOpen(true)
     if (compactLayout()) window.scrollTo({top:0,behavior:'instant'})
@@ -279,9 +279,9 @@ export default function Garden({ initialState, persist = true }: { initialState?
       <button className="blue-button icon-button" aria-label={t('植物图鉴')} onClick={() => setPanel('book')}><Icon name="book" /></button>
       <button className="blue-button icon-button" aria-label={t('游戏设置')} onClick={() => setPanel('settings')}><Icon name="gear" /></button>
     </header>
-    <nav className="mobile-nav" aria-label={t('游戏面板')}>{(['garden', 'seeds', 'upgrades'] as const).map((id, i) => <button key={id} className={mobilePanel === id ? 'active' : ''} aria-current={mobilePanel === id ? 'page' : undefined} onClick={() => showMobilePanel(id)}>{t(`shop.mobileTabs.${i}`)}</button>)}</nav>
+    <nav className="mobile-nav" aria-label={t('游戏面板')}>{(['garden', 'upgrades'] as const).map((id, i) => <button key={id} className={mobilePanel === id ? 'active' : ''} aria-current={mobilePanel === id ? 'page' : undefined} onClick={() => showMobilePanel(id)}>{t(`shop.mobileTabs.${i}`)}</button>)}</nav>
     <main className="game-layout">
-      <aside className={`seed-panel wood ${mobilePanel === 'seeds' ? 'mobile-active' : ''}`} aria-label={t('种子商店')}>
+      <aside className="seed-panel wood" aria-label={t('种子商店')}>
         <h2 className="panel-title"><Icon name="leaf" />{t('种 子')}<Icon name="leaf" /></h2>
         <div className="tier-list">{TIERS.map((name, i) => {
           if(!seedVisible(s,i as Tier))return null

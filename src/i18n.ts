@@ -40,7 +40,7 @@ const zh = {
   worker: {rest:'休息中',return:'返回补给站',deliver:'交付收获',refill:'装填补给',act:'正在照料',walk:'前往花盆',idle:'等待目标'},
   pot: {aria:'花盆{{pot}} {{plant}} {{action}}',empty:'空闲',sow:'播种',fertilize:'施肥',remove:'挖除',selectMove:'选择移动',moveHere:'移动到此处',harvest:'收获',useCan:'使用水壶',growing:'生长中'},
   inspector: {label:'植物信息',close:'关闭植物信息',emptyTitle:'第 {{pot}} 盆 · 空花盆',emptyPrompt:'点击花盆种下{{tier}}',progress:'成长 {{percent}}% · {{status}}',ready:'已成熟',harvest:'收获',selectCan:'选水壶',details:'点击植物查看详情',detailsHint:'名称、成长与收益显示在这里',waterSelected:'水壶已选中，点击植物浇水',harvestToast:'{{plant}} · 收获 +{{amount}}'},
-  shop: {tabs:['升级','雇佣','装饰'],mobileTabs:['花园','种子','商店'],decorOnly:'{{detail}} · 仅本园外观'},
+  shop: {tabs:['升级','雇佣','装饰'],mobileTabs:['花园','商店'],decorOnly:'{{detail}} · 仅本园外观'},
   help: {
     title:'园丁的小手册', chooseTitle:'选种、播种', choose:'八档种子依次为普通、稀有、珍贵、超凡、神话、远古、星界、终极。前七档各有四种植物，普通种子免费；各档均能抽到全部二十八种非终极植物，终极种子固定种出星之花。播种后立即显示品种名称、对应幼芽和成长进度，并直接开始生长；挖除不退种子费用。',
     waterTitle:'浇水、收获', water:'植物会自然生长。不同品种会长出不同幼芽。种子与工具可以同时保持选中：点击空盆会播种当前种子，点击已有植物才会使用水壶、铲子或肥料。浇水会播放 1.2 秒动画，期间该株无法重复浇水，但可以同时浇其他植物；需要补水时，点击花园左下角的水池。手机默认点击植物查看下方资料，再点“收获”按钮采收；PC 默认点击成熟植物直接收获。铲子可挖除任何阶段的植物，且不获得金币或收获次数。再次点击已选工具可取消选择。选择小推车后先点植物，可用花园左右箭头切换花园，再点空盆搬运或另一株植物交换位置；成长进度和外观变体会保留。只有手动收获有 5% 概率获得肥料，甲虫自动收获不掉落肥料。肥料可让未成熟的非终极植物立即成熟。植物没有额外特殊效果；进度满后再次点击收获金币。',
@@ -89,7 +89,7 @@ const en = {
   worker: {rest:'Resting',return:'Returning to station',deliver:'Delivering harvest',refill:'Refilling supplies',act:'Tending',walk:'Walking to a pot',idle:'Waiting'},
   pot: {aria:'Pot {{pot}} {{plant}} {{action}}',empty:'Empty',sow:'Sow',fertilize:'Fertilize',remove:'Remove',selectMove:'Select to move',moveHere:'Move here',harvest:'Harvest',useCan:'Use watering can',growing:'Growing'},
   inspector: {label:'Plant information',close:'Close plant information',emptyTitle:'Pot {{pot}} · Empty',emptyPrompt:'Click the pot to sow {{tier}}',progress:'Growth {{percent}}% · {{status}}',ready:'Ready',harvest:'Harvest',selectCan:'Select can',details:'Select a plant for details',detailsHint:'Its name, growth, and value appear here',waterSelected:'Watering can selected; click the plant to water',harvestToast:'{{plant}} · Harvest +{{amount}}'},
-  shop: {tabs:['Studies','Helpers','Decor'],mobileTabs:['Garden','Seeds','Shop'],decorOnly:'Changes this garden’s appearance only'},
+  shop: {tabs:['Studies','Helpers','Decor'],mobileTabs:['Garden','Shop'],decorOnly:'Changes this garden’s appearance only'},
   help: {
     title:'Gardener’s handbook', chooseTitle:'Choose and sow', choose:'Start with free Common Seeds. New seed tiers appear as your lifetime earnings grow. Each regular tier can reveal plants from across the collection, while the Ultimate Seed always grows the Starflower.',
     waterTitle:'Water and harvest', water:'A seed and a tool can stay selected together: empty pots sow, occupied pots use the chosen tool. Refill at the lower-left pool. Mature plants are clearly marked and can be harvested for coins; individual results may be a gain or a loss, but every unlocked regular seed keeps a positive expected return.',
